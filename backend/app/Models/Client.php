@@ -3,10 +3,11 @@ namespace App\Models;
 
 use App\Traits\BelongsToTenant;
 use App\Traits\HasAuditColumns;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends BaseModel
 {
-    use BelongsToTenant, HasAuditColumns;
+    use BelongsToTenant, HasAuditColumns, SoftDeletes;
 
     protected $table = 'clients';
 
@@ -17,7 +18,7 @@ class Client extends BaseModel
         'telephone', 'mobile', 'fax', 'email', 'site_web',
         'rib', 'banque', 'image_path', 'observations',
         'exempt_tva', 'type_client_id', 'plafond_credit', 'delai_paiement',
-        'montant_rest_du', 'commercial_id', 'created_by',
+        'montant_rest_du', 'commercial_id', 'created_by', 'if_fiscal', 'patente', 'is_active',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class Client extends BaseModel
         'exempt_tva' => 'boolean',
         'plafond_credit' => 'decimal:2',
         'montant_rest_du' => 'decimal:2',
+        'is_active' => 'boolean',
     ];
 
     protected $appends = ['display_name'];

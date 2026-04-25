@@ -1,8 +1,9 @@
 <?php
 namespace App\Services;
 
-use App\Models\{Facture, LigneFacture, Devis, EtatDocument};
+use App\Models\{Facture, LigneFacture, Devis, EtatDocument, Contrat};
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * Service de facturation — gestion du cycle de vie des factures.
@@ -74,6 +75,61 @@ class FacturationService
     }
 
     /**
+     * Générer une facture à partir d'un contrat récurrent.
+     */
+    public function genererDepuisContrat(Contrat $contrat, ?string $dateFacture = null): Facture
+    {
+        return DB::transaction(function () use ($contrat, $dateFacture) {
+            $date = $dateFacture ?? $contrat->prochaine_echeance->toDateString();
+            
+            $etatBrouillon = EtatDocument::where('tenant_id', $contrat->tenant_id)
+                ->ofType('facture')->byCode('BRL')->first();
+
+            $facture = Facture::create([
+                'tenant_id'       => $contrat->tenant_id,
+                'numero'          => $this->numerotation->generer($contrat->tenant_id, 'FACTURE'),
+                'date_facture'    => $date,
+                'client_id'       => $contrat->client_id,
+                'total_ht'        => $contrat->total_ht,
+                'total_tva'       => $contrat->total_tva,
+                'total_ttc'       => $contrat->total_ttc,
+                'montant_restant' => $contrat->total_ttc,
+                'etat_id'         => $etatBrouillon?->id,
+                'observations'    => "Facturation récurrente pour : " . $contrat->titre,
+            ]);
+
+            foreach ($contrat->lignes as $ligne) {
+                LigneFacture::create([
+                    'facture_id'    => $facture->id,
+                    'produit_id'    => $ligne->produit_id,
+                    'designation'   => $ligne->designation,
+                    'quantite'      => $ligne->quantite,
+                    'prix_unitaire' => $ligne->prix_unitaire,
+                    'taux_tva'      => $ligne->taux_tva,
+                    'montant_ht'    => $ligne->montant_ht,
+                    'montant_tva'   => $ligne->montant_tva,
+                    'montant_ttc'   => $ligne->montant_ttc,
+                    'ordre'         => $ligne->ordre,
+                    'source_type'   => 'abonnement',
+                ]);
+            }
+
+            // Mise à jour de la prochaine échéance
+            $next = Carbon::parse($contrat->prochaine_echeance);
+            switch ($contrat->frequence) {
+                case 'MENSUEL':     $next->addMonth(); break;
+                case 'TRIMESTRIEL': $next->addMonths(3); break;
+                case 'SEMESTRIEL':  $next->addMonths(6); break;
+                case 'ANNUEL':      $next->addYear(); break;
+            }
+            
+            $contrat->update(['prochaine_echeance' => $next]);
+
+            return $facture;
+        });
+    }
+
+    /**
      * Ajouter une ligne manuellement à une facture.
      */
     public function ajouterLigne(Facture $facture, array $data): LigneFacture
@@ -88,6 +144,17 @@ class FacturationService
             
             return $ligne;
         });
+    }
+
+    /**
+     * Simuler les échéances de contrats pour une date donnée.
+     */
+    public function simulerEcheances(string $date): \Illuminate\Support\Collection
+    {
+        return Contrat::with(['client', 'lignes'])
+            ->where('statut', 'ACTIF')
+            ->whereDate('prochaine_echeance', '<=', $date)
+            ->get();
     }
 
     /**

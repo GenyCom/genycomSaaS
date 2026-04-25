@@ -10,14 +10,23 @@
         </h2>
       </div>
       <div>
-        <button class="btn btn-primary" @click="saveUser">
-          {{ isEdit ? 'Appliquer les modifications' : 'Créer l\'utilisateur' }}
+        <button class="btn btn-primary" @click="saveUser" :disabled="saving">
+          {{ saving ? 'Enregistrement...' : (isEdit ? 'Appliquer les modifications' : "Créer l'utilisateur") }}
         </button>
       </div>
     </div>
 
-    <div class="card max-w-3xl">
-      <h3 class="mb-3 text-warning">Informations du compte Central</h3>
+    <!-- Loading state for edit mode -->
+    <div v-if="loadingUser" class="card" style="text-align:center; padding:3rem;">
+      <p class="text-muted">Chargement des informations...</p>
+    </div>
+
+    <div v-else class="card max-w-3xl">
+      <h3 class="form-section-title">Informations du compte Central</h3>
+
+      <div v-if="formError" class="auth-error mb-3">{{ formError }}</div>
+      <div v-if="formSuccess" class="mb-3" style="padding:0.75rem; background:var(--success-bg); color:var(--success); border-radius:var(--radius);">{{ formSuccess }}</div>
+
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
         
         <div class="form-group">
@@ -37,21 +46,32 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Mot de passe {{ isEdit ? '(Optionnel)' : '' }}</label>
+          <label class="form-label">Mot de passe {{ isEdit ? '(laisser vide pour ne pas modifier)' : '' }}</label>
           <input v-model="form.password" type="password" class="form-input" placeholder="••••••••" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirmer le mot de passe</label>
+          <input v-model="form.password_confirmation" type="password" class="form-input" placeholder="••••••••" />
         </div>
 
         <div class="form-group">
           <label class="form-label">Privilège SuperAdmin</label>
           <select v-model="form.is_superadmin" class="form-input">
-            <option :value="false">OUI</option> <!-- Faking a visual boolean choice for the UI demo -->
             <option :value="false">NON - Simple Accès aux Bases Client</option>
             <option :value="true">OUI - Plein Accès au Portail SuperAdmin</option>
           </select>
         </div>
+
+        <div class="form-group">
+          <label class="form-label">Statut du compte</label>
+          <select v-model="form.is_active" class="form-input">
+            <option :value="true">Actif</option>
+            <option :value="false">Désactivé</option>
+          </select>
+        </div>
         
       </div>
-
     </div>
   </div>
 </template>
@@ -59,32 +79,75 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import api from '../../services/api'
 
 const route = useRoute()
 const router = useRouter()
 const isEdit = ref(false)
+const loadingUser = ref(false)
+const saving = ref(false)
+const formError = ref(null)
+const formSuccess = ref(null)
 
 const form = ref({
   nom: '',
   prenom: '',
   email: '',
   password: '',
-  is_superadmin: false
+  password_confirmation: '',
+  is_superadmin: false,
+  is_active: true,
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (route.params.id) {
     isEdit.value = true
-    // Simulation:
-    form.value.nom = 'GenyCom'
-    form.value.prenom = 'Admin'
-    form.value.email = 'admin@genycom.ma'
-    form.value.is_superadmin = false
+    loadingUser.value = true
+    try {
+      const { data } = await api.get(`/superadmin/users/${route.params.id}`)
+      form.value.nom = data.nom
+      form.value.prenom = data.prenom
+      form.value.email = data.email
+      form.value.is_superadmin = !!data.is_superadmin
+      form.value.is_active = data.is_active !== undefined ? !!data.is_active : true
+    } catch (err) {
+      formError.value = 'Impossible de charger cet utilisateur.'
+    } finally {
+      loadingUser.value = false
+    }
   }
 })
 
-function saveUser() {
-  alert('Requête POST/PUT envoyée à "/api/superadmin/users".')
-  router.push('/superadmin/users')
+async function saveUser() {
+  saving.value = true
+  formError.value = null
+  formSuccess.value = null
+
+  try {
+    const payload = { ...form.value }
+
+    // Ne pas envoyer le mot de passe s'il est vide (en mode édition)
+    if (!payload.password) {
+      delete payload.password
+      delete payload.password_confirmation
+    }
+
+    if (isEdit.value) {
+      await api.put(`/superadmin/users/${route.params.id}`, payload)
+      formSuccess.value = 'Utilisateur mis à jour avec succès.'
+    } else {
+      await api.post('/superadmin/users', payload)
+      router.push('/superadmin/users')
+    }
+  } catch (err) {
+    const errors = err.response?.data?.errors
+    if (errors) {
+      formError.value = Object.values(errors).flat().join(' ')
+    } else {
+      formError.value = err.response?.data?.message || "Erreur lors de l'enregistrement."
+    }
+  } finally {
+    saving.value = false
+  }
 }
 </script>

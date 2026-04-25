@@ -3,31 +3,37 @@ namespace App\Models;
 
 use App\Traits\BelongsToTenant;
 use App\Traits\HasAuditColumns;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Produit extends BaseModel
 {
-    use BelongsToTenant, HasAuditColumns;
+    use BelongsToTenant, HasAuditColumns, SoftDeletes;
 
     protected $table = 'produits';
 
     protected $fillable = [
         'tenant_id', 'famille_id', 'fournisseur_id', 'reference', 'reference_fournisseur',
-        'code_barre', 'designation', 'detail', 'unite', 'image_path',
+        'code_barre', 'marque', 'designation', 'detail', 'unite', 'image_path',
         'is_service', 'is_actif',
         'prix_ht_achat', 'taux_tva', 'prix_ttc_achat', 'prix_revient', 'desc_revient',
-        'prix_ht_vente', 'prix_ttc_vente',
+        'prix_ht_vente', 'marge_pourcentage', 'prix_ttc_vente',
         'stock_actuel', 'stock_initial', 'seuil_alerte', 'stock_min', 'stock_max',
-        'emplacement_stock', 'delai_appro', 'poids', 'dimensions', 'created_by',
+        'emplacement_stock', 'delai_appro', 'poids', 'dimensions',
+        'is_perissable', 'is_lot', 'garantie_mois', 'created_by',
     ];
 
     protected $casts = [
         'is_service' => 'boolean',
         'is_actif' => 'boolean',
+        'is_perissable' => 'boolean',
+        'is_lot' => 'boolean',
         'prix_ht_achat' => 'decimal:4',
         'prix_ttc_achat' => 'decimal:2',
         'prix_ht_vente' => 'decimal:4',
+        'marge_pourcentage' => 'decimal:2',
         'prix_ttc_vente' => 'decimal:2',
         'stock_actuel' => 'decimal:2',
+        'garantie_mois' => 'integer',
     ];
 
     // ─── Relations ───

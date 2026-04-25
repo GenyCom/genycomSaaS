@@ -5,6 +5,7 @@
 -- Entrepôts
 CREATE TABLE IF NOT EXISTS `entrepots` (
     `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`     BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `code`          VARCHAR(20) NOT NULL,
     `nom`           VARCHAR(100) NOT NULL,
     `adresse`       VARCHAR(500) NULL,
@@ -14,13 +15,13 @@ CREATE TABLE IF NOT EXISTS `entrepots` (
     `updated_at`    TIMESTAMP NULL,
     `deleted_at`    TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_code_entrepot` (`code`),
-    FOREIGN KEY (`responsable_id`) REFERENCES `users`(`id`)
+    UNIQUE KEY `uk_code_entrepot` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Stock
 CREATE TABLE IF NOT EXISTS `stocks` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `produit_id`        BIGINT UNSIGNED NOT NULL,
     `entrepot_id`       BIGINT UNSIGNED NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 0.00,
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `stocks` (
 -- Mouvements de stock
 CREATE TABLE IF NOT EXISTS `mouvements_stock` (
     `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`             BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `stock_id`              BIGINT UNSIGNED NOT NULL,
     `produit_id`            BIGINT UNSIGNED NOT NULL,
     `type_mouvement`        ENUM('entree_achat','sortie_vente','entree_retour','sortie_retour',
@@ -59,13 +61,13 @@ CREATE TABLE IF NOT EXISTS `mouvements_stock` (
     KEY `idx_produit` (`produit_id`),
     KEY `idx_date` (`created_at`),
     FOREIGN KEY (`stock_id`) REFERENCES `stocks`(`id`),
-    FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Inventaires
 CREATE TABLE IF NOT EXISTS `inventaires` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL,
     `code`              VARCHAR(50) NOT NULL,
     `date_inventaire`   DATE NOT NULL,
     `entrepot_id`       BIGINT UNSIGNED NULL,
@@ -78,9 +80,7 @@ CREATE TABLE IF NOT EXISTS `inventaires` (
     `updated_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_code_inv` (`code`),
-    FOREIGN KEY (`entrepot_id`) REFERENCES `entrepots`(`id`),
-    FOREIGN KEY (`valide_par`) REFERENCES `users`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`entrepot_id`) REFERENCES `entrepots`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `inventaire_lignes` (
@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS `alertes_stock` (
 -- Règlements unifiés
 CREATE TABLE IF NOT EXISTS `reglements` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `payable_type`      VARCHAR(100) NOT NULL,
     `payable_id`        BIGINT UNSIGNED NOT NULL,
     `date_reglement`    DATE NOT NULL,
@@ -131,8 +132,7 @@ CREATE TABLE IF NOT EXISTS `reglements` (
     `deleted_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     KEY `idx_payable` (`payable_type`, `payable_id`),
-    FOREIGN KEY (`mode_reglement_id`) REFERENCES `mode_reglement`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`mode_reglement_id`) REFERENCES `mode_reglement`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Échéancier
@@ -148,36 +148,24 @@ CREATE TABLE IF NOT EXISTS `echeancier` (
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    KEY `idx_echeancable` (`echeancable_type`, `echeancable_id`),
- REFERENCES `tenants`(`id`) ON DELETE CASCADE
+    KEY `idx_echeancable` (`echeancable_type`, `echeancable_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dépenses
-CREATE TABLE IF NOT EXISTS `categorie_depense` (
-    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `libelle`       VARCHAR(255) NOT NULL,
-    `detail`        VARCHAR(255) NULL,
-    `parent_id`     BIGINT UNSIGNED NULL,
-    `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at`    TIMESTAMP NULL,
-    `deleted_at`    TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`parent_id`) REFERENCES `categorie_depense`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+-- Dépenses (Frais de fonctionnement)
 CREATE TABLE IF NOT EXISTS `depenses` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `numero`            VARCHAR(100) NULL,
-    `description`       VARCHAR(255) NOT NULL,
-    `note`              LONGTEXT NULL,
-    `categorie_id`      BIGINT UNSIGNED NULL,
-    `paye_a`            VARCHAR(100) NULL,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `code`              VARCHAR(50) NULL,
+    `libelle`           VARCHAR(255) NOT NULL,
     `date_depense`      DATE NOT NULL,
     `montant`           DECIMAL(24,2) DEFAULT 0.00,
+    `categorie_id`      BIGINT UNSIGNED NULL,
     `etat_id`           BIGINT UNSIGNED NULL,
     `note_reglement`    LONGTEXT NULL,
     `is_recurrente`     TINYINT(1) DEFAULT 0,
     `frequence`         ENUM('mensuel','trimestriel','annuel') NULL,
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
@@ -185,7 +173,7 @@ CREATE TABLE IF NOT EXISTS `depenses` (
     PRIMARY KEY (`id`),
     FOREIGN KEY (`categorie_id`) REFERENCES `categorie_depense`(`id`),
     FOREIGN KEY (`etat_id`) REFERENCES `etat_document`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============ TRANSVERSAL ============
@@ -204,8 +192,7 @@ CREATE TABLE IF NOT EXISTS `fichiers` (
     `uploaded_by`       BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `idx_fileable` (`fileable_type`, `fileable_id`),
-    FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`)
+    KEY `idx_fileable` (`fileable_type`, `fileable_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Journal d'activité
@@ -237,8 +224,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`),
-    KEY `idx_notifiable` (`notifiable_type`, `notifiable_id`),
- REFERENCES `tenants`(`id`) ON DELETE CASCADE
+    KEY `idx_notifiable` (`notifiable_type`, `notifiable_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Import logs
@@ -257,7 +243,6 @@ CREATE TABLE IF NOT EXISTS `import_logs` (
     `document_type`     VARCHAR(100) NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

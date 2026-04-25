@@ -1127,6 +1127,49 @@ CREATE TABLE `lignes_avoir_fournisseur` (
     CONSTRAINT `fk_ligne_avoir_entete` FOREIGN KEY (`ID_AVOIR_FOURN`) REFERENCES `facture_avoir_fournisseur` (`ID_AVOIR_FOURN`)
 );
 
+-- ============================================================
+-- 7. GESTION DES ABONNEMENTS / CONTRATS RÉCURRENTS
+-- ============================================================
+
+DROP TABLE IF EXISTS `contrats`;
+CREATE TABLE `contrats` (
+    `id`                 int(11)         NOT NULL AUTO_INCREMENT,
+    `tenant_id`          int(11)         NOT NULL,
+    `client_id`          int(11)         NOT NULL,
+    `numero`             varchar(50)     DEFAULT NULL,
+    `titre`              varchar(255)    NOT NULL,
+    `date_debut`         date            NOT NULL,
+    `date_fin`           date            DEFAULT NULL,
+    `prochaine_echeance` date            NOT NULL,
+    `frequence`          varchar(20)     NOT NULL COMMENT 'MENSUEL, TRIMESTRIEL, SEMESTRIEL, ANNUEL',
+    `statut`             varchar(20)     NOT NULL DEFAULT 'ACTIF' COMMENT 'ACTIF, SUSPENDU, RESILIE',
+    `total_ht`           decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `total_tva`          decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `total_ttc`          decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `created_at`         timestamp       NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`         timestamp       NULL DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_contrat_tenant` (`tenant_id`),
+    KEY `idx_contrat_client` (`client_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `ligne_contrat`;
+CREATE TABLE `ligne_contrat` (
+    `id`                 int(11)         NOT NULL AUTO_INCREMENT,
+    `contrat_id`         int(11)         NOT NULL,
+    `produit_id`         int(11)         DEFAULT NULL,
+    `designation`        varchar(255)    NOT NULL,
+    `quantite`           decimal(24,2)   NOT NULL DEFAULT '1.00',
+    `prix_unitaire`      decimal(24,4)   NOT NULL DEFAULT '0.0000',
+    `taux_tva`           decimal(5,3)    NOT NULL DEFAULT '20.000',
+    `montant_ht`         decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `montant_tva`        decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `montant_ttc`        decimal(24,2)   NOT NULL DEFAULT '0.00',
+    `ordre`              int(11)         DEFAULT '0',
+    PRIMARY KEY (`id`),
+    CONSTRAINT `fk_ligne_contrat_parent` FOREIGN KEY (`contrat_id`) REFERENCES `contrats` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 ##
 CREATE TRIGGER `%1`.`TR_DEVIS`
 	AFTER INSERT ON `%1`.`bonlivraison`

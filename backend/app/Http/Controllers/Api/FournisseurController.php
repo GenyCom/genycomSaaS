@@ -2,21 +2,30 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreFournisseurRequest;
+use App\Http\Requests\UpdateFournisseurRequest;
 use App\Models\Fournisseur;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class FournisseurController extends Controller
 {
+    /**
+     * Liste paginée des fournisseurs avec eager loading et recherche.
+     */
     public function index(Request $request): JsonResponse
     {
+        $allowedSorts = ['societe', 'code_fournisseur', 'email', 'ville', 'nom', 'created_at'];
+        $sortBy = in_array($request->sort_by, $allowedSorts) ? $request->sort_by : 'societe';
+        $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
+
         $query = Fournisseur::with(['typeFournisseur'])
             ->when($request->search, fn($q, $v) => $q->where(function($sq) use ($v) {
                 $sq->where('code_fournisseur', 'like', "%{$v}%")
                    ->orWhere('societe', 'like', "%{$v}%")
                    ->orWhere('email', 'like', "%{$v}%");
             }))
-            ->orderBy($request->sort_by ?? 'societe', $request->sort_dir ?? 'asc');
+            ->orderBy($sortBy, $sortDir);
 
         $fournisseurs = $request->per_page 
             ? $query->paginate($request->per_page) 
@@ -25,64 +34,56 @@ class FournisseurController extends Controller
         return response()->json($fournisseurs);
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Création sécurisée d'un fournisseur.
+     */
+    public function store(StoreFournisseurRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'societe'               => 'required|string|max:255',
-            'code_fournisseur'      => 'nullable|string|max:50',
-            'is_personne_physique'  => 'boolean',
-            'nom'                   => 'nullable|string|max:100',
-            'prenom'                => 'nullable|string|max:100',
-            'ice'                   => 'nullable|string|max:100',
-            'adresse'               => 'nullable|string|max:500',
-            'ville'                 => 'nullable|string|max:100',
-            'code_postal'           => 'nullable|string|max:20',
-            'pays'                  => 'nullable|string|max:100',
-            'telephone'             => 'nullable|string|max:20',
-            'mobile'                => 'nullable|string|max:20',
-            'email'                 => 'nullable|email|max:255',
-            'observations'          => 'nullable|string',
-            'type_fournisseur_id'   => 'nullable|exists:type_fournisseur,id',
-            'delai_livraison_jour'  => 'nullable|integer|min:0',
-        ]);
+        $this->authorize('create', Fournisseur::class);
 
-        $fournisseur = Fournisseur::create($data);
+        $fournisseur = Fournisseur::create($request->validated());
         return response()->json($fournisseur->load('typeFournisseur'), 201);
     }
 
-    public function show(Fournisseur $fournisseur): JsonResponse
+    /**
+     * Récupération d'un fournisseur avec ses relations.
+     */
+    public function show(int $id): JsonResponse
     {
-        return response()->json($fournisseur->load(['typeFournisseur', 'contacts']));
+        $fournisseur = Fournisseur::with(['typeFournisseur', 'contacts'])->findOrFail($id);
+        return response()->json($fournisseur);
     }
 
-    public function update(Request $request, Fournisseur $fournisseur): JsonResponse
+    /**
+     * Mise à jour sécurisée d'un fournisseur.
+     */
+    public function update(UpdateFournisseurRequest $request, int $id): JsonResponse
     {
-        $data = $request->validate([
-            'societe'               => 'sometimes|string|max:255',
-            'code_fournisseur'      => 'nullable|string|max:50',
-            'is_personne_physique'  => 'boolean',
-            'nom'                   => 'nullable|string|max:100',
-            'prenom'                => 'nullable|string|max:100',
-            'ice'                   => 'nullable|string|max:100',
-            'adresse'               => 'nullable|string|max:500',
-            'ville'                 => 'nullable|string|max:100',
-            'code_postal'           => 'nullable|string|max:20',
-            'pays'                  => 'nullable|string|max:100',
-            'telephone'             => 'nullable|string|max:20',
-            'mobile'                => 'nullable|string|max:20',
-            'email'                 => 'nullable|email|max:255',
-            'observations'          => 'nullable|string',
-            'type_fournisseur_id'   => 'nullable|exists:type_fournisseur,id',
-            'delai_livraison_jour'  => 'nullable|integer|min:0',
-        ]);
+        $fournisseur = Fournisseur::findOrFail($id);
+        $this->authorize('update', $fournisseur);
 
-        $fournisseur->update($data);
+        $fournisseur->update($request->validated());
         return response()->json($fournisseur->fresh('typeFournisseur'));
     }
 
-    public function destroy(Fournisseur $fournisseur): JsonResponse
+    /**
+     * Suppression avec gestion des contraintes d'intégrité.
+     */
+    public function destroy(int $id): JsonResponse
     {
-        $fournisseur->delete();
-        return response()->json(['message' => 'Fournisseur supprimé']);
+        $fournisseur = Fournisseur::findOrFail($id);
+        $this->authorize('delete', $fournisseur);
+
+        try {
+            $fournisseur->delete();
+            return response()->json(['message' => 'Fournisseur supprimé']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Impossible de supprimer ce fournisseur : des enregistrements liés existent (commandes, produits...).'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 }

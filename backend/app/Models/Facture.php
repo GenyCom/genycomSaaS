@@ -12,29 +12,32 @@ class Facture extends BaseModel
 
     protected $fillable = [
         'tenant_id', 'numero', 'date_facture', 'date_echeance',
-        'client_id', 'projet_id', 'devis_id',
+        'client_id', 'projet_id', 'devis_id', 'bon_commande_client_id',
         'total_ht', 'total_tva', 'total_ttc', 'total_remise',
         'montant_regle', 'montant_restant',
         'etat_id', 'condition_reglement_id', 'mode_reglement_id',
-        'est_reglee', 'date_reglement', 'observations', 'devise_id', 'created_by',
+        'est_reglee', 'date_reglement', 'observations', 'devise_id', 'taux_change_document', 'created_by',
     ];
 
     protected $casts = [
-        'date_facture' => 'date',
-        'date_echeance' => 'date',
-        'date_reglement' => 'date',
+        'date_facture' => 'date:Y-m-d',
+        'date_echeance' => 'date:Y-m-d',
+        'date_reglement' => 'date:Y-m-d',
         'est_reglee' => 'boolean',
         'total_ht' => 'decimal:2',
         'total_tva' => 'decimal:2',
         'total_ttc' => 'decimal:2',
         'montant_regle' => 'decimal:2',
         'montant_restant' => 'decimal:2',
+        'taux_change_document' => 'decimal:6',
     ];
 
     // ─── Relations ───
     public function client()            { return $this->belongsTo(Client::class); }
     public function projet()            { return $this->belongsTo(Projet::class); }
+    public function devise()            { return $this->belongsTo(Devise::class); }
     public function devis()             { return $this->belongsTo(Devis::class); }
+    public function bonCommande()       { return $this->belongsTo(BonCommandeClient::class, 'bon_commande_client_id'); }
     public function etat()              { return $this->belongsTo(EtatDocument::class, 'etat_id'); }
     public function conditionReglement(){ return $this->belongsTo(ConditionReglement::class); }
     public function modeReglement()     { return $this->belongsTo(ModeReglement::class); }
@@ -42,7 +45,15 @@ class Facture extends BaseModel
     public function reglements()        { return $this->morphMany(Reglement::class, 'payable'); }
     public function echeances()         { return $this->morphMany(Echeance::class, 'echeancable'); }
     public function avoirs()            { return $this->hasMany(AvoirClient::class); }
+    public function bonLivraison()      { return $this->hasOne(BonLivraison::class); }
     public function createur()          { return $this->belongsTo(User::class, 'created_by'); }
+
+    protected $appends = ['has_bl'];
+
+    public function getHasBlAttribute(): bool
+    {
+        return $this->bonLivraison()->exists();
+    }
 
     // ─── Méthodes ───
     public function recalculerTotaux(): self

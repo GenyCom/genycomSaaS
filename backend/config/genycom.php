@@ -100,4 +100,19 @@ return [
         ]],
         ['libelle' => 'Autres', 'enfants' => []],
     ],
+    // ─── Monitoring & Alerting ───────────────────────────────────
+    'monitoring' => [
+        // Activer/Désactiver l'envoi des rapports d'exceptions
+        'enabled' => env('EXCEPTION_MAIL_ENABLED', true),
+
+        // Adresse email du destinataire des rapports
+        'recipient_email' => env('EXCEPTION_MAIL_TO', 'genycomc@gmail.com'),
+
+        // Cooldown anti-spam : délai minimum (en minutes) entre deux envois
+        // pour la même erreur (même classe + message + fichier + ligne)
+        'cooldown_minutes' => env('EXCEPTION_MAIL_COOLDOWN', 15),
+
+        // Nom de la queue dédiée au monitoring (séparée de la queue par défaut)
+        'queue_name' => env('EXCEPTION_MAIL_QUEUE', 'monitoring'),
+    ],
 ];

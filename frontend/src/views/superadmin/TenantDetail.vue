@@ -28,7 +28,7 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
       <div class="card">
-        <h3 class="mb-2 text-warning" style="font-size:1rem; font-weight:600;">Configuration Infra</h3>
+        <h3 class="form-section-title">Configuration Infra</h3>
         <ul style="list-style:none; line-height: 2;">
            <li><span class="text-muted">ID & Raison Sociale :</span> GenyCom Demo SARL</li>
            <li><span class="text-muted">Domaine Isolé :</span> <a href="#" style="color:var(--info);">demo.genycom.ma</a></li>
@@ -37,12 +37,12 @@
         </ul>
         <div class="mt-3 flex gap-2">
            <button class="btn btn-secondary">Suspendre l'instance</button>
-           <button class="btn btn-secondary text-danger" style="border-color:rgba(239, 68, 68, 0.3);">Détruire</button>
+           <button class="btn btn-secondary text-danger">Détruire</button>
         </div>
       </div>
 
       <div class="card">
-        <h3 class="mb-2 text-warning" style="font-size:1rem; font-weight:600;">Utilisateurs rattachés</h3>
+        <h3 class="form-section-title">Utilisateurs rattachés</h3>
         <table class="data-table">
           <thead>
             <tr>

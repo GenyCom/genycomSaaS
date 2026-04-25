@@ -30,35 +30,10 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('genycom_user', JSON.stringify(data.user))
         return data
       } catch (err) {
-        console.warn("Backend non détecté. Activation du Mode Démo.")
-        let demoUser = {};
-        
-        // --- DETECTION DU SUPERADMIN ---
-        if (email === 'genycomc@gmail.com') {
-          demoUser = {
-            id: 99, nom: 'Geny', prenom: 'Com', full_name: 'Geny Com',
-            email: email, is_owner: true, is_superadmin: true,
-            roles: ['superadmin'], permissions: [],
-            entreprise: { raison_sociale: 'GenyCom System' }
-          };
-        } else {
-          // --- DETECTION UTILISATEUR NORMAL ---
-          demoUser = {
-            id: 1, nom: 'Admin', prenom: 'GenyCom', full_name: 'GenyCom Admin',
-            email: email, is_owner: true, is_superadmin: false,
-            roles: ['admin'], permissions: ['dashboard.view'],
-            tenant: { id: 1, nom: 'Ma Société SARL', slug: 'ma-societe', database_name: 'genycom_client_demo', plan: 'pro' },
-            entreprise: { raison_sociale: 'Ma Société SARL' }
-          };
-        }
-
-        const demoToken = 'demo-token-' + Math.random();
-        
-        this.token = demoToken;
-        this.user = demoUser;
-        localStorage.setItem('genycom_token', demoToken);
-        localStorage.setItem('genycom_user', JSON.stringify(demoUser));
-        return { user: demoUser, token: demoToken };
+        this.error = err.response?.data?.errors?.email?.[0] 
+                     || err.response?.data?.message 
+                     || "Identifiants incorrects ou serveur inaccessible"
+        throw err
       } finally {
         this.loading = false
       }
@@ -104,5 +79,17 @@ export const useAuthStore = defineStore('auth', {
         this.logout()
       }
     },
+
+    setUser(newUser) {
+      this.user = newUser
+      localStorage.setItem('genycom_user', JSON.stringify(newUser))
+    },
+
+    setEntrepriseInfo(entrepriseData) {
+      if (this.user) {
+        this.user.entreprise = entrepriseData
+        localStorage.setItem('genycom_user', JSON.stringify(this.user))
+      }
+    }
   },
 })

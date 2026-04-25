@@ -11,7 +11,8 @@ trait HasLigneCalculs
      */
     public function recalculer(): self
     {
-        $sousTotal = $this->quantite * $this->prix_unitaire;
+        $qty = $this->quantite ?? $this->quantite_livree ?? 0;
+        $sousTotal = $qty * $this->prix_unitaire;
         
         // Appliquer la remise
         if ($this->remise_pourcent > 0) {

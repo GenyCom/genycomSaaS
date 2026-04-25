@@ -1,0 +1,196 @@
+-- ============================================================
+-- GenyCom Web SaaS — REFORME CYCLE ACHAT
+-- Architecture : BCF -> BR -> Factures Achats -> Paiements
+-- ============================================================
+
+-- 1. Bons de Commande Fournisseur (BCF)
+CREATE TABLE IF NOT EXISTS `bcf` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `numero`            VARCHAR(150) UNIQUE NOT NULL,
+    `date_commande`     DATE NOT NULL,
+    `date_livraison_prevue` DATE NULL,
+    `fournisseur_id`    BIGINT UNSIGNED NOT NULL,
+    `total_ht`          DECIMAL(24,2) DEFAULT 0.00,
+    `total_tva`         DECIMAL(24,2) DEFAULT 0.00,
+    `total_ttc`         DECIMAL(24,2) DEFAULT 0.00,
+    `statut`            ENUM('brouillon', 'valide', 'reception_partielle', 'clos', 'annule') DEFAULT 'brouillon',
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
+    `observations`      LONGTEXT NULL,
+    `created_by`        BIGINT UNSIGNED NULL,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at`        TIMESTAMP NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`fournisseur_id`) REFERENCES `fournisseurs`(`id`),
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `bcf_lignes` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `bcf_id`            BIGINT UNSIGNED NOT NULL,
+    `produit_id`        BIGINT UNSIGNED NULL,
+    `designation`       VARCHAR(255) NOT NULL,
+    `quantite`          DECIMAL(24,2) DEFAULT 1.00,
+    `prix_unitaire`     DECIMAL(24,2) DEFAULT 0.00,
+    `taux_tva`          DECIMAL(5,3) DEFAULT 0.000,
+    `montant_ht`        DECIMAL(24,2) DEFAULT 0.00,
+    `montant_tva`       DECIMAL(24,2) DEFAULT 0.00,
+    `montant_ttc`       DECIMAL(24,2) DEFAULT 0.00,
+    `ordre`             SMALLINT DEFAULT 0,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`bcf_id`) REFERENCES `bcf`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. Bons de Réception (BR)
+CREATE TABLE IF NOT EXISTS `br` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `bcf_id`            BIGINT UNSIGNED NULL, -- Optionnel si réception directe
+    `numero`            VARCHAR(150) UNIQUE NOT NULL,
+    `date_reception`    DATE NOT NULL,
+    `fournisseur_id`    BIGINT UNSIGNED NOT NULL,
+    `statut`            ENUM('brouillon', 'valide', 'annule') DEFAULT 'brouillon',
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
+    `observations`      LONGTEXT NULL,
+    `created_by`        BIGINT UNSIGNED NULL,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`bcf_id`) REFERENCES `bcf`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`fournisseur_id`) REFERENCES `fournisseurs`(`id`),
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `br_lignes` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `br_id`             BIGINT UNSIGNED NOT NULL,
+    `produit_id`        BIGINT UNSIGNED NULL,
+    `designation` TEXT NOT NULL,
+    `quantite_commandee` DECIMAL(24,2) DEFAULT 0.00,
+    `quantite_recue`    DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `prix_unitaire`     DECIMAL(24,4) DEFAULT 0.00,
+    `ordre`             SMALLINT DEFAULT 0,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`br_id`) REFERENCES `br`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Factures d'Achat (Le socle financier / Dette)
+CREATE TABLE IF NOT EXISTS `factures_achats` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+	`deleted_at`        TIMESTAMP NULL,
+    `numero`            VARCHAR(150) UNIQUE NOT NULL,
+    `fournisseur_id`    BIGINT UNSIGNED NOT NULL,
+    `date_facture`      DATE NOT NULL,
+    `date_echeance`     DATE NULL,
+    `montant_ht`        DECIMAL(24,2) DEFAULT 0.00,
+    `montant_tva`       DECIMAL(24,2) DEFAULT 0.00,
+    `montant_ttc`       DECIMAL(24,2) DEFAULT 0.00,
+    `montant_paye`      DECIMAL(24,2) DEFAULT 0.00,
+    `reste_a_payer`     DECIMAL(24,2) DEFAULT 0.00,
+    `statut`            ENUM('brouillon', 'valide', 'paye', 'partiellement_paye', 'annule') DEFAULT 'brouillon',
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
+    `observations`      LONGTEXT NULL,
+    `created_by`        BIGINT UNSIGNED NULL,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`fournisseur_id`) REFERENCES `fournisseurs`(`id`),
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `facture_achat_lignes` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `facture_achat_id`  BIGINT UNSIGNED NOT NULL,
+    `produit_id`        BIGINT UNSIGNED NULL,
+    `designation` TEXT NOT NULL,
+    `quantite`          DECIMAL(24,2) NOT NULL DEFAULT 1.00,
+    `prix_unitaire`     DECIMAL(24,4) NOT NULL DEFAULT 0.00,
+    `taux_tva`          DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    `montant_ht`        DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `montant_tva`       DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `montant_ttc`       DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `ordre`             SMALLINT DEFAULT 0,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`facture_achat_id`) REFERENCES `factures_achats`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Liaison Facture <-> BR (Plusieurs BR par Facture)
+CREATE TABLE IF NOT EXISTS `br_facture` (
+    `br_id`             BIGINT UNSIGNED NOT NULL,
+    `facture_achat_id`  BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (`br_id`, `facture_achat_id`),
+    FOREIGN KEY (`br_id`) REFERENCES `br`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`facture_achat_id`) REFERENCES `factures_achats`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Paiements Fournisseurs
+CREATE TABLE IF NOT EXISTS `paiements_fournisseurs` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `facture_achat_id`  BIGINT UNSIGNED NOT NULL,
+    `date_paiement`     DATE NOT NULL,
+    `montant`           DECIMAL(24,2) NOT NULL,
+    `mode_paiement`     VARCHAR(100) NULL, -- Par ex: Virement, Chèque, Espèces
+    `reference`         VARCHAR(255) NULL,
+    `observations`      LONGTEXT NULL,
+    `created_by`        BIGINT UNSIGNED NULL,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`facture_achat_id`) REFERENCES `factures_achats`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. Avoirs Achats (Credit Notes)
+CREATE TABLE IF NOT EXISTS `avoirs_achats` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `numero`            VARCHAR(150) UNIQUE NOT NULL,
+    `fournisseur_id`    BIGINT UNSIGNED NOT NULL,
+    `facture_achat_id`  BIGINT UNSIGNED NULL,
+    `date_avoir`        DATE NOT NULL,
+    `motif`             TEXT NULL,
+    `montant_ht`        DECIMAL(24,2) DEFAULT 0.00,
+    `montant_tva`       DECIMAL(24,2) DEFAULT 0.00,
+    `montant_ttc`       DECIMAL(24,2) DEFAULT 0.00,
+    `statut`            ENUM('brouillon', 'valide', 'utilise', 'annule') DEFAULT 'brouillon',
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
+    `created_by`        BIGINT UNSIGNED NULL,
+    `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`fournisseur_id`) REFERENCES `fournisseurs`(`id`),
+    FOREIGN KEY (`facture_achat_id`) REFERENCES `factures_achats`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `avoir_achat_lignes` (
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
+    `avoir_achat_id`    BIGINT UNSIGNED NOT NULL,
+    `produit_id`        BIGINT UNSIGNED NULL,
+    `designation`       TEXT NOT NULL,
+    `quantite`          DECIMAL(24,2) NOT NULL DEFAULT 1.00,
+    `prix_unitaire`     DECIMAL(24,4) NOT NULL DEFAULT 0.00,
+    `taux_tva`          DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    `montant_ht`        DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `montant_tva`       DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `montant_ttc`       DECIMAL(24,2) NOT NULL DEFAULT 0.00,
+    `ordre`             SMALLINT DEFAULT 0,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`avoir_achat_id`) REFERENCES `avoirs_achats`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE INDEX idx_factures_tenant_date ON factures(tenant_id, deleted_at, date_facture);
+CREATE INDEX idx_achats_tenant_reste ON factures_achats(tenant_id, deleted_at, reste_a_payer);

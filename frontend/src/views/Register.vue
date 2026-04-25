@@ -68,7 +68,7 @@ const form = reactive({
 async function handleRegister() {
   try {
     await auth.register(form)
-    router.push('/')
+    router.push('/dashboard')
   } catch {}
 }
 </script>

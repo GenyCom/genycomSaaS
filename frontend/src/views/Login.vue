@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
-          <div class="auth-logo">G</div>
+          <img src="/logo.png" alt="GenyCom Logo" style="height: 64px; object-fit: contain; margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto;" onerror="this.outerHTML='<div class=\'auth-logo\'>G</div>'" />
           <h1>Geny<span style="color: var(--accent)">Com</span></h1>
           <p>Connectez-vous à votre espace</p>
         </div>
@@ -44,6 +44,12 @@ const auth = useAuthStore()
 const form = reactive({ email: '', password: '' })
 
 onMounted(() => {
+  // Always clear any existing session when landing on the login page
+  auth.token = null
+  auth.user = null
+  localStorage.removeItem('genycom_token')
+  localStorage.removeItem('genycom_user')
+
   const lastEmail = localStorage.getItem('genycom_last_email')
   if (lastEmail) {
     form.email = lastEmail
@@ -57,7 +63,7 @@ async function handleLogin() {
     if (auth.user?.is_superadmin) {
       router.push('/superadmin')
     } else {
-      router.push('/')
+      router.push('/dashboard')
     }
   } catch {}
 }

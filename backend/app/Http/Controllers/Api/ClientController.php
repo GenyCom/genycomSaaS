@@ -2,18 +2,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreClientRequest;
+use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ClientController extends Controller
 {
+    /**
+     * Liste paginée des clients avec eager loading et recherche.
+     */
     public function index(Request $request): JsonResponse
     {
+        $allowedSorts = ['societe', 'code_client', 'email', 'ville', 'nom', 'created_at'];
+        $sortBy = in_array($request->sort_by, $allowedSorts) ? $request->sort_by : 'societe';
+        $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
+
         $query = Client::with(['typeClient', 'commercial:id,nom,prenom'])
             ->search($request->search)
             ->when($request->type_client_id, fn($q, $v) => $q->where('type_client_id', $v))
-            ->orderBy($request->sort_by ?? 'societe', $request->sort_dir ?? 'asc');
+            ->orderBy($sortBy, $sortDir);
 
         $clients = $request->per_page 
             ? $query->paginate($request->per_page) 
@@ -22,72 +31,56 @@ class ClientController extends Controller
         return response()->json($clients);
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Création sécurisée d'un client.
+     */
+    public function store(StoreClientRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'societe'               => 'required|string|max:255',
-            'code_client'           => 'nullable|string|max:50',
-            'is_personne_physique'  => 'boolean',
-            'civilite'              => 'nullable|string|max:10',
-            'nom'                   => 'nullable|string|max:100',
-            'prenom'                => 'nullable|string|max:100',
-            'ice'                   => 'nullable|string|max:100',
-            'adresse'               => 'nullable|string|max:500',
-            'ville'                 => 'nullable|string|max:100',
-            'code_postal'           => 'nullable|string|max:20',
-            'pays'                  => 'nullable|string|max:100',
-            'telephone'             => 'nullable|string|max:20',
-            'mobile'                => 'nullable|string|max:20',
-            'email'                 => 'nullable|email|max:255',
-            'observations'          => 'nullable|string',
-            'exempt_tva'            => 'boolean',
-            'type_client_id'        => 'nullable|exists:type_client,id',
-            'plafond_credit'        => 'nullable|numeric|min:0',
-            'delai_paiement'        => 'nullable|integer|min:0',
-        ]);
+        $this->authorize('create', Client::class);
 
-        $client = Client::create($data);
+        $client = Client::create($request->validated());
         return response()->json($client->load('typeClient'), 201);
     }
 
-    public function show(Client $client): JsonResponse
+    /**
+     * Récupération d'un client avec ses relations.
+     */
+    public function show(int $id): JsonResponse
     {
-        return response()->json(
-            $client->load(['typeClient', 'contacts', 'adressesLivraison', 'adressesFacturation', 'commercial:id,nom,prenom'])
-        );
+        $client = Client::with(['typeClient', 'commercial:id,nom,prenom', 'contacts'])->findOrFail($id);
+        return response()->json($client);
     }
 
-    public function update(Request $request, Client $client): JsonResponse
+    /**
+     * Mise à jour sécurisée d'un client.
+     */
+    public function update(UpdateClientRequest $request, int $id): JsonResponse
     {
-        $data = $request->validate([
-            'societe'               => 'sometimes|string|max:255',
-            'code_client'           => 'nullable|string|max:50',
-            'is_personne_physique'  => 'boolean',
-            'civilite'              => 'nullable|string|max:10',
-            'nom'                   => 'nullable|string|max:100',
-            'prenom'                => 'nullable|string|max:100',
-            'ice'                   => 'nullable|string|max:100',
-            'adresse'               => 'nullable|string|max:500',
-            'ville'                 => 'nullable|string|max:100',
-            'code_postal'           => 'nullable|string|max:20',
-            'pays'                  => 'nullable|string|max:100',
-            'telephone'             => 'nullable|string|max:20',
-            'mobile'                => 'nullable|string|max:20',
-            'email'                 => 'nullable|email|max:255',
-            'observations'          => 'nullable|string',
-            'exempt_tva'            => 'boolean',
-            'type_client_id'        => 'nullable|exists:type_client,id',
-            'plafond_credit'        => 'nullable|numeric|min:0',
-            'delai_paiement'        => 'nullable|integer|min:0',
-        ]);
+        $client = Client::findOrFail($id);
+        $this->authorize('update', $client);
 
-        $client->update($data);
+        $client->update($request->validated());
         return response()->json($client->fresh('typeClient'));
     }
 
-    public function destroy(Client $client): JsonResponse
+    /**
+     * Suppression avec gestion des contraintes d'intégrité.
+     */
+    public function destroy(int $id): JsonResponse
     {
-        $client->delete();
-        return response()->json(['message' => 'Client supprimé']);
+        $client = Client::findOrFail($id);
+        $this->authorize('delete', $client);
+
+        try {
+            $client->delete();
+            return response()->json(['message' => 'Client supprimé']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Impossible de supprimer ce client : des enregistrements liés existent (factures, devis, projets...).'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 }

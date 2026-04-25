@@ -13,5 +13,11 @@ trait HasAuditColumns
                 $model->created_by = $model->created_by ?? auth()->id();
             }
         });
+
+        static::updating(function ($model) {
+            if (auth()->check() && in_array('updated_by', $model->getFillable())) {
+                $model->updated_by = auth()->id();
+            }
+        });
     }
 }

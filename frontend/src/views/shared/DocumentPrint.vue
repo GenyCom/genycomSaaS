@@ -1,45 +1,66 @@
 <template>
   <div class="print-layout">
-    <!-- Floating actions (hidden on print) -->
     <div class="no-print print-actions">
-      <button class="btn btn-primary" @click="doPrint">
+      <button class="btn btn-primary" @click="doPrint" :disabled="loading">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Imprimer / Sauvegarder PDF
       </button>
       <button class="btn btn-secondary" @click="closeWindow">Fermer</button>
     </div>
 
-    <!-- A4 Page Container -->
-    <div class="page-a4">
+    <div v-if="loading" class="loading-state">
+       <div class="spinner"></div>
+       <p>Chargement du document en cours...</p>
+    </div>
+
+    <div v-else-if="error" class="error-state">
+       <div class="error-card">
+          <h3>Erreur de chargement</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn btn-secondary" @click="closeWindow">Fermer</button>
+       </div>
+    </div>
+
+    <div v-else class="page-a4">
       
-      <!-- Document Header -->
       <header class="doc-header">
          <div class="company-logo">
-           <h1>GenyCom</h1>
-           <p class="company-details">Solutions Informatiques & Digitales<br/>123 Avenue Hasan II, Casablanca<br/>contact@genycom.ma | +212 5 22 00 00 00</p>
+           <img v-if="entreprises.logo_path" :src="entreprises.logo_path" alt="Logo" class="print-logo" />
+           <h1 v-else>{{ entreprises.raison_sociale || 'GenyCom' }}</h1>
+           <p class="company-details">
+             <strong>{{ entreprises.raison_sociale || 'GenyCom SaaS' }}</strong><br/>
+             {{ entreprises.forme_juridique || '' }}<br/>
+             {{ entreprises.adresse || 'Adresse Entreprise' }}<br/>
+             {{ entreprises.code_postal || '' }} {{ entreprises.ville || '' }}<br/>
+             {{ entreprises.email || '' }} | {{ entreprises.telephone || '' }}
+           </p>
          </div>
          <div class="doc-meta">
            <h2 class="doc-title">{{ docTitle }}</h2>
            <div class="meta-row"><span class="meta-label">Numéro</span><span class="meta-value font-mono">{{ docNumero }}</span></div>
            <div class="meta-row"><span class="meta-label">Date</span><span class="meta-value">{{ docDate }}</span></div>
+           <div class="meta-row" v-if="docStatut"><span class="meta-label">État</span><span class="meta-value" :style="{color: docStatut.couleur || '#2563eb'}">{{ docStatut.libelle }}</span></div>
          </div>
       </header>
 
-      <!-- Parties (From / To) -->
       <div class="parties-section">
          <div class="party-box from-box">
             <h4>Émetteur</h4>
-            <strong>GenyCom SARL</strong>
-            <p>123 Avenue Hasan II<br/>20000 Casablanca, Maroc<br/>ICE: 001234567000089</p>
+            <strong>{{ entreprises.raison_sociale || 'GenyCom' }}</strong>
+            <p>
+              {{ entreprises.adresse || '---' }}<br/>
+              {{ entreprises.code_postal || '' }} {{ entreprises.ville || '' }}<br/>
+              ICE: {{ entreprises.ice || '---' }}
+            </p>
          </div>
          <div class="party-box to-box">
             <h4>À l'attention de</h4>
-            <strong>{{ clientName }}</strong>
-            <p>{{ clientAddress }}</p>
+            <strong>{{ clientName || 'Client Inconnu' }}</strong>
+            <p v-if="clientAddress">{{ clientAddress }}</p>
+            <p v-else>Adresse non renseignée</p>
          </div>
       </div>
 
-      <!-- Items Table -->
       <div class="items-section">
          <table class="doc-table">
             <thead>
@@ -54,37 +75,51 @@
             <tbody>
                <tr v-for="(item, idx) in lignes" :key="idx">
                  <td style="font-weight: 500;">{{ item.designation }}</td>
-                 <td style="text-align:right">{{ item.quantite }}</td>
+                 <td style="text-align:right">{{ item.quantite }} {{ item.unite || '' }}</td>
                  <td style="text-align:right">{{ formatMoney(item.prix_unitaire) }}</td>
-                 <td style="text-align:right">{{ item.taux_tva }}%</td>
-                 <td style="text-align:right; font-weight: 600;">{{ formatMoney(item.prix_unitaire * item.quantite) }}</td>
+                 <td style="text-align:right">{{ parseFloat(item.taux_tva || 20).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}%</td>
+                 <td style="text-align:right; font-weight: 600;">{{ formatMoney(item.montant_ht || (item.prix_unitaire * item.quantite)) }}</td>
                </tr>
                <tr v-if="lignes.length === 0">
-                 <td colspan="5" style="text-align:center; color:#888;">Aucune ligne facturable.</td>
+                 <td colspan="5" style="text-align:center; padding: 2rem; color:#888;">Aucun article sur ce document.</td>
                </tr>
             </tbody>
          </table>
       </div>
 
-      <!-- Totals -->
       <div class="doc-totals">
          <div class="totals-box">
-            <div class="total-row"><span class="total-label">Total HT</span><span>{{ formatMoney(totalHT) }}</span></div>
-            <div class="total-row"><span class="total-label">TVA (20%)</span><span>{{ formatMoney(totalTVA) }}</span></div>
-            <div class="total-row grand-total"><span class="total-label">Total TTC</span><span>{{ formatMoney(totalTTC) }}</span></div>
+            <div class="total-row"><span class="total-label">Total HT</span><span>{{ formatMoney(totalHT) }} DH</span></div>
+            <div class="total-row"><span class="total-label">Total TVA</span><span>{{ formatMoney(totalTVA) }} DH</span></div>
+            <div class="total-row grand-total"><span class="total-label">Total TTC</span><span>{{ formatMoney(totalTTC) }} DH</span></div>
+            
+            <template v-if="isFacture">
+              <div class="total-row" style="margin-top: 0.5rem; color: #059669;">
+                <span class="total-label">Montant Payé</span>
+                <span>{{ formatMoney(montantPaye) }} DH</span>
+              </div>
+              <div class="total-row" style="font-size: 0.9rem; font-weight: 800; color: #dc2626; border-top: 1px dashed #e5e7eb; padding-top: 0.5rem;">
+                <span class="total-label">Reste à Payer</span>
+                <span>{{ formatMoney(resteAPayer) }} DH</span>
+              </div>
+            </template>
+
          </div>
       </div>
 
-      <!-- Remarks & Footer -->
       <div class="doc-footer">
+         <p class="remarks" v-if="observations">
+           <strong>Notes :</strong><br/>
+           {{ observations }}
+         </p>
          <p class="remarks">
-           <strong>Conditions de paiement : </strong> {{ type === 'devis' ? 'Ce devis est valable 30 jours à compter de sa date d\'émission.' : 'Paiement à réception de facture par virement bancaire.' }}<br/>
-           <strong>Coordonnées bancaires : </strong> Banque Populaire - RIB 000 000 0000 0000 0000 0000 00<br/>
+           <strong>Conditions : </strong> {{ type === 'devis' ? 'Ce devis est valable 30 jours.' : 'Paiement selon conditions en vigueur.' }}<br/>
+           <span v-if="entreprises.rib"><strong>Banque : </strong> {{ entreprises.banque }} | <strong>RIB : </strong> {{ entreprises.rib }}</span>
          </p>
          <hr style="margin-top: 2rem; margin-bottom: 0.5rem; border-color: #ddd;">
          <p class="legal-notice">
-           GenyCom SARL au capital de 100.000 DH - RC : 12345 - PATENTE : 1234567 - IF : 1234567 - ICE : 001234567000089<br/>
-           <i>Document généré informatiquement par le système de gestion GenyCom</i>
+           {{ entreprises.raison_sociale }} - RC : {{ entreprises.rc || '---' }} - IF : {{ entreprises.if_fiscal || '---' }} - Patente : {{ entreprises.patente || '---' }} - ICE : {{ entreprises.ice || '---' }}<br/>
+           <i>Ce document est une pièce commerciale officielle générée par le système GenyCom.</i>
          </p>
       </div>
 
@@ -95,55 +130,142 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import api from '../../services/api'
 
 const route = useRoute()
 const type = route.params.type
 const id = route.params.id
 
-// Mock Data Loading
+const loading = ref(true)
+const error = ref(false)
+const errorMessage = ref('')
+const entreprises = ref({})
+const docData = ref({})
+const docStatut = ref(null)
+const observations = ref('')
+
+// Détecter s'il s'agit d'une facture pour afficher le bloc "Reste à payer"
+const isFacture = computed(() => {
+  return ['facture', 'factures', 'facture-achat', 'factures-achats'].includes(type.toLowerCase())
+})
+
 const docTitle = computed(() => {
-  if (type === 'facture') return 'FACTURE'
-  if (type === 'devis') return 'DEVIS'
-  if (type === 'commande') return 'BON DE COMMANDE'
-  if (type === 'avoir-client') return 'AVOIR CLIENT'
-  if (type === 'avoir-fournisseur') return 'AVOIR FOURNISSEUR'
-  return 'DOCUMENT'
+  const titles = {
+    'devis': 'DEVIS',
+    'facture': 'FACTURE',
+    'factures-achats': 'FACTURE D\'ACHAT',
+    'commande': 'BON DE COMMANDE',
+    'avoir-client': 'AVOIR CLIENT',
+    'avoir-fournisseur': 'AVOIR FOURNISSEUR',
+    'bons-commande-client': 'BON DE COMMANDE CLIENT',
+    'bcc': 'BON DE COMMANDE CLIENT',
+    'bons-livraison': 'BON DE LIVRAISON',
+    'bl': 'BON DE LIVRAISON',
+    'bons-reception': 'BON DE RÉCEPTION',
+    'br': 'BON DE RÉCEPTION'
+  }
+  return titles[type] || 'DOCUMENT COMMERCIAL'
 })
 
 const docNumero = ref('---')
 const docDate = ref('---')
-const clientName = ref('Client Inconnu')
-const clientAddress = ref('Adresse non renseignée\nMaroc')
+const clientName = ref('---')
+const clientAddress = ref('')
 const lignes = ref([])
 
-onMounted(() => {
-  // Simulate fetching data depending on the type and logic
-  docDate.value = new Date().toLocaleDateString('fr-FR')
-  
-  if (type === 'devis' || type === 'facture' || type === 'avoir-client') {
-    docNumero.value = type === 'devis' ? 'DEV-2026-04-102' : (type === 'facture' ? 'FAC-2026-04-001' : 'AVR-2026-001')
-    clientName.value = 'TechnoPlus SARL'
-    clientAddress.value = '45 Boulevard d\'Anfa\n20000 Casablanca'
-    lignes.value = [
-      { designation: 'Audit Informatique Annuel', quantite: 1, prix_unitaire: 5000, taux_tva: 20 },
-      { designation: 'Maintenance Serveur', quantite: 3, prix_unitaire: 1200, taux_tva: 20 }
-    ]
-  } else {
-    docNumero.value = 'CMD-2026-001'
-    clientName.value = 'DistriTech Maroc'
-    clientAddress.value = 'Route El Jadida\n20000 Casablanca'
-    lignes.value = [
-      { designation: 'Écran LED 27"', quantite: 10, prix_unitaire: 1200, taux_tva: 20 }
-    ]
+onMounted(async () => {
+  try {
+    loading.value = true
+    
+    // 1. Charger les infos entreprise
+    try {
+      const resEnt = await api.get('/parametrage/entreprise')
+      entreprises.value = resEnt.data || {}
+    } catch (e) {
+      console.warn("Infos entreprise non trouvées", e)
+    }
+
+    // 2. Déterminer l'endpoint (Ajout explicite de factures-achats)
+    let endpoint = ''
+    switch(type) {
+      case 'devis': endpoint = `/devis/${id}`; break;
+      case 'facture': 
+      case 'factures': endpoint = `/factures/${id}`; break;
+      case 'facture-achat': 
+      case 'factures-achats': endpoint = `/factures-achats/${id}`; break;
+      case 'commande': endpoint = `/commandes/${id}`; break;
+      case 'bons-commande-client': 
+      case 'bcc': endpoint = `/bons-commande-client/${id}`; break;
+      case 'bons-livraison': 
+      case 'bl': endpoint = `/bons-livraison/${id}`; break;
+      case 'bons-reception': 
+      case 'br': endpoint = `/bons-reception/${id}`; break;
+      default: endpoint = `/${type}/${id}`;
+    }
+
+    const resDoc = await api.get(endpoint)
+    const data = resDoc.data
+    if (!data) throw new Error("Aucune donnée reçue de l'API")
+    
+    docData.value = data
+    
+    // Mapping des champs
+    docNumero.value = data.numero || '---'
+    const rawDate = data.date_devis || data.date_facture || data.date_commande || data.date_livraison || data.date_reception || data.created_at
+    docDate.value = rawDate ? new Date(rawDate).toLocaleDateString('fr-FR') : '---'
+    
+    docStatut.value = data.etat || (data.etat_id ? { libelle: 'Statut ID ' + data.etat_id } : null)
+    observations.value = data.observations || ''
+
+    const tier = data.client || data.fournisseur
+    if (tier) {
+      clientName.value = tier.societe || (tier.nom ? `${tier.nom} ${tier.prenom || ''}` : 'Tier Inconnu')
+      clientAddress.value = [tier.adresse, tier.code_postal, tier.ville, tier.pays].filter(Boolean).join(', ')
+    }
+
+    lignes.value = data.lignes || []
+    
+  } catch (err) {
+    console.error("Erreur chargement impression:", err)
+    error.value = true
+    errorMessage.value = err.response?.data?.message || "Impossible de charger le document. Vérifiez votre connexion ou vos droits d'accès."
+  } finally {
+    loading.value = false
   }
 })
 
-const totalHT = computed(() => lignes.value.reduce((s, l) => s + (l.quantite * l.prix_unitaire), 0))
-const totalTVA = computed(() => lignes.value.reduce((s, l) => s + (l.quantite * l.prix_unitaire * (l.taux_tva/100)), 0))
-const totalTTC = computed(() => totalHT.value + totalTVA.value)
+// === CALCULS ===
+const totalHT = computed(() => {
+  if (docData.value.total_ht) return parseFloat(docData.value.total_ht)
+  return lignes.value.reduce((s, l) => s + (parseFloat(l.montant_ht) || (l.quantite * l.prix_unitaire)), 0)
+})
+const totalTVA = computed(() => {
+  if (docData.value.total_tva) return parseFloat(docData.value.total_tva)
+  return lignes.value.reduce((s, l) => s + (parseFloat(l.montant_tva) || (l.quantite * l.prix_unitaire * ((l.taux_tva || 20)/100))), 0)
+})
+const totalTTC = computed(() => {
+  if (docData.value.total_ttc) return parseFloat(docData.value.total_ttc)
+  return totalHT.value + totalTVA.value
+})
+
+const montantPaye = computed(() => {
+  return parseFloat(docData.value.montant_paye || 0)
+})
+
+const resteAPayer = computed(() => {
+  // On utilise en priorité la vraie valeur "reste_a_payer" de l'API si elle existe
+  if (docData.value.reste_a_payer !== undefined && docData.value.reste_a_payer !== null) {
+    return parseFloat(docData.value.reste_a_payer)
+  }
+  // Sinon on la recalcule par sécurité
+  return Math.max(0, totalTTC.value - montantPaye.value)
+})
 
 function formatMoney(val) {
-  return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DH'
+  // Remplacement de la virgule par un espace pour les milliers comme vous l'aimez (ex: 1 000 233,52)
+  return (parseFloat(val) || 0)
+    .toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .replace(/\s/g, ' '); 
 }
 
 function doPrint() {
@@ -158,6 +280,56 @@ function closeWindow() {
 <style>
 /* CSS Reset minimal for printing */
 body { margin: 0; padding: 0; background-color: #f7f9fc; }
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  gap: 1.5rem;
+  color: #6b7280;
+  font-family: sans-serif;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #fef2f2;
+}
+
+.error-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-card h3 { color: #991b1b; margin-top: 0; }
+.error-card p { color: #4b5563; margin-bottom: 2rem; }
+
+.print-logo {
+  max-height: 60px;
+  margin-bottom: 1rem;
+}
 
 .print-layout {
   min-height: 100vh;

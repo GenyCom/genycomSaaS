@@ -20,7 +20,7 @@ class NumerotationService
         $annee = (int) $date->format('Y');
         $mois  = (int) $date->format('m');
         
-        return DB::transaction(function () use ($tenantId, $typeDocument, $date, $annee, $mois) {
+        return DB::connection('tenant')->transaction(function () use ($tenantId, $typeDocument, $date, $annee, $mois) {
             // Récupérer ou créer la séquence avec verrouillage
             $sequence = SequenceNumerotation::lockForUpdate()->firstOrCreate(
                 [
@@ -57,9 +57,12 @@ class NumerotationService
             $field = match($type) {
                 'FACTURE'  => 'format_numero_facture',
                 'DEVIS'    => 'format_numero_devis',
+                'BCC'      => 'format_numero_bcc',
                 'COMMANDE' => 'format_numero_cmd',
                 'BL'       => 'format_numero_bl',
                 'BR'       => 'format_numero_br',
+                'BCF'      => 'format_numero_bcf',
+                'FACTURE_ACHAT' => 'format_numero_facture_achat',
                 'AVOIR'    => 'format_numero_avoir',
                 default    => null,
             };
@@ -75,12 +78,15 @@ class NumerotationService
     {
         return match($type) {
             'FACTURE'  => 'FAC-{YYYY}{MM}-{SEQ}',
-            'DEVIS'    => 'DV-{YYYY}{MM}{DD}-{SEQ}',
-            'COMMANDE' => 'CMD-{YYYY}{MM}{DD}-{SEQ}',
-            'BL'       => 'BL-{YYYY}{MM}{DD}-{SEQ}',
-            'BR'       => 'BR-{YYYY}{MM}{DD}-{SEQ}',
+            'DEVIS'    => 'DEV-{YYYY}{MM}-{SEQ}',
+            'BCC'      => 'BCC-{YYYY}{MM}-{SEQ}',
+            'COMMANDE' => 'CMD-{YYYY}{MM}-{SEQ}',
+            'BL'       => 'BL-{YYYY}{MM}-{SEQ}',
+            'BR'       => 'BR-{YYYY}{MM}-{SEQ}',
+            'BCF'      => 'BCF-{YYYY}{MM}-{SEQ}',
             'AVOIR'    => 'AV-{YYYY}{MM}-{SEQ}',
-            'DETTE'    => 'DT-{YYYY}{MM}{DD}-{SEQ}',
+            'DETTE'    => 'DT-{YYYY}{MM}-{SEQ}',
+            'FACTURE_ACHAT' => 'FA-{YYYY}{MM}-{SEQ}',
             default    => 'DOC-{YYYY}{MM}-{SEQ}',
         };
     }
@@ -89,12 +95,15 @@ class NumerotationService
     {
         return match($type) {
             'FACTURE'  => 'FAC',
-            'DEVIS'    => 'DV',
+            'DEVIS'    => 'DEV',
+            'BCC'      => 'BCC',
             'COMMANDE' => 'CMD',
             'BL'       => 'BL',
             'BR'       => 'BR',
+            'BCF'      => 'BCF',
             'AVOIR'    => 'AV',
             'DETTE'    => 'DT',
+            'FACTURE_ACHAT' => 'FA',
             default    => 'DOC',
         };
     }

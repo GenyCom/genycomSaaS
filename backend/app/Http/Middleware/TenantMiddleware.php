@@ -23,9 +23,19 @@ class TenantMiddleware
         
         $tenant = null;
         if ($tenantId) {
-            $tenant = $user->tenants()->find($tenantId);
+            // Un SuperAdmin peut accéder à n'importe quel tenant s'il spécifie l'ID
+            if ($user && $user->is_superadmin) {
+                $tenant = \App\Models\Tenant::find($tenantId);
+            } else {
+                $tenant = $user->tenants()->find($tenantId);
+            }
         } else {
             $tenant = $user->tenants()->first();
+            
+            // Fallback pour SuperAdmin : on cherche en priorité le tenant de démonstration ID 2 (Sorec)
+            if (!$tenant && $user && $user->is_superadmin) {
+                $tenant = \App\Models\Tenant::find(2) ?: \App\Models\Tenant::whereHas('users')->first() ?: \App\Models\Tenant::first();
+            }
         }
 
         if (!$tenant) {

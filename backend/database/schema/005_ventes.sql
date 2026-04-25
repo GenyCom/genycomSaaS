@@ -5,16 +5,21 @@
 -- Projets
 CREATE TABLE IF NOT EXISTS `projets` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `code_projet`       VARCHAR(50) NOT NULL,
     `nom_projet`        VARCHAR(255) NOT NULL,
     `description`       LONGTEXT NULL,
     `client_id`         BIGINT UNSIGNED NULL,
+    `type_projet`       VARCHAR(100) NULL,
     `date_debut`        DATE NULL,
     `date_fin_prevue`   DATE NULL,
     `date_fin_reelle`   DATE NULL,
     `budget_prevu`      DECIMAL(24,2) DEFAULT 0.00,
     `budget_consomme`   DECIMAL(24,2) DEFAULT 0.00,
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `statut`            ENUM('brouillon','en_cours','en_pause','termine','annule') DEFAULT 'brouillon',
+    `avancement_pcent`  INT DEFAULT 0,
     `responsable_id`    BIGINT UNSIGNED NULL,
     `priorite`          ENUM('basse','normale','haute','urgente') DEFAULT 'normale',
     `created_by`        BIGINT UNSIGNED NULL,
@@ -24,13 +29,13 @@ CREATE TABLE IF NOT EXISTS `projets` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_code_projet` (`code_projet`),
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`),
-    FOREIGN KEY (`responsable_id`) REFERENCES `users`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Devis
 CREATE TABLE IF NOT EXISTS `devis` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `numero`            VARCHAR(150) NULL,
     `date_devis`        DATE NOT NULL,
     `date_validite`     DATE NULL,
@@ -47,6 +52,7 @@ CREATE TABLE IF NOT EXISTS `devis` (
     `est_facture`       TINYINT(1) DEFAULT 0,
     `est_livre`         TINYINT(1) DEFAULT 0,
     `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -57,15 +63,15 @@ CREATE TABLE IF NOT EXISTS `devis` (
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`),
     FOREIGN KEY (`projet_id`) REFERENCES `projets`(`id`),
     FOREIGN KEY (`etat_id`) REFERENCES `etat_document`(`id`),
-    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ligne_devis` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `devis_id`          BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NULL,
-    `designation`       VARCHAR(255) NOT NULL,
+    `designation` TEXT NOT NULL,
     `description`       TEXT NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
     `unite`             VARCHAR(50) NULL,
@@ -88,6 +94,7 @@ CREATE TABLE IF NOT EXISTS `ligne_devis` (
 -- Factures Client
 CREATE TABLE IF NOT EXISTS `factures` (
     `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`             BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `numero`                VARCHAR(150) NULL,
     `date_facture`          DATE NOT NULL,
     `date_echeance`         DATE NULL,
@@ -107,6 +114,7 @@ CREATE TABLE IF NOT EXISTS `factures` (
     `date_reglement`        DATE NULL,
     `observations`          LONGTEXT NULL,
     `devise_id`             BIGINT UNSIGNED NULL,
+    `taux_change_document`  DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`            BIGINT UNSIGNED NULL,
     `created_at`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`            TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -121,15 +129,15 @@ CREATE TABLE IF NOT EXISTS `factures` (
     FOREIGN KEY (`etat_id`) REFERENCES `etat_document`(`id`),
     FOREIGN KEY (`condition_reglement_id`) REFERENCES `condition_reglement`(`id`),
     FOREIGN KEY (`mode_reglement_id`) REFERENCES `mode_reglement`(`id`),
-    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ligne_facture` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `facture_id`        BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NULL,
-    `designation`       VARCHAR(255) NOT NULL,
+    `designation` TEXT NOT NULL,
     `description`       TEXT NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
     `unite`             VARCHAR(50) NULL,
@@ -154,6 +162,7 @@ CREATE TABLE IF NOT EXISTS `ligne_facture` (
 -- Bons de livraison
 CREATE TABLE IF NOT EXISTS `bons_livraison` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `numero`            VARCHAR(150) NULL,
     `date_livraison`    DATE NOT NULL,
     `devis_id`          BIGINT UNSIGNED NULL,
@@ -163,6 +172,8 @@ CREATE TABLE IF NOT EXISTS `bons_livraison` (
     `mode_livraison_id` BIGINT UNSIGNED NULL,
     `observations`      LONGTEXT NULL,
     `statut`            ENUM('brouillon','valide','livre','annule') DEFAULT 'brouillon',
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
@@ -170,15 +181,15 @@ CREATE TABLE IF NOT EXISTS `bons_livraison` (
     PRIMARY KEY (`id`),
     FOREIGN KEY (`devis_id`) REFERENCES `devis`(`id`),
     FOREIGN KEY (`facture_id`) REFERENCES `factures`(`id`),
-    FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ligne_bon_livraison` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `bon_livraison_id`  BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NOT NULL,
-    `designation`       VARCHAR(255) NOT NULL,
+    `designation` TEXT NOT NULL,
     `quantite_prevue`   DECIMAL(24,2) DEFAULT 0.00,
     `quantite_livree`   DECIMAL(24,2) DEFAULT 0.00,
     `ordre`             SMALLINT DEFAULT 0,
@@ -192,6 +203,7 @@ CREATE TABLE IF NOT EXISTS `ligne_bon_livraison` (
 -- Avoirs Client
 CREATE TABLE IF NOT EXISTS `avoirs_client` (
     `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`             BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `numero`                VARCHAR(150) NULL,
     `date_avoir`            DATE NOT NULL,
     `client_id`             BIGINT UNSIGNED NOT NULL,
@@ -204,6 +216,8 @@ CREATE TABLE IF NOT EXISTS `avoirs_client` (
     `est_reglee`            TINYINT(1) DEFAULT 0,
     `motif`                 VARCHAR(500) NULL,
     `observations`          LONGTEXT NULL,
+    `devise_id`             BIGINT UNSIGNED NULL,
+    `taux_change_document`  DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`            BIGINT UNSIGNED NULL,
     `created_at`            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`            TIMESTAMP NULL,
@@ -212,14 +226,15 @@ CREATE TABLE IF NOT EXISTS `avoirs_client` (
     FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`),
     FOREIGN KEY (`facture_id`) REFERENCES `factures`(`id`),
     FOREIGN KEY (`etat_id`) REFERENCES `etat_document`(`id`),
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`devise_id`) REFERENCES `devise`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ligne_avoir_client` (
     `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `avoir_id`          BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NULL,
-    `designation`       VARCHAR(255) NOT NULL,
+    `designation` TEXT NOT NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
     `prix_unitaire`     DECIMAL(24,4) DEFAULT 0.0000,
     `taux_tva`          DECIMAL(5,3) DEFAULT 0.000,
@@ -234,3 +249,15 @@ CREATE TABLE IF NOT EXISTS `ligne_avoir_client` (
     FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE bons_livraison ADD COLUMN projet_id BIGINT UNSIGNED NULL AFTER devis_id;
+ALTER TABLE bons_livraison 
+ADD COLUMN total_ht DECIMAL(15,2) DEFAULT 0.00 AFTER statut,
+ADD COLUMN total_tva DECIMAL(15,2) DEFAULT 0.00 AFTER total_ht,
+ADD COLUMN total_ttc DECIMAL(15,2) DEFAULT 0.00 AFTER total_tva,
+ADD COLUMN total_remise DECIMAL(15,2) DEFAULT 0.00 AFTER total_ttc;
+ALTER TABLE ligne_bon_livraison 
+ADD COLUMN prix_unitaire DECIMAL(15,4) DEFAULT 0.0000 AFTER quantite_livree,
+ADD COLUMN taux_tva DECIMAL(5,2) DEFAULT 0.00 AFTER prix_unitaire,
+ADD COLUMN montant_ht DECIMAL(15,2) DEFAULT 0.00 AFTER taux_tva,
+ADD COLUMN montant_tva DECIMAL(15,2) DEFAULT 0.00 AFTER montant_ht,
+ADD COLUMN montant_ttc DECIMAL(15,2) DEFAULT 0.00 AFTER montant_tva;

@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\{
     DashboardController,
     ClientController,
     FactureController,
+    AvoirClientController,
+    AvoirFournisseurController,
     FournisseurController,
     ProduitController,
     DevisController,
@@ -15,6 +17,15 @@ use App\Http\Controllers\Api\{
     StockController,
     ProjetController,
     DepenseController,
+    ContratController,
+    WorkflowVenteController,
+    WorkflowAchatController,
+    BonCommandeClientController,
+    BonLivraisonController,
+    BonReceptionController,
+    DetteController,
+    FactureAchatController,
+    NotificationController,
 };
 use Illuminate\Support\Facades\Route;
 
@@ -24,16 +35,22 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // ─── Protected Routes ───────────────────────────────────────
 use App\Http\Controllers\Api\SuperAdmin\SuperAdminUserController;
+use App\Http\Controllers\Api\SuperAdmin\SuperAdminTenantController;
+use App\Http\Controllers\Api\SuperAdmin\SuperAdminDashboardController;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class])->group(function () {
     
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/me/password', [AuthController::class, 'updatePassword']);
     
     // SuperAdmin Routes
     Route::prefix('superadmin')->group(function() {
+        Route::get('dashboard', SuperAdminDashboardController::class);
         Route::apiResource('users', SuperAdminUserController::class);
+        Route::apiResource('tenants', SuperAdminTenantController::class)->only(['index', 'show', 'store', 'destroy']);
     });
 
     // Dashboard
@@ -44,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/top-clients', [DashboardController::class, 'topClients']);
         Route::get('/echeances', [DashboardController::class, 'echeances']);
         Route::get('/alertes-stock', [DashboardController::class, 'alertesStock']);
+        Route::get('/stock-stats', [DashboardController::class, 'stockStats']);
     });
 
     // Clients
@@ -51,27 +69,70 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Factures
     Route::apiResource('factures', FactureController::class);
+    Route::apiResource('avoirs-clients', AvoirClientController::class);
+    Route::post('avoirs-clients/{id}/valider', [AvoirClientController::class, 'valider']);
     Route::post('factures/{facture}/valider', [FactureController::class, 'valider']);
     Route::post('factures/{facture}/reglement', [FactureController::class, 'reglement']);
-
+	Route::post('factures/{id}/reglement', [FactureController::class, 'reglement']);
+	
+    // Ventes / Contrats
+    Route::apiResource('contrats', ContratController::class);
+    
     // --- Autres modules activés ---
     Route::apiResource('fournisseurs', FournisseurController::class);
     Route::apiResource('produits', ProduitController::class);
+    Route::get('produits-next-ref', [ProduitController::class, 'nextReference']);
     Route::apiResource('devis', DevisController::class);
     Route::apiResource('commandes', CommandeController::class);
-    Route::apiResource('stock', StockController::class)->only(['index','show']);
+    Route::post('stock/adjust', [StockController::class, 'adjust']);
+    Route::post('stock/transfer', [StockController::class, 'transfer']);
+    Route::get('stock', [StockController::class, 'index']);
+    Route::get('stock/{id}', [StockController::class, 'show']);
     Route::apiResource('projets', ProjetController::class);
     Route::apiResource('depenses', DepenseController::class);
     
-    // Modules restants (à venir)
-    // Route::apiResource('bons-livraison', BonLivraisonController::class);
-    // Route::apiResource('bons-reception', BonReceptionController::class);
-    // Route::apiResource('avoirs-client', AvoirClientController::class);
-    // Route::apiResource('avoirs-fournisseur', AvoirFournisseurController::class);
-    // Route::apiResource('inventaires', InventaireController::class);
-    // Route::apiResource('dettes', DetteController::class);
-    // Route::apiResource('reglements', ReglementController::class);
+    // Workflow de Transformation
+    Route::prefix('workflow')->group(function () {
+        Route::post('devis-to-bc/{devis}', [WorkflowVenteController::class, 'devisToBC']);
+        Route::post('bc-to-bl/{bcc}', [WorkflowVenteController::class, 'bcToBL']);
+        Route::post('bl-to-facture/{bl}', [WorkflowVenteController::class, 'blToFacture']);
+        Route::post('facture-to-bl/{facture}', [WorkflowVenteController::class, 'factureToBL']);
+        
+        // Achats
+        Route::post('commande-fournisseur-to-br/{id}', [WorkflowAchatController::class, 'commandeToBR']);
+        Route::post('br-to-facture-achat/{br}', [WorkflowAchatController::class, 'brToFacture']);
+    });
+
+    // Modules Ventes
+    Route::apiResource('bons-commande-client', BonCommandeClientController::class);
+    Route::apiResource('bons-livraison', BonLivraisonController::class);
+
+    // Modules Achats
+    Route::apiResource('bons-reception', BonReceptionController::class);
+    Route::apiResource('factures-achats', FactureAchatController::class);
+    Route::apiResource('avoirs-fournisseurs', AvoirFournisseurController::class);
+    Route::post('avoirs-fournisseurs/{id}/valider', [AvoirFournisseurController::class, 'valider']);
+    Route::apiResource('dettes', DetteController::class)->only(['index', 'show']);
+    Route::post('dettes/{id}/reglement', [DetteController::class, 'reglement']);
     
-    // Paramétrage
-    // Route::prefix('parametrage')->group(function () { ... });
+    // Paramétrage & Référentiels
+	Route::get('parametrage/taux-tva', [\App\Http\Controllers\Api\TvaController::class, 'index']);
+    Route::prefix('parametrage')->group(function () {
+        Route::get('entreprise', [App\Http\Controllers\Api\EntrepriseController::class, 'show']);
+        Route::put('entreprise', [App\Http\Controllers\Api\EntrepriseController::class, 'update']);
+        
+        // Dynamic reference CRUD handles: 'taux-tva', 'devises', 'entrepots', 'modes-reglement', 'conditions-reglement', 'familles-produit'
+        Route::apiResource('referentiels/{type}', App\Http\Controllers\Api\Parametrage\ReferentielController::class)
+             ->parameters(['{type}' => 'id']);
+    });
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+});
+
+// Debug route – temporary
+Route::get('debug/stock', function () {
+    return \App\Models\Stock::with(['produit', 'entrepot'])->get();
 });

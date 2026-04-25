@@ -15,21 +15,24 @@ class Devis extends BaseModel
         'client_id', 'projet_id', 'numero_bon_commande',
         'total_ht', 'total_tva', 'total_ttc', 'total_remise',
         'etat_id', 'observations', 'conditions',
-        'est_facture', 'est_livre', 'devise_id', 'created_by',
+        'est_facture', 'est_livre', 'devise_id', 'taux_change_document', 'created_by',
     ];
-
+ 
     protected $casts = [
-        'date_devis' => 'date',
-        'date_validite' => 'date',
+        'date_devis' => 'date:Y-m-d',
+        'date_validite' => 'date:Y-m-d',
         'est_facture' => 'boolean',
         'est_livre' => 'boolean',
+        'taux_change_document' => 'decimal:6',
     ];
-
+ 
     public function client()  { return $this->belongsTo(Client::class); }
     public function projet()  { return $this->belongsTo(Projet::class); }
+    public function devise()  { return $this->belongsTo(Devise::class); }
     public function etat()    { return $this->belongsTo(EtatDocument::class, 'etat_id'); }
     public function lignes()  { return $this->hasMany(LigneDevis::class)->orderBy('ordre'); }
     public function factures(){ return $this->hasMany(Facture::class); }
+    public function bonsCommande() { return $this->hasMany(BonCommandeClient::class); }
     public function bonsLivraison() { return $this->hasMany(BonLivraison::class); }
 
     public function recalculerTotaux(): self

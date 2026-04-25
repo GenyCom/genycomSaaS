@@ -3,10 +3,11 @@ namespace App\Models;
 
 use App\Traits\BelongsToTenant;
 use App\Traits\HasAuditColumns;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Fournisseur extends BaseModel
 {
-    use BelongsToTenant, HasAuditColumns;
+    use BelongsToTenant, HasAuditColumns, SoftDeletes;
 
     protected $table = 'fournisseurs';
 
@@ -16,14 +17,17 @@ class Fournisseur extends BaseModel
         'adresse', 'ville', 'code_postal', 'pays',
         'telephone', 'mobile', 'fax', 'email', 'site_web',
         'rib', 'banque', 'image_path', 'observations',
-        'type_fournisseur_id', 'delai_livraison', 'created_by',
+        'type_fournisseur_id', 'delai_livraison', 'created_by', 'if_fiscal', 'patente', 'is_active',
     ];
 
-    protected $casts = ['is_personne_physique' => 'boolean'];
+    protected $casts = [
+        'is_personne_physique' => 'boolean',
+        'is_active' => 'boolean',
+    ];
 
     public function typeFournisseur() { return $this->belongsTo(TypeFournisseur::class); }
     public function contacts()        { return $this->morphMany(Contact::class, 'contactable'); }
-    public function commandes()       { return $this->hasMany(Commande::class); }
+    public function commandes()       { return $this->hasMany(BonCommandeFournisseur::class, 'fournisseur_id'); }
     public function dettes()          { return $this->hasMany(DetteFournisseur::class); }
     public function produits()        { return $this->hasMany(Produit::class); }
     public function fichiers()        { return $this->morphMany(Fichier::class, 'fileable'); }
