@@ -254,7 +254,7 @@
                 <tr v-for="r in form.reglements" :key="r.id">
                   <td>
                     <div style="font-weight: 700; font-size: .8rem;">{{ formatDate(r.date_reglement) }}</div>
-                    <div style="font-size: .7rem; color: #6B7280;">{{ r.mode_libelle || 'Virement' }}</div>
+                    <div style="font-size: .7rem; color: #6B7280;">{{ r.mode_reglement?.libelle || 'Non spécifié' }}</div>
                   </td>
                   <td class="text-right font-bold mono" style="color: #059669;">
                     + {{ formatMoney(r.montant) }} DH

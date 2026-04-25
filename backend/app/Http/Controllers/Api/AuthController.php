@@ -216,6 +216,7 @@ class AuthController extends Controller
                 'plan'  => $tenant->statut,
             ] : null,
             'entreprise'    => $entrepriseInfo,
+            'app_version'   => env('APP_VERSION', '1.0'),
         ];
     }
 }

@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\Route;
 // ─── Public Routes ──────────────────────────────────────────
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/monitoring/frontend-error', [\App\Http\Controllers\Api\FrontendErrorController::class, 'report']);
 
 // ─── Protected Routes ───────────────────────────────────────
 use App\Http\Controllers\Api\SuperAdmin\SuperAdminUserController;

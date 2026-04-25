@@ -4,7 +4,10 @@
     <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-logo">
         <img src="/logo.png" alt="GenyCom" style="height: 36px; object-fit: contain; margin-right: 0.5rem;" onerror="this.outerHTML='<div class=\'logo-icon\'>G</div>'" />
-        <div class="logo-text">Geny<span>Com</span></div>
+        <div class="logo-text-wrapper" style="display: flex; flex-direction: column; justify-content: center;">
+          <div class="logo-text" style="line-height: 1;">Geny<span>Com</span></div>
+          <div v-if="auth.user?.app_version" style="font-size: 0.65rem; color: #64748B; font-weight: 700; margin-top: 2px;">v{{ auth.user.app_version }}</div>
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -161,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import NotificationBell from '../components/shared/NotificationBell.vue'
@@ -171,6 +174,12 @@ const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
 const theme = ref(localStorage.getItem('genycom_theme') || 'light')
+
+onMounted(() => {
+  if (!auth.user?.app_version) {
+    auth.fetchUser()
+  }
+})
 
 // Apply stored theme on mount
 document.documentElement.setAttribute('data-theme', theme.value)

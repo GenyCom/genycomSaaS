@@ -24,7 +24,12 @@
       </div>
       <div class="hero-meta">
         <div class="hero-type-badge"><span class="dot"></span>{{ authStore.entreprise.raison_sociale }}</div>
-        <h1 class="hero-name">Bonjour, {{ authStore.user?.prenom || 'Admin' }} <span style="color:#059669; font-size:1rem;">(Connecté)</span> 👋</h1>
+        <h1 class="hero-name">
+          Bonjour, {{ authStore.user?.prenom || 'Admin' }} 
+          <span v-if="!connectionError" style="color:#059669; font-size:1rem;">(Connecté)</span>
+          <span v-else style="color:#DC2626; font-size:1rem;">(Problème de connexion)</span>
+          👋
+        </h1>
         <p class="hero-sub">Résumé de performance pour la période sélectionnée.</p>
       </div>
     </div>
@@ -90,7 +95,7 @@
             <div class="bar-chart-container">
               <div v-for="(item, idx) in caMensuel" :key="idx" class="chart-column">
                 <div class="bar-wrapper">
-                  <div class="bar-tooltip">{{ formatCompact(item.ca) }}</div>
+                  <div class="bar-tooltip">{{ formatMoney(item.ca) }}</div>
                   <div class="bar" :class="{ 'empty-bar': item.ca === 0 }" :style="{ height: getBarHeight(item.ca) }"></div>
                 </div>
                 <span class="bar-label">{{ item.label }}</span>
@@ -178,6 +183,7 @@ const topClients = ref([])
 const currentFilter = ref('Ce mois')
 const lastSync = ref(new Date().toLocaleTimeString())
 const loading = ref(false)
+const connectionError = ref(false)
 
 const stockStats = ref({ sufficient: 0, critical: 0, rupture: 0, total: 0 })
 
@@ -202,6 +208,7 @@ function getBarHeight(val) {
 
 async function refreshData() {
   loading.value = true
+  connectionError.value = false
   try {
     const config = { params: { periode: currentFilter.value } }
     
@@ -245,6 +252,7 @@ async function refreshData() {
     
   } catch (e) {
     console.error("❌ Erreur de chargement du Dashboard :", e)
+    connectionError.value = true
   } finally {
     loading.value = false
   }
