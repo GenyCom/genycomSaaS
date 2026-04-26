@@ -102,10 +102,10 @@ class ReferentielController extends Controller
         }
 
         if ($type === 'etats' && $request->has('type_document')) {
-            $query->where('type_document', $request->type_document);
+            $query->where('type_document', $request->type_document)->orderBy('ordre', 'asc');
         }
 
-        return response()->json($query->orderBy('ordre', 'asc')->latest()->get());
+        return response()->json($query->latest()->get());
     }
 
     public function store(Request $request, $type): JsonResponse

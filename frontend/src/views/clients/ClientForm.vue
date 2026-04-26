@@ -418,7 +418,7 @@ onMounted(async () => {
   --radius-sm:    6px;
   --shadow-sm:    0 1px 2px rgba(0,0,0,.05);
 
-  font-family: 'Inter', system-ui, sans-serif;
+  
   background: var(--c-bg);
   min-height: 100vh;
   padding: 24px 28px 48px;

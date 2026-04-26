@@ -44,6 +44,14 @@ class TenantMiddleware
 
         // Configuration dynamique de la base de données du locataire
         Config::set('database.connections.tenant.database', $tenant->database_name);
+        
+        if ($tenant->db_username) {
+            Config::set('database.connections.tenant.username', $tenant->db_username);
+        }
+        if ($tenant->db_password) {
+            Config::set('database.connections.tenant.password', $tenant->db_password);
+        }
+
         DB::purge('tenant'); // Force la reconnexion avec les paramètres modifiés
         
         // Optionnel : Injecter le tenant dans la requête pour y accéder plus tard

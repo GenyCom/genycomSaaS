@@ -95,7 +95,7 @@ onMounted(async () => {
 <style scoped>
 .sa-dashboard-view {
   --c-bg: #F7F8FA; --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #f59e0b;
-  padding: 24px 28px; background: var(--c-bg); min-height: 100vh; font-family: 'Inter', sans-serif;
+  padding: 24px 28px; background: var(--c-bg); min-height: 100vh; 
 }
 .sa-hero { border-left: 4px solid var(--c-accent); }
 .sa-theme { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }

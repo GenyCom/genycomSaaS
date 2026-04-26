@@ -60,53 +60,53 @@ INSERT INTO `mode_livraison`(`libelle`) VALUES
 
 -- Etat de Commande
 INSERT INTO `etat_document`(`type_document`, `ordre`, `code`, `libelle`, `detail`, `couleur`, `is_system`) VALUES 
-('commande', 1, 'ENC', 'En cours', 'La commande est créée', '#94a3b8', 1),
-('commande', 2, 'OVR', 'Ouverte', 'La commande est envoyée au fournisseur', '#3b82f6', 1),
-('commande', 3, 'REC', 'Reçu', 'La commande est livrée', '#10b981', 1),
-('commande', 4, 'ANL', 'Annulée', 'La commande est annulée', '#ef4444', 1);
+('commande', 1, 'ENC', 'EN COURS', 'La commande est créée', '#94a3b8', 1),
+('commande', 2, 'OVR', 'OUVERTE', 'La commande est envoyée au fournisseur', '#3b82f6', 1),
+('commande', 3, 'REC', 'REÇU', 'La commande est livrée', '#10b981', 1),
+('commande', 4, 'ANL', 'ANNULÉE', 'La commande est annulée', '#ef4444', 1);
 
 -- Catégories dépenses
 INSERT INTO `categorie_depense` (`id`, `libelle`, `detail`, `parent_id`) VALUES 
-(1, 'Charges Variables', 'Charges variables', NULL),
-(2, 'Charges Fixes', 'Charges fixes', NULL),
-(3, 'Autres', 'Autres charges', NULL),
-(4, 'Fête & Cadeaux', 'Cérémonies et fêtes', 1),
-(5, 'Frais de sous-traitance', 'Les frais de sous-traitance', 1),
-(6, 'Commissions', 'Commissions versées', 1),
-(7, 'Achat marchandises', 'Achat de marchandises', 1),
-(8, 'Loyer', 'Loyers ou immeubles', 2),
-(9, 'Eau, Electricité', 'Factures fixes', 2),
-(10, 'Frais de carburant', 'Transport', 2),
-(11, 'Frais restauration', 'Restauration et hôtels', 2);
+(1, 'CHARGES VARIABLES', 'Charges variables', NULL),
+(2, 'CHARGES FIXES', 'Charges fixes', NULL),
+(3, 'AUTRES', 'Autres charges', NULL),
+(4, 'FÊTE & CADEAUX', 'Cérémonies et fêtes', 1),
+(5, 'FRAIS DE SOUS-TRAITANCE', 'Les frais de sous-traitance', 1),
+(6, 'COMMISSIONS', 'Commissions versées', 1),
+(7, 'ACHAT MARCHANDISES', 'Achat de marchandises', 1),
+(8, 'LOYER', 'Loyers ou immeubles', 2),
+(9, 'EAU, ELECTRICITÉ', 'Factures fixes', 2),
+(10, 'FRAIS DE CARBURANT', 'Transport', 2),
+(11, 'FRAIS RESTAURATION', 'Restauration et hôtels', 2);
 
 -- Type de client (Secteur / Domaine)
 INSERT INTO `type_client`(`libelle`, `exempt_tva`, `vip`) VALUES 
-('Particulier (B2C)', 0, 0),
+('PARTICULIER (B2C)', 0, 0),
 ('PME / TPE', 0, 0),
-('Grand Compte', 0, 1),
-('Administration Publique', 1, 0),
-('Revendeur / Distributeur', 0, 0);
+('GRAND COMPTE', 0, 1),
+('ADMINISTRATION PUBLIQUE', 1, 0),
+('REVENDEUR / DISTRIBUTEUR', 0, 0);
 
 -- Type de fournisseur (Domaine / Catégorie)
 INSERT INTO `type_fournisseur`(`libelle`, `detail`, `vip`) VALUES 
-('Marchandises & Matières', 'Fournisseur de matières premières et produits finis', 0),
-('Matériel & Équipement', 'Fournisseur d''équipements IT, machines, véhicules', 0),
-('Services & Prestations', 'Prestataire de services (Marketing, Consulting, IT)', 0),
-('Sous-traitant', 'Sous-traitance spécialisée ou BTP', 0),
-('Logistique & Transport', 'Prestataire de fret, transport et stockage', 0),
-('Fournitures (Consommables)', 'Fournitures de bureau, entretien, hygiène', 0);
+('MARCHANDISES & MATIÈRES', 'Fournisseur de matières premières et produits finis', 0),
+('MATÉRIEL & ÉQUIPEMENT', 'Fournisseur d''équipements IT, machines, véhicules', 0),
+('SERVICES & PRESTATIONS', 'Prestataire de services (Marketing, Consulting, IT)', 0),
+('SOUS-TRAITANT', 'Sous-traitance spécialisée ou BTP', 0),
+('LOGISTIQUE & TRANSPORT', 'Prestataire de fret, transport et stockage', 0),
+('FOURNITURES (CONSOMMABLES)', 'Fournitures de bureau, entretien, hygiène', 0);
 
 -- Etat de Dette
 INSERT INTO `etat_document`(`type_document`, `ordre`, `code`, `libelle`, `detail`, `couleur`, `is_system`) VALUES 
-('dette', 1, 'BRL', 'Brouillon', 'Dette créée', '#94a3b8', 1),
-('dette', 2, 'OVR', 'Ouverte', 'Dette validée en attente de règlement', '#3b82f6', 1),
-('dette', 3, 'PPY', 'Partielle', 'Dette partiellement réglée', '#f59e0b', 1),
-('dette', 4, 'PAY', 'Soldée', 'Dette intégralement réglée', '#10b981', 1),
-('dette', 5, 'RTD', 'En retard', 'Echéance dépassée', '#ef4444', 1),
-('dette', 6, 'ANL', 'Annulée', 'Dette annulée', '#64748b', 1);
+('dette', 1, 'BRL', 'BROUILLON', 'Dette créée', '#94a3b8', 1),
+('dette', 2, 'OVR', 'OUVERTE', 'Dette validée en attente de règlement', '#3b82f6', 1),
+('dette', 3, 'PPY', 'PARTIELLE', 'Dette partiellement réglée', '#f59e0b', 1),
+('dette', 4, 'PAY', 'SOLDÉE', 'Dette intégralement réglée', '#10b981', 1),
+('dette', 5, 'RTD', 'EN RETARD', 'Echéance dépassée', '#ef4444', 1),
+('dette', 6, 'ANL', 'ANNULÉE', 'Dette annulée', '#64748b', 1);
 
-INSERT INTO etat_document (type_document, code, libelle, color, ordre, is_system, tenant_id) 
+INSERT INTO etat_document (type_document, code, libelle, couleur, ordre, is_system, tenant_id) 
 VALUES 
-('devis', 'BRO', 'Brouillon', '#64748b', 1, 1, 1),
-('devis', 'ENV', 'Envoyé', '#3b82f6', 2, 1, 1),
-('devis', 'ACC', 'Accepté', '#10b981', 3, 1, 1);
+('devis', 'BRO', 'BROUILLON', '#64748b', 1, 1, 1),
+('devis', 'ENV', 'ENVOYÉ', '#3b82f6', 2, 1, 1),
+('devis', 'ACC', 'ACCEPTÉ', '#10b981', 3, 1, 1);

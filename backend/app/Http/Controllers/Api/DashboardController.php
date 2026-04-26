@@ -27,14 +27,14 @@ class DashboardController extends Controller
         return response()->json($this->dashboard->caMensuel());
     }
 
-    public function topVentes(): JsonResponse
+    public function topVentes(Request $request): JsonResponse
     {
-        return response()->json($this->dashboard->topVentes());
+        return response()->json($this->dashboard->topVentes($request->get('periode', 'Ce mois')));
     }
 
-    public function topClients(): JsonResponse
+    public function topClients(Request $request): JsonResponse
     {
-        return response()->json($this->dashboard->topClients());
+        return response()->json($this->dashboard->topClients($request->get('periode', 'Ce mois')));
     }
 
     public function echeances(): JsonResponse

@@ -41,7 +41,9 @@
           <p class="kpi-label">Chiffre d'Affaires</p>
           <div class="value-row">
             <p class="kpi-value">{{ formatMoney(kpis.ca_mois) }}</p>
-            <span class="trend-badge pos">+12.5%</span>
+            <span :class="['trend-badge', (kpis.ca_trend || 0) >= 0 ? 'pos' : 'neg']">
+              {{ (kpis.ca_trend || 0) > 0 ? '+' : '' }}{{ kpis.ca_trend || 0 }}%
+            </span>
           </div>
         </div>
       </div>
@@ -49,10 +51,12 @@
       <div class="kpi-card success">
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div class="kpi-content">
-          <p class="kpi-label">Marge Nette (Est.)</p>
+          <p class="kpi-label">Marge Nette</p>
           <div class="value-row">
             <p class="kpi-value">{{ formatMoney((kpis.ca_mois || 0) * 0.35) }}</p>
-            <span class="trend-badge pos">+4.2%</span>
+            <span :class="['trend-badge', (kpis.ca_trend || 0) >= 0 ? 'pos' : 'neg']">
+              {{ (kpis.ca_trend || 0) > 0 ? '+' : '' }}{{ kpis.ca_trend || 0 }}%
+            </span>
           </div>
         </div>
       </div>
@@ -272,7 +276,7 @@ onMounted(refreshData)
   --c-bg: #F7F8FA; --c-surface: #FFFFFF; --c-border: #E8EAEE;
   --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #2563EB;
   --c-success: #16A34A; --c-danger: #DC2626; --c-warning: #EA580C;
-  background: var(--c-bg); min-height: 100vh; font-family: 'Inter', sans-serif;
+  background: var(--c-bg); min-height: 100vh;
 }
 
 /* --- Top Navigation --- */
@@ -351,6 +355,7 @@ onMounted(refreshData)
 .value-row { display: flex; align-items: baseline; gap: 6px; }
 .trend-badge { padding: 1px 5px; border-radius: 4px; font-size: .6rem; font-weight: 800; }
 .trend-badge.pos { background: #DCFCE7; color: #166534; }
+.trend-badge.neg { background: #FEE2E2; color: #991B1B; }
 .kpi-sub-text { font-size: .68rem; color: var(--c-muted); margin: 2px 0 0; }
 
 /* --- Main Layout Grids --- */

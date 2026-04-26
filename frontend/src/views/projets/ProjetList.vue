@@ -236,7 +236,7 @@ onMounted(() => {
   --radius-sm:     8px;
   --shadow-sm:    0 1px 3px rgba(0,0,0,.06);
 
-  font-family: 'Inter', system-ui, sans-serif;
+  
   background: var(--c-bg);
   min-height: 100vh;
   padding: 24px 28px 48px;

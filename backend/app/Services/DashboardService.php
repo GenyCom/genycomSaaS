@@ -18,14 +18,15 @@ class DashboardService
 
     public function getKPIs(string $periode = 'Ce mois'): array
     {
-        $startDate = match ($periode) {
-            'Trimestre' => now()->startOfQuarter(),
-            'Année'     => now()->startOfYear(),
-            default     => now()->startOfMonth(),
-        };
+        $startDate = $this->getStartDate($periode);
+        $previousDates = $this->getPreviousPeriodDates($periode);
+        
+        $currentCA = $this->caPeriode($startDate);
+        $previousCA = $this->caPeriodeEntre($previousDates['start'], $previousDates['end']);
 
         return [
-            'ca_mois'               => $this->caPeriode($startDate), 
+            'ca_mois'               => $currentCA, 
+            'ca_trend'              => $this->calculateTrend($currentCA, $previousCA),
             'ca_encaisse'           => $this->caEncaissePeriode($startDate),
             'ca_annee'              => $this->caAnnee(),
             'factures_impayees'     => $this->facturesImpayees(),
@@ -40,6 +41,33 @@ class DashboardService
             'nb_produits'           => $this->countTable('produits'),
             'nb_fournisseurs'       => $this->countTable('fournisseurs'),
         ];
+    }
+
+    private function getPreviousPeriodDates(string $periode): array
+    {
+        $now = now();
+        return match ($periode) {
+            'Trimestre' => [
+                'start' => $now->copy()->subQuarter()->startOfQuarter(),
+                'end'   => $now->copy()->subQuarter()->endOfQuarter(),
+            ],
+            'Année' => [
+                'start' => $now->copy()->subYear()->startOfYear(),
+                'end'   => $now->copy()->subYear()->endOfYear(),
+            ],
+            default => [
+                'start' => $now->copy()->subMonth()->startOfMonth(),
+                'end'   => $now->copy()->subMonth()->endOfMonth(),
+            ],
+        };
+    }
+
+    private function calculateTrend(float $current, float $previous): float
+    {
+        if ($previous == 0) {
+            return $current > 0 ? 100 : 0;
+        }
+        return round((($current - $previous) / $previous) * 100, 1);
     }
 
     private function countTable(string $table): int
@@ -145,6 +173,17 @@ class DashboardService
         return $stock + $factures;
     }
 
+    public function caPeriodeEntre($start, $end): float
+    {
+        try {
+            return (float) DB::connection('tenant')->table('factures')
+                ->where('tenant_id', $this->tid())
+                ->whereNull('deleted_at')
+                ->whereBetween('date_facture', [$start, $end])
+                ->sum('total_ttc');
+        } catch (\Exception $e) { return 0; }
+    }
+
     public function caPeriode($startDate): float
     {
         try {
@@ -204,8 +243,9 @@ class DashboardService
         } catch (\Exception $e) { return []; }
     }
 
-    public function topVentes(int $limit = 10): array
+    public function topVentes(string $periode = 'Ce mois', int $limit = 10): array
     {
+        $startDate = $this->getStartDate($periode);
         try {
             return DB::connection('tenant')->table('ligne_facture as lf')
                 ->join('factures as f', 'f.id', '=', 'lf.facture_id')
@@ -213,24 +253,25 @@ class DashboardService
                 ->where('f.tenant_id', $this->tid())
                 ->whereNull('f.deleted_at')
                 ->whereNull('lf.deleted_at')
-                ->whereYear('f.date_facture', now()->year)
+                ->where('f.date_facture', '>=', $startDate)
                 ->selectRaw('p.designation, p.reference, SUM(lf.quantite) as qte_vendue, SUM(lf.montant_ttc) as ca_ttc')
                 ->groupBy('p.id', 'p.designation', 'p.reference')
-                ->orderByDesc('ca_ttc')
+                ->orderByDesc('qte_vendue')
                 ->limit($limit)
                 ->get()
                 ->toArray();
         } catch (\Exception $e) { return []; }
     }
 
-    public function topClients(int $limit = 10): array
+    public function topClients(string $periode = 'Ce mois', int $limit = 10): array
     {
+        $startDate = $this->getStartDate($periode);
         try {
             return DB::connection('tenant')->table('factures as f')
                 ->join('clients as c', 'c.id', '=', 'f.client_id')
                 ->where('f.tenant_id', $this->tid())
                 ->whereNull('f.deleted_at')
-                ->whereYear('f.date_facture', now()->year)
+                ->where('f.date_facture', '>=', $startDate)
                 ->selectRaw('c.societe, c.code_client, COUNT(f.id) as nb_factures, SUM(f.total_ttc) as ca_total')
                 ->groupBy('c.id', 'c.societe', 'c.code_client')
                 ->orderByDesc('ca_total')
@@ -238,6 +279,15 @@ class DashboardService
                 ->get()
                 ->toArray();
         } catch (\Exception $e) { return []; }
+    }
+
+    private function getStartDate(string $periode): \Carbon\Carbon
+    {
+        return match ($periode) {
+            'Trimestre' => now()->startOfQuarter(),
+            'Année'     => now()->startOfYear(),
+            default     => now()->startOfMonth(),
+        };
     }
 
     public function echeancesProchaines(): array

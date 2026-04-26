@@ -72,8 +72,8 @@ ALTER TABLE `factures` ADD CONSTRAINT `fk_facture_bcc` FOREIGN KEY (`bon_command
 -- Ajout d'états de base pour BCC si nécessaire
 INSERT IGNORE INTO `etat_document` (`type_document`, `code`, `libelle`, `ordre`, `couleur`, `is_system`)
 VALUES 
-('bcc', 'BROUILLON', 'Brouillon', 10, '#94a3b8', 1),
-('bcc', 'VALIDE', 'Validé', 20, '#3b82f6', 1),
-('bcc', 'LIVRE', 'Livré', 30, '#10b981', 1),
-('bcc', 'FACTURE', 'Facturé', 40, '#6366f1', 1),
-('bcc', 'ANNULE', 'Annulé', 99, '#ef4444', 1);
+('bcc', 'BROUILLON', 'BROUILLON', 10, '#94a3b8', 1),
+('bcc', 'VALIDE', 'VALIDÉ', 20, '#3b82f6', 1),
+('bcc', 'LIVRE', 'LIVRÉ', 30, '#10b981', 1),
+('bcc', 'FACTURE', 'FACTURÉ', 40, '#6366f1', 1),
+('bcc', 'ANNULE', 'ANNULÉ', 99, '#ef4444', 1);

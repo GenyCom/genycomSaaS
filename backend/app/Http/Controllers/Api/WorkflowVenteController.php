@@ -143,7 +143,7 @@ class WorkflowVenteController extends Controller
             // Désactivé car le BL n'a plus de montants financiers sur ses lignes
             // $bl->recalculerTotaux();
 
-            $bcc->update(['est_livre' => true]);
+            $bcc->update(['est_livre' => true, 'etat_id' => 22]); // LIVRE (ID 22)
 
             return response()->json([
                 'message' => 'BC transformé en Bon de Livraison avec succès',
@@ -212,8 +212,8 @@ class WorkflowVenteController extends Controller
             $facture->recalculerTotaux();
 
             $bl->update(['facture_id' => $facture->id, 'statut' => 'livre']);
-            if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true]);
-            if ($bl->devis) $bl->devis->update(['est_facture' => true]);
+            if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true, 'etat_id' => 23]); // FACTURE (ID 23)
+            if ($bl->devis) $bl->devis->update(['est_facture' => true, 'etat_id' => 32]); // ACCEPTE (ID 32)
 
             return response()->json([
                 'message' => 'Bon de Livraison facturé avec succès',

@@ -299,7 +299,7 @@ onMounted(() => {
   --shadow-sm:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
   --shadow-md:  0 4px 12px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.04);
 
-  font-family: 'Inter', system-ui, sans-serif;
+  
   color: var(--c-text);
   background: var(--c-bg);
   min-height: 100vh;

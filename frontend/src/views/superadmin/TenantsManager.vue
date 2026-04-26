@@ -19,9 +19,20 @@
            <input v-model="form.nom_entreprise" class="form-input" placeholder="Ex: Groupe Auto" required />
          </div>
          <div class="form-group mb-0">
-           <label class="form-label">Nom de la Base (MySQL) *</label>
-           <input v-model="form.database_name" class="form-input" placeholder="Ex: genycom_groupeauto" required />
+            <label class="form-label">Nom de la Base (MySQL) *</label>
+            <input v-model="form.database_name" class="form-input" placeholder="Ex: genycom_groupeauto" required />
+            <p class="text-xs text-muted mt-1">La base doit déjà exister si votre hébergeur ne permet pas le CREATE DATABASE.</p>
          </div>
+
+         <div class="form-group mb-0">
+            <label class="form-label">Utilisateur DB (Optionnel)</label>
+            <input v-model="form.db_username" class="form-input" placeholder="Utilisateur spécifique" />
+         </div>
+         <div class="form-group mb-0">
+            <label class="form-label">Mot de passe DB (Optionnel)</label>
+            <input v-model="form.db_password" type="password" class="form-input" placeholder="Mot de passe spécifique" />
+         </div>
+
          <div class="form-group mb-0" style="grid-column: span 2;">
            <label class="form-label">Email de l'Administrateur (Owner) *</label>
            <input v-model="form.email" class="form-input" placeholder="Ex: boss@groupe.com" required />
@@ -60,8 +71,17 @@
         ❌ {{ provisionError }}
       </div>
 
-      <div class="flex gap-2">
-         <button class="btn btn-primary" @click="provision" :disabled="provisioning">
+      <div v-if="showConfirmExisting" class="mb-3" style="padding:1rem; border-radius:8px; background: rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);">
+        <p class="mb-2 font-semibold" style="color: #B45309;">⚠️ La base de données existe déjà !</p>
+        <p class="text-sm mb-3">Voulez-vous utiliser cette base existante et y exécuter les scripts d'initialisation (migrations) ?</p>
+        <div class="flex gap-2">
+           <button class="btn" style="background: #D97706; color: white;" @click="provision(true)">Oui, utiliser cette base</button>
+           <button class="btn btn-secondary" @click="showConfirmExisting = false">Abandonner</button>
+        </div>
+      </div>
+
+      <div class="flex gap-2" v-if="!showConfirmExisting">
+         <button class="btn btn-primary" @click="provision(false)" :disabled="provisioning">
            <span v-if="provisioning">⏳ Génération en cours...</span>
            <span v-else>Lancer la génération de la Base !</span>
          </button>
@@ -127,12 +147,15 @@ import api from '../../services/api'
 const showForm = ref(false)
 const loading = ref(true)
 const provisioning = ref(false)
+const showConfirmExisting = ref(false)
 const provisionSuccess = ref('')
 const provisionError = ref('')
 const tenants = ref([])
 const form = ref({ 
   nom_entreprise: '', 
   database_name: '', 
+  db_username: '',
+  db_password: '',
   email: '',
   forme_juridique: '',
   adresse: '',
@@ -157,9 +180,10 @@ async function loadTenants() {
   }
 }
 
-async function provision() {
+async function provision(force = false) {
   provisionSuccess.value = ''
   provisionError.value = ''
+  showConfirmExisting.value = false
 
   if (!form.value.nom_entreprise || !form.value.database_name || !form.value.email) {
     provisionError.value = 'Veuillez remplir tous les champs.'
@@ -168,11 +192,16 @@ async function provision() {
 
   provisioning.value = true
   try {
-    const { data } = await api.post('/superadmin/tenants', form.value)
+    const { data } = await api.post('/superadmin/tenants', {
+      ...form.value,
+      confirm_existing: force
+    })
     provisionSuccess.value = data.message
     form.value = { 
       nom_entreprise: '', 
       database_name: '', 
+      db_username: '',
+      db_password: '',
       email: '',
       forme_juridique: '',
       adresse: '',
@@ -183,7 +212,12 @@ async function provision() {
     // Rafraichir la liste
     await loadTenants()
   } catch (err) {
-    provisionError.value = err.response?.data?.message || 'Erreur inconnue lors du provisioning.'
+    if (err.response?.status === 409 && err.response?.data?.code === 'DATABASE_EXISTS') {
+      showConfirmExisting.value = true
+      provisionError.value = err.response.data.message
+    } else {
+      provisionError.value = err.response?.data?.message || 'Erreur inconnue lors du provisioning.'
+    }
   } finally {
     provisioning.value = false
   }
@@ -191,6 +225,7 @@ async function provision() {
 
 function resetForm() {
   showForm.value = false
+  showConfirmExisting.value = false
   provisionSuccess.value = ''
   provisionError.value = ''
 }

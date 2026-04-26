@@ -249,16 +249,18 @@ const totalTTC = computed(() => {
 })
 
 const montantPaye = computed(() => {
-  return parseFloat(docData.value.montant_paye || 0)
+  return parseFloat(docData.value.montant_regle || 0)
 })
 
 const resteAPayer = computed(() => {
-  // On utilise en priorité la vraie valeur "reste_a_payer" de l'API si elle existe
+  // On utilise en priorité la vraie valeur "reste_a_payer" de l'API si elle existe (cas des factures d'achat)
   if (docData.value.reste_a_payer !== undefined && docData.value.reste_a_payer !== null) {
     return parseFloat(docData.value.reste_a_payer)
   }
-  // Sinon on la recalcule par sécurité
-  return Math.max(0, totalTTC.value - montantPaye.value)
+  // Sinon on calcule pour les factures client : TTC - réglé
+  const ttc = parseFloat(docData.value.total_ttc || 0)
+  const regle = parseFloat(docData.value.montant_regle || 0)
+  return Math.max(0, ttc - regle)
 })
 
 function formatMoney(val) {
@@ -337,7 +339,7 @@ body { margin: 0; padding: 0; background-color: #f7f9fc; }
   flex-direction: column;
   align-items: center;
   padding: 2rem 0;
-  font-family: 'Inter', system-ui, sans-serif;
+  
   color: #111827;
 }
 

@@ -13,10 +13,27 @@ use Illuminate\Support\Facades\File;
 class TenantProvisioningService
 {
     /**
+     * Vérifie si une base de données existe.
+     */
+    public function databaseExists(string $dbName): bool
+    {
+        $query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?";
+        $exists = DB::connection('central')->select($query, [$dbName]);
+        return count($exists) > 0;
+    }
+
+    /**
      * Provisionne un nouveau tenant : User Global -> Base de données -> Schémas SQL.
      */
-    public function provisionner(array $data)
+    public function provisionner(array $data, bool $forceExisting = false)
     {
+        $dbName = $data['database_name'];
+        $dbExists = $this->databaseExists($dbName);
+
+        if ($dbExists && !$forceExisting) {
+            throw new \Exception("DATABASE_EXISTS");
+        }
+
         // 1. Création des enregistrements en base centrale (Transactionnelle)
         $provisioning = DB::connection('central')->transaction(function () use ($data) {
             $user = User::firstOrCreate(
@@ -32,6 +49,8 @@ class TenantProvisioningService
             $tenant = Tenant::create([
                 'nom' => $data['nom_entreprise'],
                 'database_name' => $data['database_name'],
+                'db_username'   => $data['db_username'] ?? null,
+                'db_password'   => $data['db_password'] ?? null,
                 'statut' => 'actif',
             ]);
 
@@ -44,37 +63,54 @@ class TenantProvisioningService
             return ['user' => $user, 'tenant' => $tenant];
         });
 
-        // 2. Opérations DDL (Hors transaction : MySQL ne supporte pas le rollback sur CREATE DATABASE/TABLE)
-        DB::connection('central')->statement("CREATE DATABASE `{$provisioning['tenant']->database_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+        // 2. Opérations DDL
+        if (!$dbExists) {
+            DB::connection('central')->statement("CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+        }
 
         // 3. Exécution des schémas SQL (002 à 008) sur la nouvelle base
-        $this->runTenantMigrations($provisioning['tenant']->database_name);
+        $this->runTenantMigrations($provisioning['tenant']);
 
         // 4. Insertion des données d'entreprise
-        DB::connection('tenant')->table('entreprise')->insert([
-            'raison_sociale'  => $data['nom_entreprise'],
-            'forme_juridique' => $data['forme_juridique'] ?? null,
-            'adresse'         => $data['adresse'],
-            'ville'           => $data['ville'],
-            'telephone'       => $data['telephone'] ?? null,
-            'email'           => $data['email'],
-            'site_web'        => $data['site_web'] ?? null,
-            'logo_path'       => $data['logo_url'] ?? null,
-            'pays'            => 'Maroc',
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
+        $this->setTenantConnection($provisioning['tenant']);
+        DB::connection('tenant')->table('entreprise')->updateOrInsert(
+            ['email' => $data['email']],
+            [
+                'raison_sociale'  => $data['nom_entreprise'],
+                'forme_juridique' => $data['forme_juridique'] ?? null,
+                'adresse'         => $data['adresse'],
+                'ville'           => $data['ville'],
+                'telephone'       => $data['telephone'] ?? null,
+                'email'           => $data['email'],
+                'site_web'        => $data['site_web'] ?? null,
+                'logo_path'       => $data['logo_url'] ?? null,
+                'pays'            => 'Maroc',
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]
+        );
 
         return $provisioning;
+    }
+
+    protected function setTenantConnection(Tenant $tenant)
+    {
+        Config::set('database.connections.tenant.database', $tenant->database_name);
+        if ($tenant->db_username) {
+            Config::set('database.connections.tenant.username', $tenant->db_username);
+        }
+        if ($tenant->db_password) {
+            Config::set('database.connections.tenant.password', $tenant->db_password);
+        }
+        DB::purge('tenant');
     }
 
     /**
      * Bascule sur la nouvelle connexion et exécute les fichiers SQL.
      */
-    protected function runTenantMigrations(string $dbName)
+    protected function runTenantMigrations(Tenant $tenant)
     {
-        Config::set('database.connections.tenant.database', $dbName);
-        DB::purge('tenant');
+        $this->setTenantConnection($tenant);
 
         $schemaPath = database_path('schema');
         $files = collect(File::files($schemaPath))

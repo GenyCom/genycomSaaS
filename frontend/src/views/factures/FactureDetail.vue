@@ -683,7 +683,7 @@ async function executeGenerateBL() {
   --c-bg: #F7F8FA; --c-surface: #FFFFFF; --c-border: #E8EAEE;
   --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #4338CA;
   --c-accent-bg: #EEF2FF;
-  padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; font-family: 'Inter', sans-serif;
+  padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; 
 }
 
 /* ─── Totals Card Premium ─── */

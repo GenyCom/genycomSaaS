@@ -246,7 +246,7 @@ onMounted(async () => {
   --c-danger: #DC2626;
   --c-success: #10B981;
   
-  font-family: 'Inter', system-ui, sans-serif;
+  
   background: var(--c-bg);
   min-height: 100vh;
   padding: 12px 28px 48px;

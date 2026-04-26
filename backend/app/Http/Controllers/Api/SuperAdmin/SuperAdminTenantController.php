@@ -47,6 +47,8 @@ class SuperAdminTenantController extends Controller
         $data = $request->validate([
             'nom_entreprise'  => 'required|string|max:255',
             'database_name'   => 'required|string|max:100|regex:/^[a-z0-9_]+$/|unique:tenants,database_name',
+            'db_username'     => 'nullable|string|max:100',
+            'db_password'     => 'nullable|string|max:100',
             'email'           => 'required|email',
             'adresse'         => 'required|string|max:500',
             'ville'           => 'required|string|max:100',
@@ -54,6 +56,7 @@ class SuperAdminTenantController extends Controller
             'forme_juridique' => 'nullable|string|max:100',
             'site_web'        => 'nullable|string|max:255',
             'logo_url'        => 'nullable|string|max:500',
+            'confirm_existing'=> 'nullable|boolean',
         ]);
 
         // Mot de passe par défaut si l'utilisateur n'existe pas encore
@@ -62,11 +65,13 @@ class SuperAdminTenantController extends Controller
         $data['password'] = 'password123';
         $data['pays']     = 'Maroc';
 
+        $force = (bool) ($request->confirm_existing ?? false);
+
         try {
-            $result = $provisioning->provisionner($data);
+            $result = $provisioning->provisionner($data, $force);
 
             return response()->json([
-                'message' => "Base de données [{$data['database_name']}] créée avec succès ! Les tables ont été générées.",
+                'message' => $force ? "Tenant rattaché à la base existante avec succès !" : "Base de données [{$data['database_name']}] créée avec succès !",
                 'tenant'  => [
                     'id'            => $result['tenant']->id,
                     'nom'           => $result['tenant']->nom,
@@ -82,6 +87,13 @@ class SuperAdminTenantController extends Controller
                 ],
             ], 201);
         } catch (\Exception $e) {
+            if ($e->getMessage() === "DATABASE_EXISTS") {
+                return response()->json([
+                    'code'    => 'DATABASE_EXISTS',
+                    'message' => "La base de données [{$data['database_name']}] existe déjà. Voulez-vous l'utiliser et exécuter les scripts d'initialisation ?",
+                ], 409);
+            }
+
             return response()->json([
                 'message' => "Erreur lors du provisioning : " . $e->getMessage(),
             ], 500);
