@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS `taux_tva` (
     `actif`             TINYINT(1) DEFAULT 1,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
+	`ordre` INT 		DEFAULT 0,
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS `mode_reglement` (
     `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `libelle`           VARCHAR(100) NOT NULL,
     `detail`            VARCHAR(255) NULL,
+	`ordre` 			INT DEFAULT 0,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`)

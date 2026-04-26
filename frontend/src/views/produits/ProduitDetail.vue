@@ -261,11 +261,6 @@ const imageUrl = computed(() => {
   }
   let path = form.value.image_path
   if (!path.startsWith('/')) path = '/' + path
-  if (window.location.port === '5173') return `http://genycom.test${path}`
-  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.startsWith('http')) {
-    const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-    return baseUrl + path
-  }
   return path
 })
 
@@ -284,7 +279,11 @@ onMounted(async () => {
      ])
      
      const p = pRes.data.data || pRes.data
-     form.value = { ...form.value, ...p }
+     form.value = { 
+       ...form.value, 
+       ...p,
+       taux_tva: p.taux_tva !== null && p.taux_tva !== undefined ? String(parseFloat(p.taux_tva)) : '20'
+     }
      familles.value = fRes.data || []
   } catch (e) {
     console.error(e)

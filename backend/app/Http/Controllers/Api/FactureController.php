@@ -148,63 +148,39 @@ class FactureController extends Controller
         $userId   = auth()->id();
         $tenantId = $request->get('current_tenant')->id ?? auth()->user()->tenant_id;
 
-        $this->db()->beginTransaction();
         try {
-            // 1. Récupérer la facture
-            $factureRaw = $this->db()->select("SELECT * FROM factures WHERE id = ? AND tenant_id = ? LIMIT 1", [$id, $tenantId]);
-            
-            if (empty($factureRaw)) {
-                throw new \Exception("Facture introuvable");
-            }
-            $facture = $factureRaw[0];
+            \Illuminate\Support\Facades\DB::beginTransaction();
 
-            // 2. Calculer le reste à payer
-            $resteAPayer = (float) $facture->total_ttc - (float) $facture->montant_regle;
+            $facture = Facture::where('tenant_id', $tenantId)->findOrFail($id);
+
+            $resteAPayer = $facture->total_ttc - $facture->montant_regle;
             if ($resteAPayer <= 0) {
                 throw new \Exception("Cette facture est déjà totalement réglée.");
             }
 
-            // On sécurise pour ne pas payer plus que le reste
             $montantAPayer = min((float) $data['montant'], $resteAPayer);
 
-            // 3. Insérer le règlement dans la table centralisée (Polymorphisme sur Facture)
-            $this->db()->insert(
-                "INSERT INTO reglements (tenant_id, payable_type, payable_id, date_reglement, montant, mode_reglement_id, observations, created_by, created_at)
-                 VALUES (?, 'App\\\\Models\\\\Facture', ?, ?, ?, ?, ?, ?, NOW())",
-                [
-                    $tenantId, 
-                    $id,
-                    $data['date_reglement'], 
-                    $montantAPayer,
-                    $data['mode_reglement_id'] ?? null,
-                    $data['observations'] ?? null,
-                    $userId
-                ]
-            );
+            $facture->reglements()->create([
+                'tenant_id'         => $tenantId,
+                'date_reglement'    => $data['date_reglement'],
+                'montant'           => $montantAPayer,
+                'mode_reglement_id' => $data['mode_reglement_id'] ?? null,
+                'observations'      => $data['observations'] ?? null,
+                'created_by'        => $userId
+            ]);
 
-            // 4. Mettre à jour la facture
-            $nouveauMontantRegle = (float) $facture->montant_regle + $montantAPayer;
-            $estReglee = ($nouveauMontantRegle >= (float) $facture->total_ttc) ? 1 : 0;
+            $facture->enregistrerReglement($montantAPayer);
 
-            $this->db()->update(
-                "UPDATE factures
-                 SET montant_regle = ?,
-                     est_reglee = ?,
-                     updated_at = NOW()
-                 WHERE id = ?",
-                [$nouveauMontantRegle, $estReglee, $id]
-            );
-
-            $this->db()->commit();
+            \Illuminate\Support\Facades\DB::commit();
             
             return response()->json([
                 'message' => 'Règlement client enregistré avec succès', 
-                'montant_regle' => $nouveauMontantRegle,
-                'est_reglee' => $estReglee
+                'montant_regle' => $facture->montant_regle,
+                'est_reglee' => $facture->est_reglee
             ]);
             
         } catch (\Throwable $e) {
-            $this->db()->rollBack();
+            \Illuminate\Support\Facades\DB::rollBack();
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }

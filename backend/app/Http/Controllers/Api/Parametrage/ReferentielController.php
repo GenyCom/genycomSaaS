@@ -96,10 +96,16 @@ class ReferentielController extends Controller
         }
         
         $query = $class::query();
+        
         if ($type === 'familles-produit') {
             $query->with('parent');
         }
-        return response()->json($query->latest()->get());
+
+        if ($type === 'etats' && $request->has('type_document')) {
+            $query->where('type_document', $request->type_document);
+        }
+
+        return response()->json($query->orderBy('ordre', 'asc')->latest()->get());
     }
 
     public function store(Request $request, $type): JsonResponse

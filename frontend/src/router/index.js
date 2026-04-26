@@ -53,9 +53,9 @@ const routes = [
       { path: 'devis/:id',     name: 'DevisDetail',  component: () => import('../views/ventes/DevisDetail.vue'), props: true },
       { path: 'factures',      name: 'Factures',     component: () => import('../views/factures/FactureList.vue') },
       { path: 'factures/:id',  name: 'FactureDetail',component: () => import('../views/factures/FactureDetail.vue'), props: true },
-      { path: 'contrats',       name: 'Contrats',       component: () => import('../views/ventes/ContratsIndex.vue') },
-      { path: 'contrats/create',name: 'ContratForm',    component: () => import('../views/ventes/ContratForm.vue') },
-      { path: 'contrats/:id/edit',name:'ContratEdit',   component: () => import('../views/ventes/ContratForm.vue'), props: true },
+      { path: 'contrats',       name: 'Contrats',       component: () => import('../views/contrats/ContratList.vue') },
+      { path: 'contrats/create',name: 'ContratForm',    component: () => import('../views/contrats/ContratForm.vue') },
+      { path: 'contrats/:id/edit',name:'ContratEdit',   component: () => import('../views/contrats/ContratForm.vue'), props: true },
       { path: 'commandes',     name: 'Commandes',    component: () => import('../views/achats/CommandeList.vue') },
       { path: 'commandes/:id', name: 'CommandeDetail', component: () => import('../views/achats/CommandeDetail.vue'), props: true },
       

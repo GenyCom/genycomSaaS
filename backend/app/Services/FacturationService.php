@@ -82,12 +82,14 @@ class FacturationService
         return DB::transaction(function () use ($contrat, $dateFacture) {
             $date = $dateFacture ?? $contrat->prochaine_echeance->toDateString();
             
-            $etatBrouillon = EtatDocument::where('tenant_id', $contrat->tenant_id)
+            $tenantId = $contrat->tenant_id ?? \App\Models\Tenant::where('database_name', \Illuminate\Support\Facades\DB::connection('tenant')->getDatabaseName())->value('id') ?? 1;
+
+            $etatBrouillon = EtatDocument::where('tenant_id', $tenantId)
                 ->ofType('facture')->byCode('BRL')->first();
 
             $facture = Facture::create([
-                'tenant_id'       => $contrat->tenant_id,
-                'numero'          => $this->numerotation->generer($contrat->tenant_id, 'FACTURE'),
+                'tenant_id'       => $tenantId,
+                'numero'          => $this->numerotation->generer($tenantId, 'FACTURE'),
                 'date_facture'    => $date,
                 'client_id'       => $contrat->client_id,
                 'total_ht'        => $contrat->total_ht,
@@ -208,13 +210,6 @@ class FacturationService
 
             // Mettre à jour la facture
             $facture->enregistrerReglement($data['montant']);
-            
-            // Mettre à jour l'encours du client
-            $client = $facture->client;
-            $client->montant_rest_du = Facture::where('client_id', $client->id)
-                ->where('est_reglee', false)
-                ->sum(DB::raw('total_ttc - montant_regle'));
-            $client->save();
         });
     }
 }

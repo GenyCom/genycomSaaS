@@ -41,6 +41,7 @@ class WorkflowVenteController extends Controller
                 'devise_id'     => $devis->devise_id,
                 'taux_change_document' => $devis->taux_change_document ?? 1.0,
                 'observations'  => $devis->observations,
+                'etat_id'       => 20, // Brouillon par défaut
                 'created_by'    => auth()->id() ?? $devis->created_by,
             ]);
 
@@ -68,7 +69,7 @@ class WorkflowVenteController extends Controller
             $bcc->recalculerTotaux();
 
             // 3. Mettre à jour le Devis
-            $etatAccepte = EtatDocument::where('type_document', 'devis')->where('code', 'ACCEPTE')->first();
+            $etatAccepte = EtatDocument::where('type_document', 'devis')->where('code', 'ACC')->first();
             if ($etatAccepte) {
                 $devis->update(['etat_id' => $etatAccepte->id]);
             }

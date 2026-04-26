@@ -343,16 +343,6 @@ const imageUrl = computed(() => {
   let path = form.value.image_path
   if (!path.startsWith('/')) path = '/' + path
   
-  // Fallback pour le développement local (Herd / Laragon)
-  if (window.location.port === '5173') {
-    return `http://genycom.test${path}`
-  }
-
-  if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.startsWith('http')) {
-    const baseUrl = import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-    return baseUrl + path
-  }
-  
   return path
 })
 
@@ -508,6 +498,7 @@ onMounted(async () => {
       form.value = { 
         ...form.value, 
         ...p,
+        taux_tva: p.taux_tva !== null && p.taux_tva !== undefined ? String(parseFloat(p.taux_tva)) : '20',
         prix_ht_achat: p.prix_ht_achat || p.prix_achat_ht || 0,
         prix_ht_vente: p.prix_ht_vente || p.prix_vente_ht || 0,
         detail: p.detail || p.description || ''

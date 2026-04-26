@@ -1,42 +1,27 @@
 <template>
-  <div class="devis-detail-view">
+  <div class="contrat-form-view">
     <Transition name="fade">
-      <div v-if="saving || loading || transforming" class="loading-overlay">
+      <div v-if="saving || loading" class="loading-overlay">
         <div class="loader-ring"><div></div><div></div><div></div><div></div></div>
-        <p class="loading-label">{{ transforming ? 'Génération du BC...' : (saving ? 'Enregistrement...' : 'Chargement...') }}</p>
+        <p class="loading-label">{{ saving ? 'Enregistrement en cours...' : 'Chargement...' }}</p>
       </div>
     </Transition>
 
-    <ConfirmModal 
-      :show="showConfirmModal"
-      title="Transformer en Bon de Commande"
-      message="Voulez-vous transformer ce devis en Bon de Commande ? Les lignes et les montants seront recopiés."
-      confirmText="Confirmer la Transformation"
-      @confirm="executeTransform"
-      @cancel="showConfirmModal = false"
-    />
+    <div v-if="toast.show" class="toast-notification" :class="toast.type">{{ toast.message }}</div>
 
     <div class="topbar">
       <div class="topbar-left">
-        <router-link to="/devis" class="back-btn" title="Retour aux devis">
+        <router-link to="/contrats" class="back-btn" title="Retour aux abonnements">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </router-link>
         <div class="breadcrumb">
           <span class="breadcrumb-parent">Ventes</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-          <span class="breadcrumb-current">{{ isNew ? 'Nouveau Devis' : (form.numero || 'Chargement...') }}</span>
+          <span class="breadcrumb-current">{{ isEdit ? 'Modifier Abonnement' : 'Nouvel Abonnement' }}</span>
         </div>
       </div>
       <div class="topbar-actions">
-        <button v-if="!isNew" class="btn-secondary-custom" @click="imprimer">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          <span>Imprimer</span>
-        </button>
-        <button v-if="!isNew" class="btn-secondary-custom accent-text" @click="transformToBC" :disabled="transforming">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
-          <span>Transformer en BC</span>
-        </button>
-        <button class="btn-save quote-theme-btn" @click="save" :disabled="saving">
+        <button class="btn-save contrat-theme-btn" @click="save" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span>Enregistrer</span>
         </button>
@@ -44,18 +29,16 @@
     </div>
 
     <div class="hero-header">
-      <div class="hero-avatar quote-theme">
-        <span>{{ isNew ? '+' : 'DV' }}</span>
+      <div class="hero-avatar contrat-theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
       </div>
       <div class="hero-meta">
-        <div class="hero-type-badge"><span class="dot"></span>Offre Commerciale</div>
-        <h1 class="hero-name">{{ isNew ? 'Établir un Nouveau Devis' : 'Détail du Devis : ' + form.numero }}</h1>
-        <p class="hero-sub" v-if="selectedClientName">Destinataire : <strong>{{ selectedClientName }}</strong></p>
+        <div class="hero-type-badge"><span class="dot"></span>Facturation Automatique</div>
+        <h1 class="hero-name">{{ isEdit ? form.titre : 'Créer un nouvel abonnement' }}</h1>
+        <p class="hero-sub" v-if="selectedClientName">Client : <strong>{{ selectedClientName }}</strong></p>
       </div>
-      <div v-if="!isNew" class="hero-status-selector">
-        <select v-model="form.etat_id" class="status-select-pill" :style="form.etat ? { backgroundColor: form.etat.couleur + '15', color: form.etat.couleur, borderColor: form.etat.couleur + '40' } : {}">
-          <option v-for="e in etats" :key="e.id" :value="e.id">{{ (e.libelle).toUpperCase() }}</option>
-        </select>
+      <div v-if="isEdit" class="hero-status-badge" :class="getStatutClass(form.statut)">
+        {{ form.statut }}
       </div>
     </div>
 
@@ -63,7 +46,7 @@
       <div class="kpi-item neutral">
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div class="kpi-body">
-          <p class="kpi-label">Total HT</p>
+          <p class="kpi-label">Total HT / Période</p>
           <p class="kpi-value">{{ formatMoney(form.total_ht) }} <span>DH</span></p>
         </div>
       </div>
@@ -76,10 +59,10 @@
         </div>
       </div>
       <div class="kpi-divider"></div>
-      <div class="kpi-item quote-accent">
+      <div class="kpi-item contrat-accent">
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="kpi-body">
-          <p class="kpi-label">Net à Payer TTC</p>
+          <p class="kpi-label">Montant TTC / Période</p>
           <p class="kpi-value">{{ formatMoney(form.total_ttc) }} <span>DH</span></p>
         </div>
       </div>
@@ -87,38 +70,51 @@
 
     <div class="content-grid">
       <div class="col-main">
+        
         <section class="info-card mb-4">
           <div class="card-header">
-            <div class="card-header-icon quote-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <h3>Client & Dates</h3>
+            <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+            <h3>Modalités du Contrat</h3>
           </div>
           <div class="card-body edit-form">
             <div class="form-row-custom">
-              <div class="form-group-custom">
-                <label>Client Destinataire *</label>
-                <select v-model="form.client_id" :class="{ 'input-error': errors.client_id }">
-                  <option value="" disabled>Choisir un client...</option>
+              <div class="form-group-custom" style="flex: 2;">
+                <label>Client *</label>
+                <select v-model="form.client_id" class="input-custom" :class="{ 'input-error': errors.client_id }">
+                  <option value="" disabled>Sélectionner un client...</option>
                   <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe || c.display_name }}</option>
                 </select>
                 <span v-if="errors.client_id" class="error-text">{{ errors.client_id }}</span>
               </div>
-              <div class="form-group-custom">
-                <label>Projet Lié</label>
-                <select v-model="form.projet_id">
-                  <option value="">Aucun projet</option>
-                  <option v-for="p in projects" :key="p.id" :value="p.id">[{{ p.code_projet }}] {{ p.nom_projet }}</option>
-                </select>
+              <div class="form-group-custom" style="flex: 3;">
+                <label>Titre / Description de l'abonnement *</label>
+                <input v-model="form.titre" type="text" class="input-custom" :class="{ 'input-error': errors.titre }" placeholder="Ex: Hébergement SaaS, Maintenance annuelle..." />
+                <span v-if="errors.titre" class="error-text">{{ errors.titre }}</span>
               </div>
             </div>
+            
             <div class="form-row-custom">
               <div class="form-group-custom">
-                <label>Date du Devis</label>
-                <input v-model="form.date_devis" type="date" :class="{ 'input-error': errors.date_devis }" />
-                <span v-if="errors.date_devis" class="error-text">{{ errors.date_devis }}</span>
+                <label>Fréquence de facturation *</label>
+                <select v-model="form.frequence" class="input-custom">
+                  <option value="MENSUEL">Mensuel</option>
+                  <option value="TRIMESTRIEL">Trimestriel</option>
+                  <option value="SEMESTRIEL">Semestriel</option>
+                  <option value="ANNUEL">Annuel</option>
+                </select>
               </div>
               <div class="form-group-custom">
-                <label>Validité (Jours)</label>
-                <input v-model="form.validite_jours" type="number" />
+                <label>Date de début *</label>
+                <input v-model="form.date_debut" type="date" class="input-custom" :class="{ 'input-error': errors.date_debut }" />
+                <span v-if="errors.date_debut" class="error-text">{{ errors.date_debut }}</span>
+              </div>
+              <div class="form-group-custom">
+                <label>Statut de l'abonnement</label>
+                <select v-model="form.statut" class="input-custom" :class="getStatutInputClass(form.statut)">
+                  <option value="ACTIF">🟢 Actif</option>
+                  <option value="SUSPENDU">🟠 Suspendu</option>
+                  <option value="RESILIE">🔴 Résilié</option>
+                </select>
               </div>
             </div>
           </div>
@@ -127,15 +123,14 @@
         <section class="info-card">
           <div class="card-header table-header-actions">
             <div class="flex-align-center">
-              <div class="card-header-icon quote-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63a2.12 2.12 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg></div>
-              <h3>Détail des Prestations</h3>
+              <div class="card-header-icon contrat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63a2.12 2.12 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg></div>
+              <h3>Services récurrents facturés</h3>
             </div>
             <button class="btn-add-line" @click="addLine">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Ajouter une ligne
             </button>
           </div>
-          
           <div class="card-body p-0">
             <div class="product-search-bar-container">
               <div class="search-input-wrapper">
@@ -145,7 +140,7 @@
                   v-model="searchQuery" 
                   @input="onSearchInput"
                   @keydown.enter.prevent="selectFirstProduct"
-                  placeholder="Scanner un code-barres ou rechercher (référence, désignation)..." 
+                  placeholder="Rechercher un service, forfait ou scanner un article..." 
                   class="search-input"
                 />
                 
@@ -165,7 +160,7 @@
                 </ul>
 
                 <div v-if="searchQuery.length >= 2 && searchResults.length === 0" class="search-dropdown empty-result">
-                  Aucun article trouvé pour "{{ searchQuery }}"
+                  Aucun article/service trouvé pour "{{ searchQuery }}"
                 </div>
               </div>
             </div>
@@ -174,7 +169,7 @@
               <table class="saas-table">
                 <thead>
                   <tr>
-                    <th style="width: 40%">Article / Service</th>
+                    <th style="width: 40%">Prestation / Service</th>
                     <th style="width: 13%" class="text-center">Qté</th>
                     <th style="width: 15%" class="text-right">P.U HT</th>
                     <th style="width: 12%" class="text-center">TVA</th>
@@ -186,21 +181,21 @@
                   <tr v-for="(ligne, idx) in form.lignes" :key="idx" class="ligne-row">
                     <td class="td-article">
                       <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="select-inline-table">
-                        <option value="">-- Sélection manuelle --</option>
+                        <option value="">-- Texte libre / Service --</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                       </select>
-                      <textarea v-model="ligne.designation" class="input-inline-sub" placeholder="Description personnalisée..."></textarea>
+                      <textarea v-model="ligne.designation" class="input-inline-sub" placeholder="Description de la ligne récurrente..."></textarea>
                     </td>
                     <td class="td-center">
                       <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
                     </td>
                     <td class="td-center">
-                      <input
-                        v-model.lazy="ligne.prix_unitaire_display"
+                      <input 
+                        v-model.lazy="ligne.prix_unitaire_display" 
                         @focus="onFocusPrice($event, ligne)"
                         @blur="onBlurPrice(ligne)"
-                        type="text"
-                        class="input-inline-table text-right mono"
+                        type="text" 
+                        class="input-inline-table text-right mono" 
                       />
                     </td>
                     <td class="td-center">
@@ -221,8 +216,8 @@
                     </td>
                   </tr>
                   <tr v-if="form.lignes.length === 0">
-                    <td colspan="6" class="text-center" style="padding: 40px; color: var(--c-muted); font-style: italic; font-size: 0.85rem;">
-                      Utilisez la barre de recherche ci-dessus pour scanner ou ajouter un article.
+                    <td colspan="6" class="text-center p-6 text-muted italic text-sm" style="padding: 40px;">
+                      Utilisez la barre de recherche ci-dessus pour ajouter le service à facturer.
                     </td>
                   </tr>
                 </tbody>
@@ -230,17 +225,41 @@
             </div>
           </div>
         </section>
+
       </div>
 
       <div class="col-side">
-        <section class="info-card">
+        <section class="info-card mb-4">
           <div class="card-header">
             <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-            <h3>Observations & Notes</h3>
+            <h3>Notes Internes</h3>
           </div>
           <div class="card-body">
-            <textarea v-model="form.observations" rows="6" class="textarea-custom" :class="{ 'input-error': errors.observations }" placeholder="Notes visibles sur le devis..."></textarea>
-            <span v-if="errors.observations" class="error-text">{{ errors.observations }}</span>
+            <textarea v-model="form.observations" rows="5" class="textarea-custom" placeholder="Notes visibles uniquement en interne..."></textarea>
+          </div>
+        </section>
+
+        <section class="info-card side-card totals-premium-card">
+          <div class="card-header totals-header-light">
+             <div class="card-header-icon contrat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+             <h3>Montant par Période</h3>
+          </div>
+          <div class="total-inner">
+            <div class="total-row">
+              <span class="total-label">Total Net HT</span>
+              <span class="total-value black-text">{{ formatMoney(form.total_ht) }} <small>DH</small></span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">TVA Totale</span>
+              <span class="total-value black-text">{{ formatMoney(form.total_tva) }} <small>DH</small></span>
+            </div>
+            <div class="total-row main-total-light">
+              <span class="label-main">NET À PAYER (TTC)</span>
+              <div class="amount-group">
+                <span class="amount mono black-text">{{ formatMoney(form.total_ttc) }}</span>
+                <span class="currency-dark">DH</span>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -249,31 +268,30 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../services/api'
-import { toast } from '../../services/toastService'
-import ConfirmModal from '../../components/shared/ConfirmModal.vue'
+import { toast as toastService } from '../../services/toastService'
 
 const router = useRouter()
 const route = useRoute()
-const isNew = computed(() => route.params.id === 'new')
+const isEdit = route.params.id !== undefined && route.params.id !== 'new'
+const loading = ref(false)
 const saving = ref(false)
-const loading = ref(true)
-const transforming = ref(false)
-const showConfirmModal = ref(false)
+const errors = reactive({})
+
+const toast = reactive({ show: false, message: '', type: 'success' })
 
 const form = ref({
-  numero: '',
-  date_devis: new Date().toISOString().substring(0, 10),
-  validite_jours: 30,
   client_id: '',
-  projet_id: '',
+  titre: '',
+  frequence: 'MENSUEL',
+  date_debut: new Date().toISOString().substring(0, 10),
+  statut: 'ACTIF',
+  observations: '',
   total_ht: 0,
   total_tva: 0,
   total_ttc: 0,
-  total_remise: 0,
-  observations: '',
   lignes: []
 })
 
@@ -281,9 +299,14 @@ const clients = ref([])
 const products = ref([])
 const produits = ref([])
 const projects = ref([])
-const tauxTvaList = ref([])
-const etats = ref([])
-const errors = reactive({})
+const tauxTvaList = ref([]) 
+
+function showToast(m, t = 'success') {
+  toast.show = true; 
+  toast.message = m; 
+  toast.type = t;
+  setTimeout(() => { toast.show = false }, 4000)
+}
 
 // --- RECHERCHE INTELLIGENTE (DOUCHETTE & AUTOCOMPLETE) ---
 const searchQuery = ref('')
@@ -306,22 +329,22 @@ function selectFirstProduct() {
   if (searchResults.value.length > 0) {
     ajouterProduitAuDocument(searchResults.value[0])
   } else if (searchQuery.value.length > 0) {
-    toast.error("Article introuvable pour cette recherche/scan.")
+    showToast("Article introuvable pour cette recherche/scan.", "error")
     searchQuery.value = ''
   }
 }
 
 function ajouterProduitAuDocument(produit) {
-  const pu = produit.prix_ht_vente || produit.prix_vente_ht || 0
+  // Abonnement = Vente, donc on prend le prix de vente
+  const pu = parseFloat(produit.prix_ht_vente || produit.prix_vente_ht) || 0
+  
   form.value.lignes.push({
     produit_id: produit.id,
     designation: produit.designation,
     quantite: 1,
-    unite: produit.unite || 'Unité',
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
     taux_tva: parseFloat(produit.taux_tva) || 20,
-    remise_pourcent: 0,
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -330,18 +353,33 @@ function ajouterProduitAuDocument(produit) {
   searchQuery.value = ''
   searchResults.value = []
 }
+// ---------------------------------------------------------
 
 const selectedClientName = computed(() => {
   const c = clients.value.find(client => client.id === form.value.client_id)
   return c ? (c.societe || c.display_name) : null
 })
 
+function getStatutClass(statut) {
+  if (statut === 'ACTIF') return 'status-success'
+  if (statut === 'SUSPENDU') return 'status-warning'
+  if (statut === 'RESILIE') return 'status-danger'
+  return 'status-neutral'
+}
+
+function getStatutInputClass(statut) {
+  if (statut === 'ACTIF') return 'text-success font-bold'
+  if (statut === 'SUSPENDU') return 'text-warning font-bold'
+  if (statut === 'RESILIE') return 'text-danger font-bold'
+  return ''
+}
+
 // === LOGIQUE DE FORMATTAGE DE L'INPUT ===
 function formatNumberInput(val) {
   if (val === undefined || val === null || isNaN(val)) return '0,00';
   let parts = parseFloat(val).toFixed(2).split('.');
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return parts.join(',');
+  return parts.join(','); 
 }
 
 function onFocusPrice(event, ligne) {
@@ -356,15 +394,21 @@ function onBlurPrice(ligne) {
   recalculate();
 }
 
-function formatMoney(val) {
-  return parseFloat(val || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function formatMoney(val) { 
+  return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
 }
 
 function addLine() {
   form.value.lignes.push({ 
-    produit_id: '', designation: '', quantite: 1, unite: 'Unité', 
-    prix_unitaire: 0, prix_unitaire_display: '0,00', 
-    taux_tva: 20, remise_pourcent: 0, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
+    produit_id: '', 
+    designation: '', 
+    quantite: 1, 
+    prix_unitaire: 0, 
+    prix_unitaire_display: '0,00',
+    taux_tva: 20,
+    montant_ht: 0,
+    montant_tva: 0,
+    montant_ttc: 0
   })
 }
 
@@ -374,13 +418,14 @@ function removeLine(idx) {
 }
 
 function onProduitSelect(ligne) {
-  const p = products.value.find(prod => prod.id === ligne.produit_id)
-  if (p) {
-    ligne.designation = p.designation
-    ligne.prix_unitaire = parseFloat(p.prix_ht_vente || p.prix_vente_ht) || 0
-    ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
-    ligne.taux_tva = parseFloat(p.taux_tva) || 20
-    ligne.unite = p.unite || 'Unité'
+  if (ligne.produit_id) {
+    const prod = products.value.find(p => p.id === ligne.produit_id)
+    if (prod) {
+      ligne.designation = prod.designation
+      ligne.prix_unitaire = parseFloat(prod.prix_ht_vente || prod.prix_vente) || 0
+      ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
+      ligne.taux_tva = parseInt(prod.taux_tva) || 20
+    }
   }
   recalculate()
 }
@@ -391,65 +436,42 @@ function recalculate() {
     const qty = parseFloat(l.quantite) || 0
     const pu = parseFloat(l.prix_unitaire) || 0
     const tvaPct = parseFloat(l.taux_tva) || 0
+    
     const netHT = qty * pu
     const tvaAmt = netHT * (tvaPct / 100)
+    
     l.montant_ht = +netHT.toFixed(2)
     l.montant_tva = +tvaAmt.toFixed(2)
     l.montant_ttc = +(netHT + tvaAmt).toFixed(2)
-    tht += netHT; ttva += tvaAmt
+    
+    tht += netHT; 
+    ttva += tvaAmt
   })
   form.value.total_ht = +tht.toFixed(2)
   form.value.total_tva = +ttva.toFixed(2)
   form.value.total_ttc = +(tht + ttva).toFixed(2)
 }
 
-watch(() => form.value.etat_id, (newId) => {
-  const e = etats.value.find(item => item.id === newId)
-  if (e) form.value.etat = e
-})
-
 function validateForm() {
   Object.keys(errors).forEach(key => delete errors[key])
   let isValid = true
 
-  if (!form.value.client_id) {
-    errors.client_id = "Le client est requis"
-    isValid = false
-  }
-  if (!form.value.date_devis) {
-    errors.date_devis = "La date est requise"
-    isValid = false
-  }
-
-  if (form.value.observations && form.value.observations.length > 5000) {
-    errors.observations = "Les observations dépassent la limite de 5000 caractères"
-    isValid = false
-  }
+  if (!form.value.client_id) { errors.client_id = "Requis"; isValid = false }
+  if (!form.value.titre) { errors.titre = "Requis"; isValid = false }
+  if (!form.value.date_debut) { errors.date_debut = "Requise"; isValid = false }
 
   if (!form.value.lignes || form.value.lignes.length === 0) {
-    toast.error('Le devis doit contenir au moins une ligne.')
+    showToast('L\'abonnement doit contenir au moins une ligne.', 'error')
     return false
   }
 
   form.value.lignes.forEach((l, idx) => {
-    const rowNum = idx + 1
     if (!l.designation || l.designation.trim() === '') {
-       toast.error(`Désignation manquante à la ligne ${rowNum}`)
-       isValid = false
-    }
-    const qty = parseFloat(l.quantite)
-    if (isNaN(qty) || qty <= 0) {
-       toast.error(`Quantité invalide à la ligne ${rowNum} : doit être un nombre > 0`)
-       isValid = false
-    }
-    const pu = parseFloat(l.prix_unitaire)
-    if (isNaN(pu) || pu < 0) {
-       toast.error(`Prix unitaire invalide à la ligne ${rowNum} : doit être un nombre positif`)
+       showToast(`Désignation manquante à la ligne ${idx + 1}`, 'error')
        isValid = false
     }
   })
 
-  if (!isValid) toast.error('Veuillez corriger les erreurs indiquées avant d’enregistrer.')
   return isValid
 }
 
@@ -457,39 +479,28 @@ async function save() {
   if (!validateForm()) return
   saving.value = true
   try {
-    if (isNew.value) {
-      await api.post('/devis', form.value)
-      toast.success('Devis créé avec succès !')
-      setTimeout(() => router.push('/devis'), 1000)
+    if (!isEdit) {
+      await api.post('/contrats', form.value)
+      showToast('Abonnement créé avec succès')
     } else {
-      await api.put(`/devis/${route.params.id}`, form.value)
-      toast.success('Devis mis à jour !')
-      setTimeout(() => router.push('/devis'), 1000)
+      await api.put(`/contrats/${route.params.id}`, form.value)
+      showToast('Abonnement mis à jour')
     }
+    setTimeout(() => router.push('/contrats'), 1000)
   } catch (err) {
-    console.error(err)
-    toast.error('Erreur lors de l’enregistrement.')
+    if (err.response?.status === 422) {
+      const serverErrors = err.response.data.errors
+      Object.keys(serverErrors).forEach(key => {
+        errors[key] = Array.isArray(serverErrors[key]) ? serverErrors[key][0] : serverErrors[key]
+      })
+      showToast('Erreur de validation.', 'error')
+    } else {
+      showToast('Une erreur est survenue lors de l’enregistrement.', 'error')
+    }
   } finally {
     saving.value = false
   }
 }
-
-async function transformToBC() { showConfirmModal.value = true }
-
-async function executeTransform() {
-  showConfirmModal.value = false
-  transforming.value = true
-  try {
-    const { data } = await api.post(`/workflow/devis-to-bc/${route.params.id}`)
-    toast.success('Document transformé avec succès !')
-    setTimeout(() => router.push(`/bons-commande-client/${data.id}`), 1000)
-  } catch (err) {
-    console.error(err)
-    toast.error('Erreur de transformation')
-  } finally { transforming.value = false }
-}
-
-async function imprimer() { window.open(`/print/devis/${route.params.id}`, '_blank') }
 
 onMounted(async () => {
   loading.value = true
@@ -500,82 +511,112 @@ onMounted(async () => {
       api.get('/projets', { params: { per_page: 500 } }),
       api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } }))
     ])
-    clients.value = cRes.data.data || cRes.data || []
     
-    const { data: etatsData } = await api.get('/parametrage/referentiels/etats?type_document=devis')
-    etats.value = etatsData.data || etatsData || []
+    clients.value = cRes.data.data || cRes.data || []
     products.value = pRes.data.data || pRes.data || []
     produits.value = products.value.filter(p => p.is_actif !== false)
     projects.value = prRes.data.data || prRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
-
-    if (!isNew.value) {
-      const { data } = await api.get(`/devis/${route.params.id}`)
+    
+    if (isEdit) {
+      const { data } = await api.get(`/contrats/${route.params.id}`)
       const rawData = data.data || data
-      if (rawData.date_devis) rawData.date_devis = rawData.date_devis.substring(0, 10)
+      if (rawData.date_debut) rawData.date_debut = rawData.date_debut.substring(0, 10)
+      
       if (rawData.lignes) {
         rawData.lignes.forEach(l => {
-          l.taux_tva = parseFloat(l.taux_tva) || 0;
+          l.taux_tva = parseInt(l.taux_tva) || 0
           l.quantite = parseFloat(l.quantite) || 1;
           l.prix_unitaire = parseFloat(l.prix_unitaire) || 0;
-          l.prix_unitaire_display = formatNumberInput(l.prix_unitaire); // Formattage au chargement
+          l.prix_unitaire_display = formatNumberInput(l.prix_unitaire);
         });
       }
+      
       form.value = { ...form.value, ...rawData }
       recalculate()
     }
-  } catch (e) { console.error(e) } finally { loading.value = false }
+  } catch (e) {
+    console.error(e)
+    showToast('Erreur lors du chargement des données', 'error')
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
 /* ─── Design Tokens ─── */
-.devis-detail-view {
+.contrat-form-view {
   --c-bg: #F7F8FA; --c-surface: #FFFFFF; --c-border: #E8EAEE;
-  --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #2563EB;
-  --c-accent-bg: #EEF4FF; --c-neutral-bg: #F0F4FF;
+  --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #8B5CF6; /* Theme Violet */
+  --c-accent-bg: #F5F3FF;
   padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; font-family: 'Inter', sans-serif;
 }
 
-/* ─── Structure ─── */
+/* ─── Totals Card Premium ─── */
+.totals-premium-card { background: #fff; border: 1.5px solid var(--c-accent); border-radius: 16px; color: var(--c-text); overflow: hidden; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.05); }
+.total-inner { padding: 24px; }
+.total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.total-label { font-size: 0.75rem; color: #6B7280; font-weight: 500; }
+.total-value { font-size: 1.1rem !important; font-weight: 700; color: #1A1D23; }
+.black-text { color: #000 !important; }
+
+.main-total-light { flex-direction: column; align-items: flex-end; gap: 4px; margin-bottom: 0; margin-top: 12px; border-top: 1px solid var(--c-accent-bg); padding-top: 12px; }
+.label-main { font-size: 0.75rem; font-weight: 800; color: var(--c-accent); letter-spacing: 0.1em; }
+.amount-group { display: flex; align-items: baseline; gap: 6px; }
+.amount { font-size: 2.2rem !important; font-weight: 900; letter-spacing: -1px; color: #000; }
+.currency-dark { font-size: 0.8rem; font-weight: 700; color: #94A3B8; }
+
+/* ─── Top Bar ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
-.back-btn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #D5D9E2; background: #fff; display: flex; align-items: center; justify-content: center; color: var(--c-muted); text-decoration: none; }
+.back-btn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #D5D9E2; background: #fff; display: flex; align-items: center; justify-content: center; color: var(--c-muted); text-decoration: none; transition: all 0.2s; }
+.back-btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
 .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 500; }
 .breadcrumb-current { color: var(--c-text); font-weight: 700; }
 
 .topbar-actions { display: flex; gap: 10px; }
-.btn-save { background: var(--c-accent); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+.btn-save { background: var(--c-accent); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2); }
+.contrat-theme-btn { background: var(--c-accent); }
 .btn-secondary-custom { background: #fff; color: var(--c-muted); border: 1.5px solid #D5D9E2; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; }
-.accent-text { color: var(--c-accent); border-color: var(--c-accent-bg); }
 
-/* ─── Hero ─── */
+/* ─── Hero Header ─── */
 .hero-header { display: flex; align-items: center; gap: 20px; background: #fff; padding: 16px 24px; border-radius: 16px; border: 1px solid var(--c-border); margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-.quote-theme { background: linear-gradient(135deg, #2563EB, #4F46E5); color: #fff; }
+.contrat-theme { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: #fff; }
 .hero-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; }
 .hero-meta { flex: 1; }
 .hero-type-badge { display: flex; align-items: center; gap: 5px; font-size: .65rem; font-weight: 700; text-transform: uppercase; color: var(--c-accent); margin-bottom: 2px; }
 .hero-type-badge .dot { width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; }
 .hero-name { font-size: 1.4rem; font-weight: 800; margin: 0; color: var(--c-text); }
 .hero-sub { font-size: .82rem; color: var(--c-muted); margin: 2px 0 0; }
-.hero-status-badge { padding: 6px 14px; border-radius: 100px; font-size: .7rem; font-weight: 800; background: #F1F3F6; color: #6B7280; }
+.hero-status-badge { padding: 6px 14px; border-radius: 100px; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+
+.status-success { background: #ECFDF5; color: #059669; }
+.status-warning { background: #FFFBEB; color: #D97706; }
+.status-danger { background: #FEF2F2; color: #DC2626; }
+.status-neutral { background: #F1F5F9; color: #475569; }
+
+.text-success { color: #059669; }
+.text-warning { color: #D97706; }
+.text-danger { color: #DC2626; }
 
 /* ─── KPI Strip ─── */
 .kpi-strip { display: flex; background: #fff; border: 1px solid var(--c-border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
 .kpi-item { flex: 1; padding: 18px 22px; display: flex; align-items: center; gap: 14px; }
 .kpi-divider { width: 1px; background: var(--c-border); margin: 12px 0; }
-.kpi-icon { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #F1F5F9; color: #475569; }
-.kpi-item.quote-accent .kpi-icon { background: #EEF4FF; color: var(--c-accent); }
+.kpi-icon { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.kpi-item.contrat-accent .kpi-icon { background: var(--c-accent-bg); color: var(--c-accent); }
+.kpi-item.neutral .kpi-icon { background: #F1F5F9; color: #475569; }
 .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin-bottom: 3px; }
 .kpi-value { font-size: 1.25rem; font-weight: 800; margin: 0; }
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */
-.content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+.content-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
 .card-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #F9FAFB; border-bottom: 1px solid var(--c-border); }
 .card-header h3 { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin: 0; }
-.card-header-icon { width: 28px; height: 28px; border-radius: 7px; background: #EEF4FF; color: var(--c-accent); display: flex; align-items: center; justify-content: center; }
+.card-header-icon { width: 28px; height: 28px; border-radius: 7px; background: var(--c-accent-bg); color: var(--c-accent); display: flex; align-items: center; justify-content: center; }
 .table-header-actions { justify-content: space-between; padding-right: 12px; }
 .flex-align-center { display: flex; align-items: center; gap: 10px; }
 
@@ -584,15 +625,16 @@ onMounted(async () => {
 .form-group-custom { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .form-group-custom label { font-size: .7rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; }
 .form-row-custom { display: flex; gap: 16px; }
-input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-radius: 8px; font-size: .9rem; background: #fff; }
-.textarea-custom { width: 100%; border: none; font-size: .85rem; line-height: 1.5; outline: none; resize: vertical; }
+.input-custom { padding: 10px; border: 1.5px solid #D5D9E2; border-radius: 8px; font-size: .9rem; background: #fff; width: 100%; outline: none; }
+.input-custom:focus { border-color: var(--c-accent); }
+.textarea-custom { width: 100%; border: none; font-size: .85rem; line-height: 1.5; outline: none; resize: vertical; padding: 16px; }
 
 /* ─── BARRE DE RECHERCHE (AUTOCOMPLETE / DOUCHETTE) ─── */
 .product-search-bar-container { padding: 16px 20px; border-bottom: 1px dashed var(--c-border); background: #FCFDFE; }
 .search-input-wrapper { position: relative; max-width: 600px; }
 .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94A3B8; }
 .search-input { width: 100%; padding: 12px 14px 12px 42px; font-size: .9rem; border: 1.5px solid var(--c-accent); border-radius: 10px; box-shadow: 0 0 0 3px var(--c-accent-bg); transition: all 0.2s; background: #fff; outline: none; }
-.search-input:focus { border-color: #1D4ED8; box-shadow: 0 0 0 4px #DBEAFE; }
+.search-input:focus { border-color: #7C3AED; box-shadow: 0 0 0 4px #EDE9FE; }
 
 .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; margin-bottom: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 50; max-height: 280px; overflow-y: auto; list-style: none; padding: 0; }
 .search-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; cursor: pointer; transition: background 0.2s; }
@@ -626,7 +668,7 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .select-inline-table { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-weight: 700; color: var(--c-accent); padding: 9px 10px; background: #fff; margin-bottom: 8px; font-size: .85rem; }
 .input-inline-sub { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-size: .84rem; color: var(--c-text); padding: 9px 10px; min-height: 56px; font-family: inherit; resize: vertical; display: block; }
 .input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 10px; background: #fff; font-size: .88rem; }
-.input-inline-table:focus { border-color: var(--c-accent); background: #fff; outline: none; }
+.input-inline-table:focus { border-color: var(--c-accent); outline: none; }
 .tva-select { font-weight: 600; font-size: .85rem; text-align-last: center; }
 
 .btn-row-delete { background: none; border: none; color: #94A3B8; cursor: pointer; padding: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
@@ -638,6 +680,7 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
+.font-black { font-weight: 900; }
 .input-error { border-color: #EF4444 !important; background-color: #FEF2F2 !important; }
 .error-text { color: #EF4444; font-size: 0.65rem; font-weight: 600; margin-top: 2px; }
 
@@ -645,21 +688,9 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .loader-ring { width: 40px; height: 40px; position: relative; }
 .loader-ring div { position: absolute; width: 32px; height: 32px; border: 3px solid transparent; border-top-color: var(--c-accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.status-select-pill {
-  padding: 6px 16px;
-  border-radius: 100px;
-  font-size: .75rem;
-  font-weight: 800;
-  border: 1.5px solid var(--c-border);
-  background: var(--c-bg);
-  color: var(--c-muted);
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  transition: all .2s;
-  text-transform: uppercase;
-}
-.status-select-pill:hover {
-  filter: brightness(0.95);
-}
+
+.toast-notification { position: fixed; top: 1rem; right: 1rem; padding: 0.85rem 1.5rem; border-radius: 8px; z-index: 9999; animation: slideIn 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.toast-notification.success { background: #10b981; color: #fff; }
+.toast-notification.error { background: #ef4444; color: #fff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>

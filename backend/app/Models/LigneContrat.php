@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use App\Traits\BelongsToTenant;
 use App\Traits\HasLigneCalculs;
 
 class LigneContrat extends BaseModel
 {
-    use BelongsToTenant, HasLigneCalculs;
+    use HasLigneCalculs;
 
     protected $table = 'ligne_contrat';
 
     protected $fillable = [
-        'tenant_id',
         'contrat_id',
         'produit_id',
         'designation',

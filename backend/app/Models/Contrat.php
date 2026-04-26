@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use App\Traits\BelongsToTenant;
 use App\Traits\HasAuditColumns;
 
 class Contrat extends BaseModel
 {
-    use BelongsToTenant, HasAuditColumns;
+    use HasAuditColumns;
 
     protected $table = 'contrats';
 
     protected $fillable = [
-        'tenant_id',
         'titre',
         'numero',
         'client_id',

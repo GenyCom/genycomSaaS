@@ -63,4 +63,17 @@ class Client extends BaseModel
               ->orWhere('ice', 'like', "%{$search}%");
         });
     }
+
+    // ─── Utils ───
+    public function recalculerEncours(): void
+    {
+        $this->montant_rest_du = $this->factures()
+            ->where(function ($query) {
+                $query->whereDoesntHave('etat', function($q) {
+                    $q->where('code', 'BRL'); // Exclure les brouillons
+                })->orWhereNull('etat_id'); // Inclure celles sans état défini (sécurité)
+            })
+            ->sum('montant_restant');
+        $this->saveQuietly(); // Use saveQuietly to avoid infinite loops if Client hooks exist
+    }
 }

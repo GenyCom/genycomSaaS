@@ -58,7 +58,7 @@ class DevisController extends Controller
         // Etat par défaut
         $etatBrouillon = \App\Models\EtatDocument::where('tenant_id', $tenantId)
             ->where('type_document', 'devis')
-            ->where('code', 'BROUILLON')
+            ->where('code', 'BRO')
             ->first();
         if ($etatBrouillon) {
             $data['etat_id'] = $etatBrouillon->id;
@@ -124,6 +124,7 @@ class DevisController extends Controller
             'projet_id'              => 'nullable|integer',
             'date_devis'             => 'required|date',
             'date_validite'          => 'nullable|date',
+            'etat_id'                => 'nullable|integer',
             'condition_reglement_id' => 'nullable|integer',
             'observations'           => 'nullable|string',
             'lignes'                 => 'required|array|min:1',

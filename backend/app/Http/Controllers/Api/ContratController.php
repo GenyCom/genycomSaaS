@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class ContratController extends Controller
 {
+    protected $numerotation;
+
+    public function __construct(\App\Services\NumerotationService $numerotation)
+    {
+        $this->numerotation = $numerotation;
+    }
+
     public function index()
     {
         $contrats = Contrat::with('client')->latest()->get();
@@ -35,8 +42,11 @@ class ContratController extends Controller
 
         DB::connection('tenant')->beginTransaction();
         try {
+            $tenantId = request()->get('current_tenant')?->id ?? 1;
+            
             // Création de l'entête
             $contrat = Contrat::create([
+                'numero' => $this->numerotation->generer($tenantId, 'CONTRAT'),
                 'client_id' => $request->client_id,
                 'titre' => $request->titre,
                 'date_debut' => $request->date_debut,
@@ -48,7 +58,7 @@ class ContratController extends Controller
                 'total_tva' => $request->total_tva ?? 0,
                 'total_ttc' => $request->total_ttc ?? 0,
                 'devise_id' => $request->devise_id,
-                'taux_change_document' => $request->taux_change_document,
+                'taux_change_document' => $request->taux_change_document ?? 1.0,
                 'created_by' => auth()->id(),
             ]);
 

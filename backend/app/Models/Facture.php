@@ -103,4 +103,19 @@ class Facture extends BaseModel
                      ->whereNotNull('date_echeance')
                      ->where('date_echeance', '<', now());
     }
+
+    // ─── Hooks ───
+    protected static function booted()
+    {
+        static::saved(function ($facture) {
+            if ($facture->client) {
+                $facture->client->recalculerEncours();
+            }
+        });
+        static::deleted(function ($facture) {
+            if ($facture->client) {
+                $facture->client->recalculerEncours();
+            }
+        });
+    }
 }
