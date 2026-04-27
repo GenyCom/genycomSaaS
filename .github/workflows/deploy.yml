@@ -34,7 +34,7 @@ jobs:
       - name: 5. Installation des dépendances Laravel
         run: |
           cd backend
-          composer install --no-dev --optimize-autoloader
+          composer update --no-dev --optimize-autoloader
 
       - name: 6. Envoi des fichiers vers Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
