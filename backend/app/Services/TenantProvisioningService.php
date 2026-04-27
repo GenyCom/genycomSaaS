@@ -30,8 +30,11 @@ class TenantProvisioningService
         $dbName = $data['database_name'];
         $dbExists = $this->databaseExists($dbName);
 
-        if ($dbExists && !$forceExisting) {
-            throw new \Exception("DATABASE_EXISTS");
+        // --- ADAPTATION HOSTINGER ---
+        // On exige que la base de données soit déjà créée via le hPanel.
+        // Si elle n'existe pas, on bloque le processus.
+        if (!$dbExists) {
+            throw new \Exception("La base de données '{$dbName}' est introuvable. Veuillez la créer depuis le hPanel Hostinger avant de lancer le provisionning.");
         }
 
         // 1. Création des enregistrements en base centrale (Transactionnelle)
@@ -64,9 +67,8 @@ class TenantProvisioningService
         });
 
         // 2. Opérations DDL
-        if (!$dbExists) {
-            DB::connection('central')->statement("CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
-        }
+        // SUPPRIMÉ : Hostinger bloque le CREATE DATABASE via PHP.
+        // La base est déjà créée et vérifiée plus haut.
 
         // 3. Exécution des schémas SQL (002 à 008) sur la nouvelle base
         $this->runTenantMigrations($provisioning['tenant']);
