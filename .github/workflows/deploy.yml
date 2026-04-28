@@ -58,7 +58,7 @@ jobs:
           # On envoie le dossier backend (qui contient maintenant le frontend compilé)
           local-dir: ./backend/
           # ATTENTION : Vérifiez que ce chemin correspond à votre accès FTP
-          server-dir: ./domains/genycom.com/genycom_core/backend/
+          server-dir: ./
           # Sécurité : On ne touche pas aux données réelles de la prod
           exclude: |
             **/.git*

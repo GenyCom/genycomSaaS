@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
  * BCF (Bon de Commande Fournisseur) → BR (Bon de Réception) → Dette Fournisseur
  *
  * NOTE: Dans l'architecture multi-base, les tables de réception et dettes
- * n'ont pas de colonne tenant_id, contrairement aux produits et stocks. v2
+ * n'ont pas de colonne tenant_id, contrairement aux produits et stocks. v3
  */
 class CycleAchatService
 {
