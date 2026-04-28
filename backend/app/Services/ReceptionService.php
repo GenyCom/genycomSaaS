@@ -19,7 +19,7 @@ class ReceptionService
     ) {}
 
     /**
-     * Traite la réception d'une commande (BCF). v3
+     * Traite la réception d'une commande (BCF). v4
      * @param BCF $commande L'objet BCF
      * @param array $quantitesRecues Mapping [bcf_ligne_id => quantite_recue]
      */

@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           # On envoie le dossier backend (qui contient maintenant le frontend compilé)
           local-dir: ./backend/
-          # ATTENTION : Vérifiez que ce chemin correspond à votre accès FTP
+          # ATTENTION : Vérifiez que ce chemin correspond à votre accès FTP _
           server-dir: ./
           # Sécurité : On ne touche pas aux données réelles de la prod
           exclude: |
