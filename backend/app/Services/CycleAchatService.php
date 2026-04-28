@@ -12,7 +12,10 @@ use Illuminate\Support\Facades\DB;
  */
 class CycleAchatService
 {
-    public function __construct(private NumerotationService $numerotation) {}
+    public function __construct(
+        private NumerotationService $numerotation,
+        private StockService $stockService
+    ) {}
 
     private function db()
     {
@@ -202,18 +205,20 @@ class CycleAchatService
 
     public function incrementerStock(int $tenantId, int $produitId, float $quantite, array $options = []): void
     {
+        $entrepotId = $this->stockService->getDefaultEntrepotId($tenantId);
+
         // On garde tenant_id pour stocks/mouvements car ils l'ont
         $stock = $this->db()->select(
-            "SELECT id FROM stocks WHERE tenant_id = ? AND produit_id = ? AND entrepot_id IS NULL LIMIT 1",
-            [$tenantId, $produitId]
+            "SELECT id FROM stocks WHERE tenant_id = ? AND produit_id = ? AND entrepot_id = ? LIMIT 1",
+            [$tenantId, $produitId, $entrepotId]
         );
 
         $typeMvmt = $options['type_mouvement'] ?? 'entree_achat';
 
         if (empty($stock)) {
             $this->db()->insert(
-                "INSERT INTO stocks (tenant_id, produit_id, entrepot_id, quantite, created_at) VALUES (?, ?, NULL, ?, NOW())",
-                [$tenantId, $produitId, $quantite]
+                "INSERT INTO stocks (tenant_id, produit_id, entrepot_id, quantite, created_at) VALUES (?, ?, ?, ?, NOW())",
+                [$tenantId, $produitId, $entrepotId, $quantite]
             );
             $stockId = $this->db()->getPdo()->lastInsertId();
         } else {

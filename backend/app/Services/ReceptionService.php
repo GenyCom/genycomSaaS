@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class ReceptionService
 {
-    public function __construct(private NumerotationService $numerotation) {}
+    public function __construct(
+        private NumerotationService $numerotation,
+        private StockService $stockService
+    ) {}
 
     /**
      * Traite la réception d'une commande (BCF).
@@ -84,8 +87,10 @@ class ReceptionService
 
     private function incrementerStock(int $tenantId, int $produitId, float $quantite, array $meta): void
     {
+        $entrepotId = $this->stockService->getDefaultEntrepotId($tenantId);
+
         $stock = Stock::firstOrCreate(
-            ['tenant_id' => $tenantId, 'produit_id' => $produitId, 'entrepot_id' => null],
+            ['tenant_id' => $tenantId, 'produit_id' => $produitId, 'entrepot_id' => $entrepotId],
             ['quantite' => 0]
         );
 
