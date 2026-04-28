@@ -31,10 +31,11 @@ jobs:
         with:
           php-version: '8.3'
 
-      - name: 5. Installation des dépendances Laravel
+      - name: 5. Préparation des dépendances Laravel (Optimisé)
         run: |
           cd backend
-          composer update --no-dev --optimize-autoloader
+          # On utilise 'install' et non 'update' pour la rapidité et la stabilité
+          composer install --no-dev --optimize-autoloader --no-scripts
 
       - name: 6. Envoi des fichiers vers Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -43,9 +44,17 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./backend/
+          # VÉRIFIEZ CE CHEMIN : Si votre FTP pointe déjà vers le domaine, 
+          # enlevez "domains/genycom.com/"
           server-dir: ./domains/genycom.com/genycom_core/backend/
+          # Option pour forcer la synchronisation si le robot hésite
+          dangerous-clean-slate: false 
           exclude: |
+            **/.git*
+            **/.git*/**
             **/.env
             **/storage/**
             **/vendor/**
             **/node_modules/**
+            **/tests/**
+            **/*.bak
