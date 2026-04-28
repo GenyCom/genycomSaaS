@@ -13,6 +13,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE IF NOT EXISTS tenants (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(255) NOT NULL,
+	db_username VARCHAR(100) NULL AFTER database_name,
+	db_password VARCHAR(100) NULL AFTER db_username,
     database_name VARCHAR(100) NOT NULL UNIQUE, -- ex: genycom_client_001
     domain VARCHAR(255) NULL UNIQUE,            -- ex: client.genycom.ma
     logo VARCHAR(255) NULL,

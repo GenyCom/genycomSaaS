@@ -105,8 +105,9 @@ INSERT INTO `etat_document`(`type_document`, `ordre`, `code`, `libelle`, `detail
 ('dette', 5, 'RTD', 'EN RETARD', 'Echéance dépassée', '#ef4444', 1),
 ('dette', 6, 'ANL', 'ANNULÉE', 'Dette annulée', '#64748b', 1);
 
-INSERT INTO etat_document (type_document, code, libelle, couleur, ordre, is_system, tenant_id) 
+INSERT INTO etat_document (type_document, code, libelle, couleur, ordre, is_system) 
 VALUES 
-('devis', 'BRO', 'BROUILLON', '#64748b', 1, 1, 1),
-('devis', 'ENV', 'ENVOYÉ', '#3b82f6', 2, 1, 1),
-('devis', 'ACC', 'ACCEPTÉ', '#10b981', 3, 1, 1);
+('devis', 'BRO', 'BROUILLON', '#64748b', 1, 1),
+('devis', 'ENV', 'ENVOYÉ', '#3b82f6', 2, 1),
+('devis', 'ACC', 'ACCEPTÉ', '#10b981', 3, 1),
+('devis', 'FAC', 'FACTURÉ', '#6366f1', 4, 1);

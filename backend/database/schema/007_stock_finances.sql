@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS `depenses` (
     `is_recurrente`     TINYINT(1) DEFAULT 0,
     `frequence`         ENUM('mensuel','trimestriel','annuel') NULL,
     `devise_id`         BIGINT UNSIGNED NULL,
+	`derniere_notification_at` DATETIME NULL DEFAULT NULL,
     `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

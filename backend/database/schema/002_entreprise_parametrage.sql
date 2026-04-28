@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS `etat_document` (
     `couleur`           VARCHAR(20) DEFAULT '#3b82f6',
     `detail`            TEXT NULL,
     `is_system`         TINYINT(1) DEFAULT 0,
+	`is_default` 		TINYINT(1) NOT NULL DEFAULT 0,
     `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
