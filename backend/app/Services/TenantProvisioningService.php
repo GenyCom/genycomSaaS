@@ -17,9 +17,14 @@ class TenantProvisioningService
      */
     public function databaseExists(string $dbName): bool
     {
-        $query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?";
-        $exists = DB::connection('central')->select($query, [$dbName]);
-        return count($exists) > 0;
+        try {
+            // Sur Hostinger, INFORMATION_SCHEMA est souvent restreint.
+            // On tente directement de switcher sur la base.
+            DB::connection('central')->statement("USE `{$dbName}`");
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**
