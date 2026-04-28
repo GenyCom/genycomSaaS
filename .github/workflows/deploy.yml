@@ -1,54 +1,65 @@
-name: Deploiement GenyCom SaaS
+name: Deploiement GenyCom SaaS (Production)
 
 on:
   push:
     branches:
-      - main # Le pipeline s'active uniquement quand vous pushez sur 'main'
+      - main # S'active uniquement lors d'un push sur la branche main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. Récupération du code source
+      # 1. Récupération du code source
+      - name: 📂 1. Checkout du code
         uses: actions/checkout@v4
 
-      - name: 2. Préparation de Node.js (Pour le Frontend)
+      # 2. Préparation de Node.js (Pour compiler le Frontend Vue.js)
+      - name: 🟢 2. Configuration de Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: 3. Installation et Compilation de Vue.js
+      # 3. Installation et Compilation de Vue.js
+      - name: 🏗️ 3. Build Vue.js
         run: |
           cd frontend
           npm install
           npm run build
-          # Copie de l'interface finalisée dans le dossier public du backend
+          # Nettoyage et injection du build dans le dossier public du backend
+          rm -rf ../backend/public/assets
+          rm -f ../backend/public/index.html
           cp -r dist/* ../backend/public/
 
-      - name: 4. Préparation de PHP (Pour le Backend)
+      # 4. Préparation de PHP (Mise à jour en 8.4 pour vos dépendances)
+      - name: 🐘 4. Configuration de PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
+          tools: composer:v2
 
-      - name: 5. Préparation des dépendances Laravel (Optimisé)
+      # 5. Installation des dépendances Laravel (Correctif des erreurs de version)
+      - name: 📦 5. Installation des dépendances Laravel
         run: |
           cd backend
-          # On utilise 'install' et non 'update' pour la rapidité et la stabilité
-          composer install --no-dev --optimize-autoloader --no-scripts
+          # --ignore-platform-reqs permet d'éviter les erreurs si Hostinger est encore en 8.3
+          composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
-      - name: 6. Envoi des fichiers vers Hostinger
+      # 6. Envoi des fichiers vers Hostinger via FTP
+      - name: 🚀 6. Déploiement vers Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          # On envoie le dossier backend (qui contient maintenant le frontend compilé)
           local-dir: ./backend/
-          # VÉRIFIEZ CE CHEMIN : Si votre FTP pointe déjà vers le domaine, 
-          # enlevez "domains/genycom.com/"
+          # ATTENTION : Vérifiez que ce chemin correspond à votre accès FTP
           server-dir: ./domains/genycom.com/genycom_core/backend/
-          # Option pour forcer la synchronisation si le robot hésite
-          dangerous-clean-slate: false 
+          # Sécurité : On ne touche pas aux données réelles de la prod
           exclude: |
             **/.git*
             **/.git*/**
@@ -58,3 +69,4 @@ jobs:
             **/node_modules/**
             **/tests/**
             **/*.bak
+            **/phpunit.xml
