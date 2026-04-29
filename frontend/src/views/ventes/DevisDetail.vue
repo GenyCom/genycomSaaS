@@ -336,7 +336,7 @@ const selectedClientName = computed(() => {
   return c ? (c.societe || c.display_name) : null
 })
 
-// === LOGIQUE DE FORMATTAGE DE L'INPUT ===
+//  === LOGIQUE DE FORMATTAGE DE L'INPUT ===
 function formatNumberInput(val) {
   if (val === undefined || val === null || isNaN(val)) return '0,00';
   let parts = parseFloat(val).toFixed(2).split('.');
