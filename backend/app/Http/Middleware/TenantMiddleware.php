@@ -49,18 +49,8 @@ class TenantMiddleware
             return response()->json(['message' => 'Aucun accès à une entreprise SaaS'], 403);
         }
 
-        // Purge AVANT Config::set — obligatoire sur PHP-FPM pour éviter
-        // que la connexion du worker précédent pointe sur la mauvaise base
-        DB::purge('tenant');
-
-        Config::set('database.connections.tenant.database', $tenant->database_name);
-
-        if ($tenant->db_username) {
-            Config::set('database.connections.tenant.username', $tenant->db_username);
-        }
-        if ($tenant->db_password) {
-            Config::set('database.connections.tenant.password', $tenant->db_password);
-        }
+        // Utiliser la méthode centralisée pour configurer la connexion
+        $tenant->configure();
 
         // Injecter le tenant dans la requête pour y accéder dans les contrôleurs
         $request->merge(['current_tenant' => $tenant]);

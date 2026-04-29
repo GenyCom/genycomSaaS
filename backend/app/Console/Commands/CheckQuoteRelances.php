@@ -10,17 +10,22 @@ use Carbon\Carbon;
 
 class CheckQuoteRelances extends Command
 {
-    protected $signature = 'devis:check-relances';
+    protected $signature = 'devis:check-relances {--tenant= : ID du locataire spécifique à vérifier}';
     protected $description = 'Vérifie les devis en attente et suggère une relance commerciale.';
 
     public function handle()
     {
-        $tenants = Tenant::where('statut', 'actif')->get();
+        $tenantId = $this->option('tenant');
+
+        if ($tenantId) {
+            $tenants = Tenant::where('id', $tenantId)->get();
+        } else {
+            $tenants = Tenant::where('statut', 'actif')->get();
+        }
 
         foreach ($tenants as $tenant) {
             $this->info("Vérification des devis pour {$tenant->nom}...");
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             // On cherche les devis non facturés et non refusés datant d'il y a 5, 10 ou 15 jours
             $devisToRelance = DB::connection('tenant')->table('devis')

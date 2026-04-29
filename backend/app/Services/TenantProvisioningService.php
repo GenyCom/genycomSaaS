@@ -357,21 +357,7 @@ class TenantProvisioningService
             'has_own_user' => !empty($tenant->db_username),
         ]);
 
-        Config::set('database.connections.tenant.database', $tenant->database_name);
-
-        if ($tenant->db_username) {
-            Config::set('database.connections.tenant.username', $tenant->db_username);
-            $this->log('debug', "🔧 Username tenant personnalisé appliqué.", [
-                'username' => $tenant->db_username,
-            ]);
-        }
-
-        if ($tenant->db_password) {
-            Config::set('database.connections.tenant.password', $tenant->db_password);
-            $this->log('debug', "🔧 Password tenant personnalisé appliqué (valeur masquée).");
-        }
-
-        DB::purge('tenant');
+        $tenant->configure();
 
         $this->log('debug', "✅ Connexion 'tenant' purgée et prête à être réinitialisée.", [
             'database' => $tenant->database_name,

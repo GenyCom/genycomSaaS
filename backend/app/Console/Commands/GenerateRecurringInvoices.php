@@ -29,8 +29,7 @@ class GenerateRecurringInvoices extends Command
         foreach ($tenants as $tenant) {
             $this->info("Traitement du locataire : {$tenant->nom}");
             
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             $contrats = Contrat::with('lignes')->where('statut', 'ACTIF')
                 ->whereDate('prochaine_echeance', '<=', now()->toDateString())

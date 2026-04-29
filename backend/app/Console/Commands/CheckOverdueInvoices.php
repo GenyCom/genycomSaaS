@@ -12,17 +12,22 @@ use Carbon\Carbon;
 
 class CheckOverdueInvoices extends Command
 {
-    protected $signature = 'factures:check-overdue';
+    protected $signature = 'factures:check-overdue {--tenant= : ID du locataire spécifique à vérifier}';
     protected $description = 'Vérifie les factures impayées et génère des alertes de retard.';
 
     public function handle()
     {
-        $tenants = Tenant::where('statut', 'actif')->get();
+        $tenantId = $this->option('tenant');
+
+        if ($tenantId) {
+            $tenants = Tenant::where('id', $tenantId)->get();
+        } else {
+            $tenants = Tenant::where('statut', 'actif')->get();
+        }
 
         foreach ($tenants as $tenant) {
             $this->info("Vérification des factures pour {$tenant->nom}...");
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             // 1. Récupérer les factures non réglées dont l'échéance est passée
             $overdueFactures = DB::connection('tenant')->table('factures')

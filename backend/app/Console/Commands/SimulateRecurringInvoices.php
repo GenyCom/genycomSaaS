@@ -33,8 +33,7 @@ class SimulateRecurringInvoices extends Command
         foreach ($tenants as $tenant) {
             $this->line("\nTraitement du locataire : {$tenant->nom}");
             
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             $contrats = $this->facturationService->simulerEcheances($date->toDateString());
 

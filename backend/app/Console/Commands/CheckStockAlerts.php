@@ -12,20 +12,25 @@ use Illuminate\Support\Facades\Config;
 
 class CheckStockAlerts extends Command
 {
-    protected $signature = 'stock:check-alerts';
+    protected $signature = 'stock:check-alerts {--tenant= : ID du locataire spécifique à vérifier}';
     protected $description = 'Synchronise le stock actuel des produits et génère des alertes de réapprovisionnement.';
 
     public function handle()
     {
-        $this->info("Démarrage du scan global des stocks...");
+        $tenantId = $this->option('tenant');
 
-        $tenants = Tenant::where('statut', 'actif')->get();
+        if ($tenantId) {
+            $tenants = Tenant::where('id', $tenantId)->get();
+            $this->info("Démarrage du scan pour le locataire ID : {$tenantId}");
+        } else {
+            $tenants = Tenant::where('statut', 'actif')->get();
+            $this->info("Démarrage du scan global des stocks...");
+        }
 
         foreach ($tenants as $tenant) {
             $this->info("Traitement du locataire : {$tenant->nom}");
             
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             // On ne traite que les produits physiques (pas les services)
             $produits = Produit::where('is_service', false)->get();

@@ -13,20 +13,25 @@ use Illuminate\Support\Facades\Log;
 
 class CheckExpenseReminders extends Command
 {
-    protected $signature = 'depenses:check-reminders';
+    protected $signature = 'depenses:check-reminders {--tenant= : ID du locataire spécifique à vérifier}';
     protected $description = 'Vérifie les dépenses récurrentes et envoie des notifications pour les échéances proches ou passées.';
 
     public function handle()
     {
-        $this->info("Démarrage de la vérification des rappels de dépenses...");
-
-        $tenants = Tenant::where('statut', 'actif')->get();
+        $tenantId = $this->option('tenant');
+        
+        if ($tenantId) {
+            $tenants = Tenant::where('id', $tenantId)->get();
+            $this->info("Démarrage de la vérification pour le locataire ID : {$tenantId}");
+        } else {
+            $tenants = Tenant::where('statut', 'actif')->get();
+            $this->info("Démarrage de la vérification globale des rappels de dépenses...");
+        }
 
         foreach ($tenants as $tenant) {
             $this->info("Traitement du locataire : {$tenant->nom}");
             
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             $depenses = Depense::where('is_recurrente', true)->get();
 

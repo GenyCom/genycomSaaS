@@ -20,8 +20,7 @@ class MergeOrphanStocks extends Command
 
         foreach ($tenants as $tenant) {
             $this->info("Fusion pour {$tenant->nom}...");
-            Config::set('database.connections.tenant.database', $tenant->database_name);
-            DB::purge('tenant');
+            $tenant->configure();
 
             $defaultEntrepot = Entrepot::where('is_default', true)->first();
             if (!$defaultEntrepot) {

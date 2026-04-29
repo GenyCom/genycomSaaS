@@ -15,8 +15,11 @@ class DashboardController extends Controller
     public function kpis(Request $request): JsonResponse
     {
         // Déclenche la vérification des dépenses et des stocks au chargement
-        Artisan::call('depenses:check-reminders');
-        Artisan::call('stock:check-alerts');
+        $tenant = $request->get('current_tenant');
+        if ($tenant) {
+            Artisan::call('depenses:check-reminders', ['--tenant' => $tenant->id]);
+            Artisan::call('stock:check-alerts', ['--tenant' => $tenant->id]);
+        }
 
         // On passe maintenant le filtre de période envoyé par Vue.js
         return response()->json($this->dashboard->getKPIs($request->get('periode', 'Ce mois')));
