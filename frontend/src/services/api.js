@@ -21,7 +21,7 @@ api.interceptors.request.use((config) => {
     const rawUser = localStorage.getItem('genycom_user');
     if (rawUser && rawUser !== 'undefined') {
       const userData = JSON.parse(rawUser) || {};
-      const tenantId = userData.current_tenant_id || userData.tenant_id;
+      const tenantId = userData.current_tenant_id || userData.tenant_id || userData.tenant?.id;
       if (tenantId) {
         config.headers['X-Tenant-ID'] = tenantId;
       }

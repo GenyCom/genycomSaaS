@@ -171,7 +171,7 @@
               <table class="saas-table">
                 <thead>
                   <tr>
-                    <th style="width: 40%">Article / Service</th>
+                    <th style="width: 38%">Article / Service</th>
                     <th style="width: 13%" class="text-center">Qté</th>
                     <th style="width: 15%" class="text-right">P.U HT</th>
                     <th style="width: 12%" class="text-center">TVA</th>
@@ -567,6 +567,13 @@ onMounted(async () => {
 
 /* ─── Grid ─── */
 .content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+
+@media (max-width: 1200px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .col-side { order: 2; }
+}
+
+.table-container-custom { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
 .card-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #F9FAFB; border-bottom: 1px solid var(--c-border); }
 .card-header h3 { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin: 0; }
@@ -600,7 +607,7 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .empty-result { padding: 16px; text-align: center; color: var(--c-muted); font-size: .85rem; font-style: italic; }
 
 /* ─── Table ─── */
-.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 800px; }
 .saas-table th { background: #F9FAFB; padding: 13px 18px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
 .saas-table th.text-center { text-align: center; }
 .saas-table th.text-right { text-align: right; }
