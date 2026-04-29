@@ -32,16 +32,18 @@ class TenantMiddleware
             if ($user->is_superadmin) {
                 $tenant = \App\Models\Tenant::find($tenantId);
             } else {
+                // Pour un utilisateur normal, on vérifie qu'il appartient bien à ce tenant
                 $tenant = $user->tenants()->find($tenantId);
             }
-        } else {
+        } 
+        
+        // Fallback si aucun tenantId n'est spécifié ou trouvé
+        if (!$tenant) {
             $tenant = $user->tenants()->first();
 
-            // Fallback pour SuperAdmin
+            // Si toujours rien et que c'est un SuperAdmin, on prend le premier tenant disponible dans le système
             if (!$tenant && $user->is_superadmin) {
-                $tenant = \App\Models\Tenant::find(2)
-                    ?: \App\Models\Tenant::whereHas('users')->first()
-                    ?: \App\Models\Tenant::first();
+                $tenant = \App\Models\Tenant::first();
             }
         }
 

@@ -13,11 +13,22 @@ CREATE TABLE IF NOT EXISTS `entreprise` (
     `pays`              VARCHAR(100) DEFAULT 'Maroc',
     `ice`               VARCHAR(50) NULL,
     `rc`                VARCHAR(50) NULL,
-    `if`                VARCHAR(50) NULL,
+    `if_fiscal`         VARCHAR(50) NULL,
     `patente`           VARCHAR(50) NULL,
+    `cnss`              VARCHAR(50) NULL,
     `telephone`         VARCHAR(50) NULL,
+    `fax`               VARCHAR(50) NULL,
     `email`             VARCHAR(255) NULL,
     `site_web`          VARCHAR(255) NULL,
+    `rib`               VARCHAR(100) NULL,
+    `banque`            VARCHAR(100) NULL,
+    `devise_id`         BIGINT UNSIGNED NULL,
+    `exercice_debut`    TINYINT DEFAULT 1,
+    
+    -- Impression & Conditions
+    `entete_impression`     TEXT NULL,
+    `pied_page_impression`  TEXT NULL,
+    `conditions_generales`  TEXT NULL,
     
     -- Formats de numérotation
     `format_numero_facture` VARCHAR(50) DEFAULT 'FAC-{YYYY}-{SEQ}',
