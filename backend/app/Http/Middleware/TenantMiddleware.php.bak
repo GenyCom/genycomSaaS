@@ -43,7 +43,7 @@ class TenantMiddleware
         }
 		
 		// Configuration dynamique de la base de données du locataire
-		DB::purge('tenant');
+DB::purge('tenant');
 
         // Configuration dynamique de la base de données du locataire
         Config::set('database.connections.tenant.database', $tenant->database_name);
