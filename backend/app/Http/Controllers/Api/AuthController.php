@@ -176,8 +176,7 @@ class AuthController extends Controller
         if ($tenant) {
             try {
                 // Configurer la connexion SQL au tenant temporairement
-                config(['database.connections.tenant.database' => $tenant->database_name]);
-                DB::purge('tenant');
+                $tenant->configure();
                 
                 $entreprise = DB::connection('tenant')->table('entreprise')->first();
                 if ($entreprise) {
