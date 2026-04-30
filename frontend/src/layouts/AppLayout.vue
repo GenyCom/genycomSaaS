@@ -1,5 +1,8 @@
 <template>
   <div class="app-layout">
+    <!-- Overlay for mobile -->
+    <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-logo">
@@ -146,7 +149,12 @@
     <!-- Main -->
     <div class="main-content">
       <header class="main-header">
-        <div class="page-title">{{ pageTitle }}</div>
+        <div style="display: flex; align-items: center;">
+          <button class="mobile-toggle-btn" @click="sidebarOpen = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="page-title">{{ pageTitle }}</div>
+        </div>
         <div class="header-actions">
           <NotificationBell />
           <button @click="toggleTheme" class="btn btn-secondary btn-sm" style="border-radius:50%; padding:0.4rem; height: 32px; width: 32px; display:flex; justify-content:center; align-items:center;" title="Basculer le thème">
@@ -164,7 +172,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import NotificationBell from '../components/shared/NotificationBell.vue'
@@ -174,6 +182,11 @@ const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
 const theme = ref(localStorage.getItem('genycom_theme') || 'light')
+
+// Fermer le sidebar lors du changement de route (mobile)
+watch(() => route.path, () => {
+  sidebarOpen.value = false
+})
 
 onMounted(() => {
   if (!auth.user?.app_version) {
