@@ -6,11 +6,12 @@ use App\Traits\HasAuditColumns;
 
 class Contrat extends BaseModel
 {
-    use HasAuditColumns;
+    use HasAuditColumns, \App\Traits\BelongsToTenant;
 
     protected $table = 'contrats';
 
     protected $fillable = [
+        'tenant_id',
         'titre',
         'numero',
         'client_id',

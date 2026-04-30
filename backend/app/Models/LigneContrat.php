@@ -11,6 +11,7 @@ class LigneContrat extends BaseModel
     protected $table = 'ligne_contrat';
 
     protected $fillable = [
+        'tenant_id',
         'contrat_id',
         'produit_id',
         'designation',
