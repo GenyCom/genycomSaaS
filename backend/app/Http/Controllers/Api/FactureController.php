@@ -181,6 +181,7 @@ class FactureController extends Controller
             
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
+            \App\Exceptions\ExceptionMailReporter::report($e);
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }

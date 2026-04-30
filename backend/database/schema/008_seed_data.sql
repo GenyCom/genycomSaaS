@@ -111,3 +111,4 @@ VALUES
 ('devis', 'ENV', 'ENVOYÉ', '#3b82f6', 2, 1),
 ('devis', 'ACC', 'ACCEPTÉ', '#10b981', 3, 1),
 ('devis', 'FAC', 'FACTURÉ', '#6366f1', 4, 1);
+
