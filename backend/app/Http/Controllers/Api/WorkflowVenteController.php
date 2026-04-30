@@ -31,7 +31,9 @@ class WorkflowVenteController extends Controller
         return DB::transaction(function () use ($request, $devis) {
             $tenantId = $request->get('current_tenant')->id;
             
-            // 1. Créer le BCC
+            $etatBrouillon = EtatDocument::where('tenant_id', $tenantId)
+                ->where('type_document', 'bcc')->where('code', 'BRL')->first();
+
             $bcc = BonCommandeClient::create([
                 'tenant_id'     => $tenantId,
                 'numero'        => $this->numerotation->generer($tenantId, 'BCC'),
@@ -41,7 +43,7 @@ class WorkflowVenteController extends Controller
                 'devise_id'     => $devis->devise_id,
                 'taux_change_document' => $devis->taux_change_document ?? 1.0,
                 'observations'  => $devis->observations,
-                'etat_id'       => 20, // Brouillon par défaut
+                'etat_id'       => $etatBrouillon?->id,
                 'created_by'    => auth()->id() ?? $devis->created_by,
             ]);
 
@@ -143,7 +145,9 @@ class WorkflowVenteController extends Controller
             // Désactivé car le BL n'a plus de montants financiers sur ses lignes
             // $bl->recalculerTotaux();
 
-            $bcc->update(['est_livre' => true, 'etat_id' => 22]); // LIVRE (ID 22)
+            $etatLivre = EtatDocument::where('tenant_id', $tenantId)
+                ->where('type_document', 'bcc')->where('code', 'LIV')->first();
+            $bcc->update(['est_livre' => true, 'etat_id' => $etatLivre?->id]);
 
             return response()->json([
                 'message' => 'BC transformé en Bon de Livraison avec succès',
@@ -212,8 +216,13 @@ class WorkflowVenteController extends Controller
             $facture->recalculerTotaux();
 
             $bl->update(['facture_id' => $facture->id, 'statut' => 'livre']);
-            if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true, 'etat_id' => 23]); // FACTURE (ID 23)
-            if ($bl->devis) $bl->devis->update(['est_facture' => true, 'etat_id' => 32]); // ACCEPTE (ID 32)
+            $etatFactureBcc = EtatDocument::where('tenant_id', $tenantId)
+                ->where('type_document', 'bcc')->where('code', 'FAC')->first();
+            $etatAccDevis = EtatDocument::where('tenant_id', $tenantId)
+                ->where('type_document', 'devis')->where('code', 'ACC')->first();
+
+            if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true, 'etat_id' => $etatFactureBcc?->id]);
+            if ($bl->devis) $bl->devis->update(['est_facture' => true, 'etat_id' => $etatAccDevis?->id]);
 
             return response()->json([
                 'message' => 'Bon de Livraison facturé avec succès',

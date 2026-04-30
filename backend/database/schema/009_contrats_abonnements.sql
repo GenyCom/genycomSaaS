@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `contrats` (
     `devise_id`         BIGINT UNSIGNED NULL,
     `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,
     `prochaine_facture` DATE NULL,
+	`prochaine_echeance` DATE NULL AFTER `prochaine_facture`,
     `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
