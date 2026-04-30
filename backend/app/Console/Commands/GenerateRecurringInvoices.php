@@ -50,6 +50,10 @@ class GenerateRecurringInvoices extends Command
                 }
             }
         }
+        
+        DB::disconnect('tenant');
+        DB::disconnect('central');
+        
         $this->info("Processus terminé.");
     }
 }

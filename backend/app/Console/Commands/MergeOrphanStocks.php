@@ -54,6 +54,10 @@ class MergeOrphanStocks extends Command
                 }
             }
         }
+        
+        DB::disconnect('tenant');
+        DB::disconnect('central');
+        
         $this->info("Opération terminée.");
     }
 }

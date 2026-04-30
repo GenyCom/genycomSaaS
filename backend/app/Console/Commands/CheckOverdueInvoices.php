@@ -46,6 +46,10 @@ class CheckOverdueInvoices extends Command
                 }
             }
         }
+        
+        DB::disconnect('tenant');
+        DB::disconnect('central');
+        
         $this->info("Vérification terminée.");
     }
 

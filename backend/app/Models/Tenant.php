@@ -31,17 +31,17 @@ class Tenant extends Model
      */
     public function configure(): void
     {
-        // On purge d'abord pour fermer toute connexion PDO ouverte avec d'anciens credentials
-        \Illuminate\Support\Facades\DB::purge('tenant');
+        $currentDb = config('database.connections.tenant.database');
 
-        // On définit les paramètres dynamiques
-        config([
-            'database.connections.tenant.database' => $this->database_name,
-            'database.connections.tenant.username' => $this->db_username ?: config('database.connections.central.username'),
-            'database.connections.tenant.password' => $this->db_password ?: config('database.connections.central.password'),
-        ]);
+        // On ne purge et reconfigure que si on change de base de données
+        if ($currentDb !== $this->database_name) {
+            \Illuminate\Support\Facades\DB::purge('tenant');
 
-        // Optionnel : reconnecter immédiatement pour valider
-        // \Illuminate\Support\Facades\DB::connection('tenant')->reconnect();
+            config([
+                'database.connections.tenant.database' => $this->database_name,
+                'database.connections.tenant.username' => $this->db_username ?: config('database.connections.central.username'),
+                'database.connections.tenant.password' => $this->db_password ?: config('database.connections.central.password'),
+            ]);
+        }
     }
 }

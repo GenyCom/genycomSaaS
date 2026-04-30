@@ -68,7 +68,10 @@ class CheckStockAlerts extends Command
                 }
             }
         }
-
+        
+        DB::disconnect('tenant');
+        DB::disconnect('central');
+        
         $this->info("Scan terminé.");
     }
 }
