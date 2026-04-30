@@ -17,22 +17,15 @@
       </div>
     </div>
 
-    <!-- On vérifie que authStore.user existe, car l'entreprise peut être directement sur l'utilisateur ou chargée plus tard -->
-    <div class="hero-header dashboard-hero">
+    <div v-if="authStore.entreprise" class="hero-header dashboard-hero">
       <div class="hero-avatar company-logo">
-        <!-- Affichage du logo s'il existe -->
-        <img v-if="authStore.entreprise?.logo_path" :src="authStore.entreprise.logo_path" alt="Logo Entreprise" />
-        <!-- Sinon, on affiche la première lettre de la raison sociale, et si ça n'existe pas, une lettre par défaut "S" -->
-        <span v-else>{{ authStore.entreprise?.raison_sociale?.charAt(0) || 'S' }}</span>
+        <img v-if="authStore.entreprise.logo_path" :src="authStore.entreprise.logo_path" alt="Logo" />
+        <span v-else>{{ authStore.entreprise.raison_sociale?.charAt(0) }}</span>
       </div>
       <div class="hero-meta">
-        <!-- On affiche la raison sociale, ou un texte de chargement/défaut -->
-        <div class="hero-type-badge">
-          <span class="dot"></span>
-          {{ authStore.entreprise?.raison_sociale || 'Mon Entreprise' }}
-        </div>
+        <div class="hero-type-badge"><span class="dot"></span>{{ authStore.entreprise.raison_sociale }}</div>
         <h1 class="hero-name">
-          Bonjour, {{ authStore.user?.prenom || authStore.user?.name || 'Admin' }}
+          Bonjour, {{ authStore.user?.prenom || 'Admin' }} 
           <span v-if="!connectionError" style="color:#059669; font-size:1rem;">(Connecté)</span>
           <span v-else style="color:#DC2626; font-size:1rem;">(Problème de connexion)</span>
           👋
