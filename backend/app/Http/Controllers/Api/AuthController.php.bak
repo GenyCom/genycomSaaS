@@ -189,7 +189,7 @@ class AuthController extends Controller
                         'telephone' => $entreprise->telephone,
                         'email' => $entreprise->email,
                         'site_web' => $entreprise->site_web,
-                        'logo_path' => $entreprise->logo_path, // CORRECTION ICI
+                        'logo' => $entreprise->logo_path,
                     ];
                 }
             } catch (\Exception $e) {
