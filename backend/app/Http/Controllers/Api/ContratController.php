@@ -93,7 +93,6 @@ class ContratController extends Controller
             return response()->json($contrat->load('lignes'), 201);
         } catch (\Exception $e) {
             DB::connection('tenant')->rollBack();
-            \Illuminate\Support\Facades\Log::error("Erreur Création Contrat: " . $e->getMessage(), ['exception' => $e]);
             return response()->json(['message' => 'Erreur lors de la création du contrat', 'error' => $e->getMessage()], 500);
         }
     }
@@ -135,7 +134,6 @@ class ContratController extends Controller
             return response()->json($contrat->fresh('lignes'));
         } catch (\Exception $e) {
             DB::connection('tenant')->rollBack();
-            \Illuminate\Support\Facades\Log::error("Erreur Mise à jour Contrat: " . $e->getMessage(), ['exception' => $e]);
             return response()->json(['message' => 'Erreur lors de la mise à jour', 'error' => $e->getMessage()], 500);
         }
     }
