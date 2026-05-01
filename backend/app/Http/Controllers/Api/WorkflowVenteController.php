@@ -31,7 +31,7 @@ class WorkflowVenteController extends Controller
         return DB::transaction(function () use ($request, $devis) {
             $tenantId = $request->get('current_tenant')->id;
             
-            $etatBrouillon = EtatDocument::where('type_document', 'bcc')->where('code', 'BROUILLON')->first();
+            $etatBrouillon = EtatDocument::where('type_document', 'bcc')->where('code', 'BRL')->first();
 
             $bcc = BonCommandeClient::create([
                 'tenant_id'     => $tenantId,
@@ -144,7 +144,7 @@ class WorkflowVenteController extends Controller
             // Désactivé car le BL n'a plus de montants financiers sur ses lignes
             // $bl->recalculerTotaux();
 
-            $etatLivre = EtatDocument::where('type_document', 'bcc')->where('code', 'LIVRE')->first();
+            $etatLivre = EtatDocument::where('type_document', 'bcc')->where('code', 'LIV')->first();
             $bcc->update(['est_livre' => true, 'etat_id' => $etatLivre?->id]);
 
             return response()->json([
@@ -214,7 +214,7 @@ class WorkflowVenteController extends Controller
             $facture->recalculerTotaux();
 
             $bl->update(['facture_id' => $facture->id, 'statut' => 'livre']);
-            $etatFactureBcc = EtatDocument::where('type_document', 'bcc')->where('code', 'FACTURE')->first();
+            $etatFactureBcc = EtatDocument::where('type_document', 'bcc')->where('code', 'FAC')->first();
             $etatAccDevis = EtatDocument::where('type_document', 'devis')->where('code', 'ACC')->first();
 
             if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true, 'etat_id' => $etatFactureBcc?->id]);
