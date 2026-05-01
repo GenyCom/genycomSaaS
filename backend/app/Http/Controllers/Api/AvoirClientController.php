@@ -59,8 +59,7 @@ class AvoirClientController extends Controller
         }
 
         return \DB::transaction(function() use ($data, $tenantId) {
-            $etatBrouillon = \App\Models\EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'avoir_client')->where('code', 'BRL')->first();
+            $etatBrouillon = \App\Models\EtatDocument::where('type_document', 'avoir_client')->where('code', 'BRL')->first();
 
             $avoir = AvoirClient::create([
                 'tenant_id' => $tenantId,
@@ -125,8 +124,7 @@ class AvoirClientController extends Controller
 
         \DB::transaction(function() use ($avoir) {
             $tenantId = auth()->user()->tenant_id;
-            $etatValide = \App\Models\EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'avoir_client')->where('code', 'VAL')->first();
+            $etatValide = \App\Models\EtatDocument::where('type_document', 'avoir_client')->where('code', 'VAL')->first();
             
             $avoir->update(['etat_id' => $etatValide?->id]); // Validé
             $this->stockService->validerAvoirClient($avoir->id, auth()->id());

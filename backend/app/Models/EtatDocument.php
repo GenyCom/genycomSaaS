@@ -2,16 +2,11 @@
 
 namespace App\Models;
 
-use App\Traits\BelongsToTenant;
-
 class EtatDocument extends BaseModel
 {
-    use BelongsToTenant;
-
     protected $table = 'etat_document';
 
     protected $fillable = [
-        'tenant_id',
         'type_document',
         'code',
         'libelle',

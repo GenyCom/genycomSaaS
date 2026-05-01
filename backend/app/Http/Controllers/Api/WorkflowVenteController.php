@@ -31,8 +31,7 @@ class WorkflowVenteController extends Controller
         return DB::transaction(function () use ($request, $devis) {
             $tenantId = $request->get('current_tenant')->id;
             
-            $etatBrouillon = EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'bcc')->where('code', 'BRL')->first();
+            $etatBrouillon = EtatDocument::where('type_document', 'bcc')->where('code', 'BROUILLON')->first();
 
             $bcc = BonCommandeClient::create([
                 'tenant_id'     => $tenantId,
@@ -145,8 +144,7 @@ class WorkflowVenteController extends Controller
             // Désactivé car le BL n'a plus de montants financiers sur ses lignes
             // $bl->recalculerTotaux();
 
-            $etatLivre = EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'bcc')->where('code', 'LIV')->first();
+            $etatLivre = EtatDocument::where('type_document', 'bcc')->where('code', 'LIVRE')->first();
             $bcc->update(['est_livre' => true, 'etat_id' => $etatLivre?->id]);
 
             return response()->json([
@@ -216,10 +214,8 @@ class WorkflowVenteController extends Controller
             $facture->recalculerTotaux();
 
             $bl->update(['facture_id' => $facture->id, 'statut' => 'livre']);
-            $etatFactureBcc = EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'bcc')->where('code', 'FAC')->first();
-            $etatAccDevis = EtatDocument::where('tenant_id', $tenantId)
-                ->where('type_document', 'devis')->where('code', 'ACC')->first();
+            $etatFactureBcc = EtatDocument::where('type_document', 'bcc')->where('code', 'FACTURE')->first();
+            $etatAccDevis = EtatDocument::where('type_document', 'devis')->where('code', 'ACC')->first();
 
             if ($bl->bonCommande) $bl->bonCommande->update(['est_facture' => true, 'etat_id' => $etatFactureBcc?->id]);
             if ($bl->devis) $bl->devis->update(['est_facture' => true, 'etat_id' => $etatAccDevis?->id]);

@@ -49,8 +49,7 @@ class CommandeController extends Controller
         $data['tenant_id'] = $tenantId;
 
         // Etat par défaut
-        $etatBrouillon = \App\Models\EtatDocument::where('tenant_id', $tenantId)
-            ->where('type_document', 'bcf')
+        $etatBrouillon = \App\Models\EtatDocument::where('type_document', 'bcf')
             ->where('code', 'BROUILLON')
             ->first();
         if ($etatBrouillon) {
