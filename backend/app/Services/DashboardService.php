@@ -231,12 +231,13 @@ class DashboardService
     public function caMensuel(): array
     {
         try {
-            return DB::connection('tenant')->table('reglements')
+            return DB::connection('tenant')->table('factures')
                 ->where('tenant_id', $this->tid())
-                ->where('payable_type', 'App\\Models\\Facture')
-                ->whereRaw("date_reglement >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)")
-                ->selectRaw("DATE_FORMAT(date_reglement, '%Y-%m') as mois, SUM(montant) as ca")
-                ->groupByRaw("DATE_FORMAT(date_reglement, '%Y-%m')")
+                ->whereNull('deleted_at')
+                ->whereNotNull('numero') // On ne prend que les factures validées
+                ->whereRaw("date_facture >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)")
+                ->selectRaw("DATE_FORMAT(date_facture, '%Y-%m') as mois, SUM(total_ttc) as ca")
+                ->groupByRaw("DATE_FORMAT(date_facture, '%Y-%m')")
                 ->orderBy('mois')
                 ->get()
                 ->toArray();

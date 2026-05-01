@@ -211,10 +211,11 @@ function formatCompact(val) {
 
 const maxCA = computed(() => Math.max(...caMensuel.value.map(i => parseFloat(i.ca) || 0), 1))
 function getBarHeight(val) {
-  if (!val || val === 0) return '6px'; // Petite barre grise si aucun CA
+  if (!val || val === 0) return '4px'; // Petite barre grise si aucun CA
   const max = Math.max(...caMensuel.value.map(i => parseFloat(i.ca) || 0), 1);
   const pct = (parseFloat(val) / max) * 100;
-  return `calc(${pct}% - 10px)`; // -10px pour ne pas déborder
+  // Utilisation de Math.max pour garantir une hauteur minimale visible
+  return `${Math.max(pct, 2)}%`; 
 }
 
 async function refreshData() {
@@ -225,7 +226,7 @@ async function refreshData() {
     
     const [kpiRes, caRes, tvRes, tcRes, ssRes] = await Promise.all([
       api.get('/dashboard/kpis', config),
-      api.get('/dashboard/ca-mensuel'), 
+      api.get('/dashboard/ca-mensuel', config), 
       api.get('/dashboard/top-ventes', config),
       api.get('/dashboard/top-clients', config),
       api.get('/dashboard/stock-stats')
