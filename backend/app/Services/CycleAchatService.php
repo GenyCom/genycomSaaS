@@ -25,7 +25,7 @@ class CycleAchatService
     /**
      * Transforme un BCF en Bon de Réception, incrémente le stock.
      */
-    public function transformerBcfEnBr(int $tenantId, int $idBcf, int $userId): array
+    public function transformerBcfEnBr(int $tenantId, int $idBcf, int $userId, $entrepotId = null): array
     {
         \Log::info("Transformation BCF -> BR lancée", ['tenant' => $tenantId, 'bcf' => $idBcf]);
         $this->db()->beginTransaction();
@@ -45,9 +45,9 @@ class CycleAchatService
 
             // 3. Insérer le Bon de Réception
             $this->db()->insert(
-                "INSERT INTO br (numero, date_reception, bcf_id, fournisseur_id, observations, statut, devise_id, taux_change_document, created_by, created_at)
-                 VALUES (?, NOW(), ?, ?, ?, 'valide', ?, ?, ?, NOW())",
-                [$numeroBr, $bcf->id, $bcf->fournisseur_id, $bcf->observations, $bcf->devise_id, $bcf->taux_change_document ?? 1.0, $userId]
+                "INSERT INTO br (tenant_id, numero, date_reception, bcf_id, fournisseur_id, entrepot_id, observations, statut, devise_id, taux_change_document, created_by, created_at)
+                 VALUES (?, ?, NOW(), ?, ?, ?, ?, 'valide', ?, ?, ?, NOW())",
+                [$tenantId, $numeroBr, $bcf->id, $bcf->fournisseur_id, $entrepotId, $bcf->observations, $bcf->devise_id, $bcf->taux_change_document ?? 1.0, $userId]
             );
             $brId = $this->db()->getPdo()->lastInsertId();
 
@@ -76,6 +76,7 @@ class CycleAchatService
                         'document_id'        => $brId,
                         'prix_unitaire'      => $ligne->prix_unitaire,
                         'taux_change'        => $bcf->taux_change_document ?? 1.0,
+                        'entrepot_id'        => $entrepotId,
                         'user_id'            => $userId,
                     ]);
                 }
@@ -205,7 +206,7 @@ class CycleAchatService
 
     public function incrementerStock(int $tenantId, int $produitId, float $quantite, array $options = []): void
     {
-        $entrepotId = $this->stockService->getDefaultEntrepotId($tenantId);
+        $entrepotId = $options['entrepot_id'] ?? $this->stockService->getDefaultEntrepotId($tenantId);
 
         // On garde tenant_id pour stocks/mouvements car ils l'ont
         $stock = $this->db()->select(

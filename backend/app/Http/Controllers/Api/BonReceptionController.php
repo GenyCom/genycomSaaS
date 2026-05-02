@@ -75,6 +75,7 @@ class BonReceptionController extends Controller
             'bcf_id'                   => 'nullable|integer',
             'date_reception'           => 'required|date',
             'observations'             => 'nullable|string',
+            'entrepot_id'              => 'nullable|integer',
             'lignes'                   => 'required|array|min:1',
             'lignes.*.produit_id'      => 'nullable|integer',
             'lignes.*.designation'     => 'required|string|max:255',
@@ -89,15 +90,18 @@ class BonReceptionController extends Controller
         try {
             $numero = app(\App\Services\NumerotationService::class)->generer($tenantId, 'BR');
             
-            // On récupère le bcf_id ou on met null
-            $bcfId = $data['bcf_id'] ?? null;
-            
-            $this->db()->insert(
-                "INSERT INTO br (numero, date_reception, bcf_id, fournisseur_id, observations, statut, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, 'valide', ?, NOW())",
-                [$numero, $data['date_reception'], $bcfId, $data['fournisseur_id'], $data['observations'] ?? null, $userId]
-            );
-            $brId = $this->db()->getPdo()->lastInsertId();
+            $br = BR::create([
+                'tenant_id'      => $tenantId,
+                'numero'         => $numero,
+                'date_reception' => $data['date_reception'],
+                'bcf_id'         => $data['bcf_id'] ?? null,
+                'fournisseur_id' => $data['fournisseur_id'],
+                'entrepot_id'    => $data['entrepot_id'] ?? null,
+                'observations'   => $data['observations'] ?? null,
+                'statut'         => 'valide',
+                'created_by'     => $userId
+            ]);
+            $brId = $br->id;
 
             foreach ($data['lignes'] as $index => $ligne) {
                 $pId = (!empty($ligne['produit_id'])) ? $ligne['produit_id'] : null;
@@ -119,6 +123,7 @@ class BonReceptionController extends Controller
                         'document_type'      => 'BonReception',
                         'document_id'        => $brId,
                         'prix_unitaire'      => $ligne['prix_unitaire'],
+                        'entrepot_id'        => $data['entrepot_id'] ?? null,
                         'user_id'            => $userId,
                     ]);
                 }
