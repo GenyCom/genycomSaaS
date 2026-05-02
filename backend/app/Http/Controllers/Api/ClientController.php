@@ -20,6 +20,12 @@ class ClientController extends Controller
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
         $query = Client::with(['typeClient', 'commercial:id,nom,prenom'])
+            ->withSum(['factures' => function($q) {
+                $q->whereNotNull('numero'); // Uniquement les factures validées
+            }], 'total_ttc')
+            ->withSum(['factures' => function($q) {
+                $q->whereNotNull('numero');
+            }], 'montant_regle')
             ->search($request->search)
             ->when($request->type_client_id, fn($q, $v) => $q->where('type_client_id', $v))
             ->orderBy($sortBy, $sortDir);

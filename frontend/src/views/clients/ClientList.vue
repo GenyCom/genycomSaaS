@@ -71,7 +71,8 @@
               <th>Société / Nom</th>
               <th>Localisation</th>
               <th>Contact</th>
-              <th>Type</th>
+              <th class="text-right">Total Ventes</th>
+              <th class="text-right">Règlements</th>
               <th class="text-right">Reste dû</th>
               <th class="text-right">Actions</th>
             </tr>
@@ -97,10 +98,11 @@
                   <div class="email-sub">{{ client.email || '—' }}</div>
                 </div>
               </td>
-              <td>
-                <span class="type-pill" :class="{ 'vip': client.type_client?.vip }">
-                  {{ client.type_client?.libelle || 'Standard' }}
-                </span>
+              <td class="text-right">
+                <div class="amount-cell">{{ formatMoney(client.factures_sum_total_ttc) }} <span class="currency">DH</span></div>
+              </td>
+              <td class="text-right">
+                <div class="amount-cell text-success">{{ formatMoney(client.factures_sum_montant_regle) }} <span class="currency">DH</span></div>
               </td>
               <td class="text-right">
                 <div class="amount-cell" :class="{ 'has-debt': client.montant_rest_du > 0 }">
@@ -123,7 +125,7 @@
               </td>
             </tr>
             <tr v-if="filteredClients.length === 0">
-              <td colspan="7" class="empty-row">
+              <td colspan="8" class="empty-row">
                 <div class="empty-content">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" color="var(--c-border-mid)"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                   <p>Aucun client ne correspond à votre recherche.</p>
@@ -323,9 +325,10 @@ onMounted(async () => {
 }
 .type-pill.vip { background: #FFFBEB; color: #D97706; }
 
-.amount-cell { font-size: .95rem; font-weight: 800; color: var(--c-muted); }
+.amount-cell { font-size: .88rem; font-weight: 700; color: var(--c-muted); }
 .amount-cell.has-debt { color: var(--c-danger); }
-.amount-cell .currency { font-size: .65rem; font-weight: 600; margin-left: 2px; opacity: .7; }
+.amount-cell .currency { font-size: .6rem; font-weight: 600; margin-left: 2px; opacity: .7; }
+.text-success { color: var(--c-success) !important; }
 
 .text-right { text-align: right; }
 

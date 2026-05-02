@@ -71,7 +71,9 @@
               <th>Société / Nom</th>
               <th>Localisation</th>
               <th>Contact</th>
-              <th>Type</th>
+              <th class="text-right">Total Achats</th>
+              <th class="text-right">Règlements</th>
+              <th class="text-right">Reste à payer</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
@@ -96,10 +98,17 @@
                   <div class="email-sub">{{ frn.email || '—' }}</div>
                 </div>
               </td>
-              <td>
-                <span class="type-pill">
-                  {{ frn.type_fournisseur?.libelle || 'Standard' }}
-                </span>
+              <td class="text-right">
+                <div class="amount-cell">{{ formatMoney(frn.factures_achats_sum_montant_ttc) }} <span class="currency">DH</span></div>
+              </td>
+              <td class="text-right">
+                <div class="amount-cell text-success">{{ formatMoney(frn.factures_achats_sum_montant_paye) }} <span class="currency">DH</span></div>
+              </td>
+              <td class="text-right">
+                <div class="amount-cell" :class="{ 'has-debt': (frn.factures_achats_sum_montant_ttc - frn.factures_achats_sum_montant_paye) > 0 }">
+                  {{ formatMoney(frn.factures_achats_sum_montant_ttc - frn.factures_achats_sum_montant_paye) }}
+                  <span class="currency">DH</span>
+                </div>
               </td>
               <td class="text-right">
                 <div class="actions-group">
@@ -116,7 +125,7 @@
               </td>
             </tr>
             <tr v-if="filteredFournisseurs.length === 0">
-              <td colspan="6" class="empty-row">
+              <td colspan="9" class="empty-row">
                 <div class="empty-content">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" color="var(--c-border-mid)"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                   <p>Aucun fournisseur ne correspond à votre recherche.</p>
@@ -158,6 +167,10 @@ function showToast(message, type = 'success') {
   toast.message = message
   toast.type = type
   setTimeout(() => { toast.show = false }, 4000)
+}
+
+function formatMoney(val) {
+  return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function deleteFournisseur(id) {
@@ -307,6 +320,11 @@ onMounted(async () => {
   display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: .7rem;
   font-weight: 800; background: var(--c-subtle); color: var(--c-muted);
 }
+
+.amount-cell { font-size: .88rem; font-weight: 700; color: var(--c-muted); }
+.amount-cell.has-debt { color: var(--c-danger); }
+.amount-cell .currency { font-size: .6rem; font-weight: 600; margin-left: 2px; opacity: .7; }
+.text-success { color: #16A34A !important; }
 
 .text-right { text-align: right; }
 

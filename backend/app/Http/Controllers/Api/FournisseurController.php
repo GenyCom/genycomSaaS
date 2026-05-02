@@ -20,6 +20,8 @@ class FournisseurController extends Controller
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
         $query = Fournisseur::with(['typeFournisseur'])
+            ->withSum('facturesAchats', 'montant_ttc')
+            ->withSum('facturesAchats', 'montant_paye')
             ->when($request->search, fn($q, $v) => $q->where(function($sq) use ($v) {
                 $sq->where('code_fournisseur', 'like', "%{$v}%")
                    ->orWhere('societe', 'like', "%{$v}%")
