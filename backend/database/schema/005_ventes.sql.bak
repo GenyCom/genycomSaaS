@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `bons_livraison` (
     `client_id`         BIGINT UNSIGNED NOT NULL,
     `adresse_livraison_id` BIGINT UNSIGNED NULL,
     `mode_livraison_id` BIGINT UNSIGNED NULL,
-	`entrepot_id` 		BIGINT UNSIGNED NULL AFTER `mode_livraison_id`,
+	`entrepot_id` BIGINT UNSIGNED NULL AFTER `mode_livraison_id`,
     `observations`      LONGTEXT NULL,
     `statut`            ENUM('brouillon','valide','livre','annule') DEFAULT 'brouillon',
     `devise_id`         BIGINT UNSIGNED NULL,

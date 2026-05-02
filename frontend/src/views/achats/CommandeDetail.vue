@@ -473,7 +473,7 @@ onMounted(async () => {
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),
       api.get('/parametrage/referentiels/taux-tva'),
-      api.get('/stock/entrepots')
+      api.get('/parametrage/referentiels/entrepots')
     ])
     fournisseurs.value = fRes.data.data || fRes.data || []
     
@@ -482,7 +482,7 @@ onMounted(async () => {
     
     projects.value = prRes.data.data || prRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
-    warehouses.value = wRes.data || []
+    warehouses.value = wRes.data.data || wRes.data || []
 
     // Set default warehouse
     if (!form.value.entrepot_id) {

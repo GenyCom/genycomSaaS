@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `br` (
     `numero`            VARCHAR(150) UNIQUE NOT NULL,
     `date_reception`    DATE NOT NULL,
     `fournisseur_id`    BIGINT UNSIGNED NOT NULL,
-	`entrepot_id` 		BIGINT UNSIGNED NULL AFTER `fournisseur_id`,
+	`entrepot_id` BIGINT UNSIGNED NULL AFTER `fournisseur_id`,
     `statut`            ENUM('brouillon', 'valide', 'annule') DEFAULT 'brouillon',
     `devise_id`         BIGINT UNSIGNED NULL,
     `taux_change_document` DECIMAL(24,6) DEFAULT 1.000000,

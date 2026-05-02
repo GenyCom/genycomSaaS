@@ -12,7 +12,7 @@ class BonCommandeClient extends BaseModel
 
     protected $fillable = [
         'tenant_id', 'numero', 'date_commande', 'date_livraison_prevue',
-        'client_id', 'projet_id', 'devis_id',
+        'client_id', 'projet_id', 'devis_id', 'entrepot_id',
         'total_ht', 'total_tva', 'total_ttc', 'total_remise',
         'etat_id', 'observations', 'conditions',
         'est_livre', 'est_facture', 'devise_id', 'taux_change_document', 'created_by',
@@ -42,5 +42,10 @@ class BonCommandeClient extends BaseModel
         $this->total_ttc = $this->lignes()->sum('montant_ttc');
         $this->save();
         return $this;
+    }
+
+    public function entrepot()
+    {
+        return $this->belongsTo(Entrepot::class);
     }
 }

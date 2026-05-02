@@ -25,6 +25,7 @@ class BonCommandeFournisseur extends BaseModel
         'observations',
         'devise_id',
         'taux_change_document',
+        'entrepot_id',
         'created_by'
     ];
 
@@ -48,5 +49,10 @@ class BonCommandeFournisseur extends BaseModel
         $this->total_ttc = $this->lignes()->sum('montant_ttc');
         $this->save();
         return $this;
+    }
+
+    public function entrepot()
+    {
+        return $this->belongsTo(Entrepot::class);
     }
 }

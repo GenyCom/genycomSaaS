@@ -279,11 +279,11 @@ onMounted(async () => {
     const [fRes, pRes, wRes] = await Promise.all([
       api.get('/fournisseurs', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
-      api.get('/stock/entrepots')
+      api.get('/parametrage/referentiels/entrepots')
     ])
     fournisseurs.value = fRes.data.data || fRes.data || []
     produits.value = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
-    warehouses.value = wRes.data || []
+    warehouses.value = wRes.data.data || wRes.data || []
 
     // Set default warehouse
     if (!form.value.entrepot_id) {
