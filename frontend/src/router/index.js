@@ -88,6 +88,7 @@ const routes = [
       { path: 'stock/:id/historique', name: 'StockHistorique', component: () => import('../views/stock/StockHistorique.vue'), props: true },
       { path: 'parametrage',   name: 'Parametrage',  component: () => import('../views/parametrage/ParametrageIndex.vue') },
       { path: 'profile',       name: 'ProfileSettings', component: () => import('../views/shared/ProfileSettings.vue') },
+      { path: 'reporting',     name: 'Reporting',    component: () => import('../views/reporting/Reporting.vue') },
     ],
   },
   {

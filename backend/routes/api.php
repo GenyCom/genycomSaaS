@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\{
     DetteController,
     FactureAchatController,
     NotificationController,
+    ReportingController,
 };
 use Illuminate\Support\Facades\Route;
 
@@ -131,6 +132,14 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // Reporting
+    Route::prefix('reporting')->group(function () {
+        Route::get('/sales', [ReportingController::class, 'sales']);
+        Route::get('/purchases', [ReportingController::class, 'purchases']);
+        Route::get('/finance', [ReportingController::class, 'finance']);
+        Route::get('/stock', [ReportingController::class, 'stock']);
+    });
 });
 
 // Debug route – temporary

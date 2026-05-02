@@ -107,12 +107,12 @@
           </router-link>
         </div>
 
-        <!-- Finances -->
+        <!-- Analyses -->
         <div class="nav-section">
-          <div class="nav-section-label">Finances</div>
-          <router-link to="/depenses" class="nav-item" active-class="active">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span>Dépenses</span>
+          <div class="nav-section-label">Analyses</div>
+          <router-link to="/reporting" class="nav-item" active-class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            <span>Reporting</span>
           </router-link>
         </div>
 
@@ -216,6 +216,7 @@ const pageTitle = computed(() => {
     DetteList: 'Dettes Fournisseur', DetteDetail: 'Dette Fournisseur',
     Stock: 'Gestion de Stock', Depenses: 'Dépenses', Parametrage: 'Paramétrage',
     Contrats: 'Abonnements & Contrats', ContratForm: 'Fiche Contrat',
+    Reporting: 'Reporting & Analyses',
   }
   return titles[route.name] || route.name || 'GenyCom'
 })
