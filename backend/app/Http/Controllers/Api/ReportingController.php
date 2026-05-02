@@ -14,9 +14,10 @@ class ReportingController extends Controller
     {
         $start = $request->get('start', now()->startOfMonth()->toDateString());
         $end = $request->get('end', now()->toDateString());
+        $clientId = $request->get('client_id');
         
         return response()->json([
-            'journal' => $this->reporting->salesJournal($start, $end),
+            'journal' => $this->reporting->salesJournal($start, $end, $clientId),
             'by_client' => $this->reporting->salesByClient($start, $end)
         ]);
     }
@@ -25,8 +26,9 @@ class ReportingController extends Controller
     {
         $start = $request->get('start', now()->startOfMonth()->toDateString());
         $end = $request->get('end', now()->toDateString());
+        $supplierId = $request->get('fournisseur_id');
         
-        return response()->json($this->reporting->purchaseJournal($start, $end));
+        return response()->json($this->reporting->purchaseJournal($start, $end, $supplierId));
     }
 
     public function finance(Request $request): JsonResponse

@@ -14,13 +14,14 @@ class ReportingService
     /**
      * Rapport de ventes détaillé
      */
-    public function salesJournal(string $start, string $end): array
+    public function salesJournal(string $start, string $end, ?int $clientId = null): array
     {
         return DB::connection('tenant')->table('factures as f')
             ->join('clients as c', 'c.id', '=', 'f.client_id')
             ->where('f.tenant_id', $this->tid())
             ->whereNull('f.deleted_at')
             ->whereBetween('f.date_facture', [$start, $end])
+            ->when($clientId, fn($q) => $q->where('f.client_id', $clientId))
             ->select('f.id', 'f.numero', 'f.date_facture', 'c.societe', 'f.total_ht', 'f.total_tva', 'f.total_ttc', 'f.montant_regle', 'f.est_reglee')
             ->orderBy('f.date_facture', 'desc')
             ->get()
@@ -30,13 +31,14 @@ class ReportingService
     /**
      * Rapport d'achats et dépenses détaillé
      */
-    public function purchaseJournal(string $start, string $end): array
+    public function purchaseJournal(string $start, string $end, ?int $supplierId = null): array
     {
         $achats = DB::connection('tenant')->table('factures_achats as fa')
             ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
             ->where('fa.tenant_id', $this->tid())
             ->whereNull('fa.deleted_at')
             ->whereBetween('fa.date_facture', [$start, $end])
+            ->when($supplierId, fn($q) => $q->where('fa.fournisseur_id', $supplierId))
             ->select('fa.id', 'fa.numero', 'fa.date_facture', 'fr.societe', 'fa.montant_ht as total_ht', 'fa.montant_tva as total_tva', 'fa.montant_ttc as total_ttc', DB::raw("'achat' as type"))
             ->get();
 
@@ -44,6 +46,9 @@ class ReportingService
             ->where('d.tenant_id', $this->tid())
             ->whereNull('d.deleted_at')
             ->whereBetween('d.date_depense', [$start, $end])
+            // Les dépenses directes n'ont pas forcément de fournisseur_id dans ce modèle simple,
+            // mais on peut les filtrer si on avait un lien. Pour l'instant, si un fournisseur est choisi, on ne montre que les achats.
+            ->when($supplierId, fn($q) => $q->whereRaw('1=0')) 
             ->select('d.id', DB::raw("'' as numero"), 'd.date_depense as date_facture', 'd.libelle as societe', 'd.montant as total_ht', DB::raw("0 as total_tva"), 'd.montant as total_ttc', DB::raw("'depense' as type"))
             ->get();
 

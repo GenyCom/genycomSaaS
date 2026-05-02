@@ -55,7 +55,13 @@
 
         <div class="table-card mt-4">
           <div class="card-header">
-            <h3>Journal des Ventes</h3>
+            <div class="header-with-filter">
+              <h3>Journal des Ventes</h3>
+              <select v-model="filters.clientId" @change="fetchData" class="filter-select">
+                <option :value="null">Tous les clients</option>
+                <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe }}</option>
+              </select>
+            </div>
             <button @click="exportCSV(salesData.journal, 'journal_ventes')" class="btn-export">Exporter CSV</button>
           </div>
           <div class="table-responsive">
@@ -98,7 +104,13 @@
       <div v-if="activeTab === 'purchases'" class="tab-pane">
         <div class="table-card">
           <div class="card-header">
-            <h3>Journal des Achats & Dépenses</h3>
+            <div class="header-with-filter">
+              <h3>Journal des Achats & Dépenses</h3>
+              <select v-model="filters.supplierId" @change="fetchData" class="filter-select">
+                <option :value="null">Tous les fournisseurs</option>
+                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
+              </select>
+            </div>
             <button @click="exportCSV(purchaseData, 'journal_achats')" class="btn-export">Exporter CSV</button>
           </div>
           <div class="table-responsive">
@@ -247,9 +259,32 @@ const purchaseData = ref([])
 const financeData = ref({ vat: { collected_vat: 0, deductible_vat: 0, net_vat: 0 }, profitability: [] })
 const stockData = ref({ total_value_purchase: 0, total_value_sale: 0 })
 
+const clients = ref([])
+const suppliers = ref([])
+const filters = reactive({
+  clientId: null,
+  supplierId: null
+})
+
+async function fetchFilterData() {
+  try {
+    const [cRes, sRes] = await Promise.all([
+      api.get('/clients'),
+      api.get('/fournisseurs')
+    ])
+    clients.value = cRes.data.data || cRes.data
+    suppliers.value = sRes.data.data || sRes.data
+  } catch (e) { console.error(e) }
+}
+
 async function fetchData() {
   loading.value = true
-  const params = { start: dateRange.start, end: dateRange.end }
+  const params = { 
+    start: dateRange.start, 
+    end: dateRange.end,
+    client_id: filters.clientId,
+    fournisseur_id: filters.supplierId
+  }
   try {
     const [salesRes, purchaseRes, financeRes, stockRes] = await Promise.all([
       api.get('/reporting/sales', { params }),
@@ -298,7 +333,10 @@ function exportCSV(data, filename) {
   link.click()
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchFilterData()
+  fetchData()
+})
 </script>
 
 <style scoped>
@@ -365,4 +403,18 @@ onMounted(fetchData)
 .loader-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
 .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
 .mt-4 { margin-top: 1rem; }
+
+.header-with-filter { display: flex; align-items: center; gap: 12px; flex: 1; }
+.filter-select { 
+  padding: 4px 8px; 
+  border-radius: 6px; 
+  border: 1px solid #e2e8f0; 
+  font-size: 0.8rem; 
+  color: #334155; 
+  font-weight: 600; 
+  outline: none;
+  background: white;
+  max-width: 250px;
+}
+.filter-select:focus { border-color: #3b82f6; }
 </style>
