@@ -37,14 +37,14 @@ class ReportingService
             ->where('fa.tenant_id', $this->tid())
             ->whereNull('fa.deleted_at')
             ->whereBetween('fa.date_facture', [$start, $end])
-            ->select('fa.id', 'fa.numero', 'fa.date_facture', 'fr.societe', 'fa.total_ht', 'fa.total_tva', 'fa.total_ttc', DB::raw("'achat' as type"))
+            ->select('fa.id', 'fa.numero', 'fa.date_facture', 'fr.societe', 'fa.montant_ht as total_ht', 'fa.montant_tva as total_tva', 'fa.montant_ttc as total_ttc', DB::raw("'achat' as type"))
             ->get();
 
         $depenses = DB::connection('tenant')->table('depenses as d')
             ->where('d.tenant_id', $this->tid())
             ->whereNull('d.deleted_at')
             ->whereBetween('d.date_depense', [$start, $end])
-            ->select('d.id', DB::raw("'' as numero"), 'd.date_depense as date_facture', 'd.libelle as societe', 'd.montant_ht as total_ht', 'd.montant_tva as total_tva', 'd.montant as total_ttc', DB::raw("'depense' as type"))
+            ->select('d.id', DB::raw("'' as numero"), 'd.date_depense as date_facture', 'd.libelle as societe', 'd.montant as total_ht', DB::raw("0 as total_tva"), 'd.montant as total_ttc', DB::raw("'depense' as type"))
             ->get();
 
         return $achats->concat($depenses)->sortByDesc('date_facture')->values()->toArray();
@@ -99,18 +99,14 @@ class ReportingService
             ->where('tenant_id', $this->tid())
             ->whereNull('deleted_at')
             ->whereBetween('date_facture', [$start, $end])
-            ->sum('total_tva');
-
-        $deductibleDepenses = DB::connection('tenant')->table('depenses')
-            ->where('tenant_id', $this->tid())
-            ->whereNull('deleted_at')
-            ->whereBetween('date_depense', [$start, $end])
             ->sum('montant_tva');
+
+        $deductibleDepenses = 0; // La table depenses semble ne pas avoir de colonne TVA distincte d'après le modèle
 
         return [
             'collected_vat' => (float) $collected,
-            'deductible_vat' => (float) ($deductibleAchats + $deductibleDepenses),
-            'net_vat' => (float) ($collected - ($deductibleAchats + $deductibleDepenses))
+            'deductible_vat' => (float) $deductibleAchats,
+            'net_vat' => (float) ($collected - $deductibleAchats)
         ];
     }
 
@@ -119,11 +115,13 @@ class ReportingService
      */
     public function inventoryValuation(): array
     {
-        return DB::connection('tenant')->table('produits')
+        $res = DB::connection('tenant')->table('produits')
             ->where('tenant_id', $this->tid())
             ->whereNull('deleted_at')
             ->where('is_service', 0)
-            ->selectRaw('SUM(stock_actuel * prix_achat) as total_value_purchase, SUM(stock_actuel * prix_vente) as total_value_sale')
-            ->first() ? (array) DB::connection('tenant')->table('produits')->where('tenant_id', $this->tid())->whereNull('deleted_at')->where('is_service', 0)->selectRaw('SUM(stock_actuel * prix_achat) as total_value_purchase, SUM(stock_actuel * prix_vente) as total_value_sale')->first() : ['total_value_purchase' => 0, 'total_value_sale' => 0];
+            ->selectRaw('SUM(stock_actuel * prix_ht_achat) as total_value_purchase, SUM(stock_actuel * prix_ht_vente) as total_value_sale')
+            ->first();
+
+        return (array) $res;
     }
 }
