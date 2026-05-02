@@ -35,7 +35,7 @@ class WorkflowAchatController extends Controller
                 }
             }
 
-            $br = $this->receptionService->receptionnerCommande($commande, $quantitesRecues, $userId);
+            $br = $this->receptionService->receptionnerCommande($commande, $quantitesRecues, $userId, $request->input('entrepot_id'));
 
             return response()->json([
                 'message' => 'Bon de réception généré avec succès',

@@ -102,6 +102,14 @@
                 <input v-model="form.date_reception" type="date" />
               </div>
             </div>
+            <div class="form-group-custom mt-2">
+              <label>Dépôt de Réception (Entrepôt) *</label>
+              <select v-model="form.entrepot_id" class="accent-select">
+                <option v-for="e in warehouses" :key="e.id" :value="e.id">
+                  {{ e.nom }} {{ e.is_default ? '(Par défaut)' : '' }}
+                </option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -198,11 +206,13 @@ const form = ref({
   fournisseur_id: '',
   date_reception: new Date().toISOString().substring(0, 10),
   observations: '',
+  entrepot_id: null,
   lignes: []
 })
 
 const fournisseurs = ref([])
 const produits = ref([])
+const warehouses = ref([])
 
 const totalHT = computed(() => {
   return form.value.lignes.reduce((sum, l) => sum + (parseFloat(l.quantite_recue) || 0) * (parseFloat(l.prix_unitaire) || 0), 0)
@@ -266,12 +276,20 @@ async function executeTransform() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [fRes, pRes] = await Promise.all([
+    const [fRes, pRes, wRes] = await Promise.all([
       api.get('/fournisseurs', { params: { per_page: 500 } }),
-      api.get('/produits', { params: { per_page: 500 } })
+      api.get('/produits', { params: { per_page: 500 } }),
+      api.get('/stock/entrepots')
     ])
     fournisseurs.value = fRes.data.data || fRes.data || []
     produits.value = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
+    warehouses.value = wRes.data || []
+
+    // Set default warehouse
+    if (!form.value.entrepot_id) {
+      const def = warehouses.value.find(w => w.is_default)
+      if (def) form.value.entrepot_id = def.id
+    }
 
     if (!isNew.value) {
       const { data } = await api.get(`/bons-reception/${route.params.id}`)

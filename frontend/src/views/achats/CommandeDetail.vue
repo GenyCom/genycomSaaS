@@ -117,6 +117,15 @@
                 <input v-model="form.date_livraison_prevue" type="date" />
               </div>
             </div>
+            <div class="form-group-custom mt-2">
+              <label>Dépôt de Réception (Entrepôt) *</label>
+              <select v-model="form.entrepot_id" class="accent-select">
+                <option v-for="e in warehouses" :key="e.id" :value="e.id">
+                  {{ e.nom }} {{ e.is_default ? '(Par défaut)' : '' }}
+                </option>
+              </select>
+              <p class="field-hint">L'entrepôt où les articles seront stockés lors de la réception.</p>
+            </div>
           </div>
         </section>
 
@@ -269,6 +278,7 @@ const form = ref({
   total_ttc: 0,
   observations: '',
   statut: 'brouillon',
+  entrepot_id: null,
   lignes: []
 })
 
@@ -276,6 +286,7 @@ const fournisseurs = ref([])
 const products = ref([])
 const produits = ref([])
 const projects = ref([])
+const warehouses = ref([])
 const tauxTvaList = ref([])
 const errors = reactive({})
 
@@ -439,7 +450,9 @@ async function executeTransform() {
   showConfirm.value = false
   transforming.value = true
   try {
-    const { data } = await api.post(`/workflow/commande-fournisseur-to-br/${route.params.id}`)
+    const { data } = await api.post(`/workflow/commande-fournisseur-to-br/${route.params.id}`, {
+      entrepot_id: form.value.entrepot_id
+    })
     toast.success('Bon de Réception généré avec succès !')
     setTimeout(() => {
       router.push(`/bons-reception/${data.id}`)
@@ -455,11 +468,12 @@ async function executeTransform() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [fRes, pRes, prRes, tvaRes] = await Promise.all([
+    const [fRes, pRes, prRes, tvaRes, wRes] = await Promise.all([
       api.get('/fournisseurs', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),
-      api.get('/parametrage/referentiels/taux-tva')
+      api.get('/parametrage/referentiels/taux-tva'),
+      api.get('/stock/entrepots')
     ])
     fournisseurs.value = fRes.data.data || fRes.data || []
     
@@ -468,6 +482,13 @@ onMounted(async () => {
     
     projects.value = prRes.data.data || prRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
+    warehouses.value = wRes.data || []
+
+    // Set default warehouse
+    if (!form.value.entrepot_id) {
+      const def = warehouses.value.find(w => w.is_default)
+      if (def) form.value.entrepot_id = def.id
+    }
 	
     if (!isNew.value) {
       const { data } = await api.get(`/commandes/${route.params.id}`)

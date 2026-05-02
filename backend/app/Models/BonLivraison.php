@@ -13,7 +13,7 @@ class BonLivraison extends BaseModel
     protected $fillable = [
         'tenant_id', 'numero', 'date_livraison',
         'devis_id', 'bon_commande_client_id', 'facture_id', 'projet_id',
-        'client_id', 'adresse_livraison_id', 'mode_livraison_id',
+        'client_id', 'adresse_livraison_id', 'mode_livraison_id', 'entrepot_id',
         'total_ht', 'total_tva', 'total_ttc', 'total_remise', 'devise_id', 'taux_change_document',
         'observations', 'statut', 'etat_id', 'created_by'
     ];
@@ -36,5 +36,10 @@ class BonLivraison extends BaseModel
         $this->total_ttc = $this->lignes()->sum('montant_ttc');
         $this->save();
         return $this;
+    }
+
+    public function entrepot()
+    {
+        return $this->belongsTo(Entrepot::class);
     }
 }

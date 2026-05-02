@@ -118,6 +118,15 @@
                 <input v-model="form.date_livraison_prevue" type="date" />
               </div>
             </div>
+            <div class="form-group-custom mt-2">
+              <label>Dépôt d'Expédition (Entrepôt) *</label>
+              <select v-model="form.entrepot_id" class="accent-select">
+                <option v-for="e in warehouses" :key="e.id" :value="e.id">
+                  {{ e.nom }} {{ e.is_default ? '(Par défaut)' : '' }}
+                </option>
+              </select>
+              <p class="field-hint">L'entrepôt d'où les articles seront décomptés lors de la livraison.</p>
+            </div>
           </div>
         </section>
 
@@ -283,6 +292,7 @@ const form = ref({
   total_tva: 0,
   total_ttc: 0,
   observations: '',
+  entrepot_id: null,
   lignes: []
 })
 
@@ -290,6 +300,7 @@ const clients = ref([])
 const products = ref([])
 const produits = ref([])
 const projects = ref([])
+const warehouses = ref([])
 const tauxTvaList = ref([])
 const errors = reactive({})
 
@@ -472,7 +483,9 @@ async function executeTransform() {
   showConfirmModal.value = false
   transforming.value = true
   try {
-    const { data } = await api.post(`/workflow/bc-to-bl/${route.params.id}`)
+    const { data } = await api.post(`/workflow/bc-to-bl/${route.params.id}`, {
+      entrepot_id: form.value.entrepot_id
+    })
     toast.success('Bon de Livraison généré avec succès !')
     setTimeout(() => router.push(`/bons-livraison/${data.id}`), 1000)
   } catch (err) {
@@ -485,11 +498,12 @@ async function imprimer() { window.open(`/print/bcc/${route.params.id}`, '_blank
 onMounted(async () => {
   loading.value = true
   try {
-    const [cRes, pRes, prRes, tvaRes] = await Promise.all([
+    const [cRes, pRes, prRes, tvaRes, wRes] = await Promise.all([
       api.get('/clients', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),
-      api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } }))
+      api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } })),
+      api.get('/stock/entrepots')
     ])
     
     clients.value = cRes.data.data || cRes.data || []
@@ -497,6 +511,13 @@ onMounted(async () => {
     produits.value = products.value.filter(p => p.is_actif !== false)
     projects.value = prRes.data.data || prRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
+    warehouses.value = wRes.data || []
+
+    // Set default warehouse
+    if (!form.value.entrepot_id) {
+      const def = warehouses.value.find(w => w.is_default)
+      if (def) form.value.entrepot_id = def.id
+    }
 
     if (!isNew.value) {
       const { data } = await api.get(`/bons-commande-client/${route.params.id}`)

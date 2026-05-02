@@ -17,6 +17,7 @@ class BR extends BaseModel
         'numero',
         'date_reception',
         'fournisseur_id',
+        'entrepot_id',
         'statut',
         'observations',
         'created_by'
@@ -44,5 +45,10 @@ class BR extends BaseModel
     public function factures()
     {
         return $this->belongsToMany(FactureAchat::class, 'br_facture', 'br_id', 'facture_achat_id');
+    }
+
+    public function entrepot()
+    {
+        return $this->belongsTo(Entrepot::class);
     }
 }

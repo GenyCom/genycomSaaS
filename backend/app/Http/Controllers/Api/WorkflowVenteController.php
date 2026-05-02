@@ -99,6 +99,7 @@ class WorkflowVenteController extends Controller
                 'devis_id'               => $bcc->devis_id,
                 'projet_id'              => $bcc->projet_id,
                 'bon_commande_client_id' => $bcc->id,
+                'entrepot_id'            => $request->input('entrepot_id'),
                 'statut'                 => 'valide',
                 'total_ht'               => $bcc->total_ht,
                 'total_tva'              => $bcc->total_tva,
@@ -136,7 +137,7 @@ class WorkflowVenteController extends Controller
                         $bl->id,
                         auth()->id(),
                         $tenantId,
-                        null // Utilise l'entrepôt par défaut
+                        $request->input('entrepot_id')
                     );
                 }
             }
@@ -258,6 +259,7 @@ class WorkflowVenteController extends Controller
                 'facture_id'     => $facture->id,
                 'bon_commande_client_id' => $facture->bon_commande_client_id,
                 'devis_id'       => $facture->devis_id,
+                'entrepot_id'    => $request->input('entrepot_id'),
                 'statut'         => 'valide',
                 'total_ht'       => $facture->total_ht,
                 'total_tva'      => $facture->total_tva,
@@ -295,7 +297,8 @@ class WorkflowVenteController extends Controller
                         'BL',
                         $bl->id,
                         auth()->id(),
-                        $tenantId
+                        $tenantId,
+                        $request->input('entrepot_id')
                     );
                 }
             }

@@ -23,9 +23,9 @@ class ReceptionService
      * @param BCF $commande L'objet BCF
      * @param array $quantitesRecues Mapping [bcf_ligne_id => quantite_recue]
      */
-    public function receptionnerCommande(BonCommandeFournisseur $commande, array $quantitesRecues, int $userId): BR
+    public function receptionnerCommande(BonCommandeFournisseur $commande, array $quantitesRecues, int $userId, ?int $entrepotId = null): BR
     {
-        return DB::transaction(function () use ($commande, $quantitesRecues, $userId) {
+        return DB::transaction(function () use ($commande, $quantitesRecues, $userId, $entrepotId) {
             $tenantId = $commande->tenant_id;
             $numeroBr = $this->numerotation->generer($tenantId, 'BR');
 
@@ -36,6 +36,7 @@ class ReceptionService
                 'numero'         => $numeroBr,
                 'date_reception' => now(),
                 'fournisseur_id' => $commande->fournisseur_id,
+                'entrepot_id'    => $entrepotId,
                 'devise_id'      => $commande->devise_id,
                 'taux_change_document' => $commande->taux_change_document ?? 1.0,
                 'statut'         => 'valide',
@@ -67,6 +68,7 @@ class ReceptionService
                             'user_id' => $userId,
                             'prix' => $ligneBCF->prix_unitaire,
                             'taux_change' => $br->taux_change_document ?? 1.0,
+                            'entrepot_id' => $entrepotId
                         ]);
                     }
                 }
@@ -87,7 +89,7 @@ class ReceptionService
 
     private function incrementerStock(int $tenantId, int $produitId, float $quantite, array $meta): void
     {
-        $entrepotId = $this->stockService->getDefaultEntrepotId($tenantId);
+        $entrepotId = $meta['entrepot_id'] ?? $this->stockService->getDefaultEntrepotId($tenantId);
 
         $stock = Stock::firstOrCreate(
             ['tenant_id' => $tenantId, 'produit_id' => $produitId, 'entrepot_id' => $entrepotId],
