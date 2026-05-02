@@ -125,6 +125,11 @@
           </div>
           <div class="card-body edit-form">
             <div class="form-group-custom"><label>ICE (Identifiant Commun)</label><input v-model="form.ice" type="text" class="mono font-bold accent" /></div>
+            <div class="form-row-custom">
+              <div class="form-group-custom flex-1"><label>I.F. (Fiscal)</label><input v-model="form.if_fiscal" type="text" class="mono" /></div>
+              <div class="form-group-custom flex-1"><label>Patente</label><input v-model="form.patente" type="text" class="mono" /></div>
+            </div>
+            <div class="form-group-custom"><label>RC (Registre Commerce)</label><input v-model="form.rc" type="text" class="mono" /></div>
             <div class="form-group-custom"><label>Banque</label><input v-model="form.banque" type="text" placeholder="Ex: Attijariwafa..." /></div>
             <div class="form-group-custom"><label>RIB / Compte</label><input v-model="form.rib" type="text" class="mono" maxlength="24" placeholder="24 chiffres..." /></div>
             <div class="total-separator-line my-2"></div>
@@ -153,7 +158,8 @@ const saving = ref(false)
 
 const form = ref({
   societe: '', is_personne_physique: false, nom: '', prenom: '',
-  type_fournisseur_id: '', code_fournisseur: '', ice: '',
+  type_fournisseur_id: '', code_fournisseur: '', ice: '', rc: '',
+  if_fiscal: '', patente: '',
   email: '', mobile: '', adresse: '', ville: '', pays: 'Maroc',
   delai_livraison: 0, banque: '', rib: '', is_active: true
 })
