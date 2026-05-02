@@ -99,6 +99,7 @@
         <div class="table-card">
           <div class="card-header">
             <h3>Journal des Achats & Dépenses</h3>
+            <button @click="exportCSV(purchaseData, 'journal_achats')" class="btn-export">Exporter CSV</button>
           </div>
           <div class="table-responsive">
             <table class="report-table">

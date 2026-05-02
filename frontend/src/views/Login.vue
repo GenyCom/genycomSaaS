@@ -26,7 +26,7 @@
         </form>
         <p class="text-center mt-3 text-sm text-muted">
 		  Pas encore de compte ?
-		  <span style="font-weight: 600; color: #a0aec0; cursor: not-allowed;">Créer un compte</span>
+		  <span style="font-weight: 600; color: #cbd5e0; cursor: not-allowed; opacity: 0.6;">Créer un compte</span>
 		</p>
       </div>
     </div>
