@@ -20,8 +20,9 @@ class FournisseurController extends Controller
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
         $query = Fournisseur::with(['typeFournisseur'])
-            ->withSum('facturesAchats', 'montant_ttc')
-            ->withSum('facturesAchats', 'montant_paye')
+            ->withSum('facturesAchats as total_achats', 'montant_ttc')
+            ->withSum('facturesAchats as total_paye', 'montant_paye')
+            ->withSum('commandes as total_commandes', 'total_ttc')
             ->when($request->search, fn($q, $v) => $q->where(function($sq) use ($v) {
                 $sq->where('code_fournisseur', 'like', "%{$v}%")
                    ->orWhere('societe', 'like', "%{$v}%")
@@ -52,7 +53,12 @@ class FournisseurController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $fournisseur = Fournisseur::with(['typeFournisseur', 'contacts'])->findOrFail($id);
+        $fournisseur = Fournisseur::with(['typeFournisseur', 'contacts'])
+            ->withSum('facturesAchats as total_achats', 'montant_ttc')
+            ->withSum('facturesAchats as total_paye', 'montant_paye')
+            ->withSum('commandes as total_commandes', 'total_ttc')
+            ->findOrFail($id);
+            
         return response()->json($fournisseur);
     }
 

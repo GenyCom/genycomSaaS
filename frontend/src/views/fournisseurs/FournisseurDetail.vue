@@ -73,7 +73,7 @@
         </div>
         <div class="kpi-body">
           <p class="kpi-label">Engagements (Dû)</p>
-          <p class="kpi-value">{{ formatMoney(fournisseur.total_achats || 0) }} <span>DH</span></p>
+          <p class="kpi-value">{{ formatMoney(fournisseur.total_achats - fournisseur.total_paye) }} <span>DH</span></p>
         </div>
       </div>
       <div class="kpi-divider"></div>
@@ -82,8 +82,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h12M6 9a6 6 0 016-6 6 6 0 016 6m0 0v3h2a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7a2 2 0 012-2h2V9"/></svg>
         </div>
         <div class="kpi-body">
-          <p class="kpi-label">Volume Commandé</p>
-          <p class="kpi-value">{{ formatMoney(fournisseur.total_commandes || 0) }} <span>DH</span></p>
+          <p class="kpi-label">Volume Achats</p>
+          <p class="kpi-value">{{ formatMoney(fournisseur.total_achats || 0) }} <span>DH</span></p>
         </div>
       </div>
       <div class="kpi-divider"></div>

@@ -99,14 +99,14 @@
                 </div>
               </td>
               <td class="text-right">
-                <div class="amount-cell">{{ formatMoney(frn.factures_achats_sum_montant_ttc) }} <span class="currency">DH</span></div>
+                <div class="amount-cell">{{ formatMoney(frn.total_achats) }} <span class="currency">DH</span></div>
               </td>
               <td class="text-right">
-                <div class="amount-cell text-success">{{ formatMoney(frn.factures_achats_sum_montant_paye) }} <span class="currency">DH</span></div>
+                <div class="amount-cell text-success">{{ formatMoney(frn.total_paye) }} <span class="currency">DH</span></div>
               </td>
               <td class="text-right">
-                <div class="amount-cell" :class="{ 'has-debt': (frn.factures_achats_sum_montant_ttc - frn.factures_achats_sum_montant_paye) > 0 }">
-                  {{ formatMoney(frn.factures_achats_sum_montant_ttc - frn.factures_achats_sum_montant_paye) }}
+                <div class="amount-cell" :class="{ 'has-debt': (frn.total_achats - frn.total_paye) > 0 }">
+                  {{ formatMoney(frn.total_achats - frn.total_paye) }}
                   <span class="currency">DH</span>
                 </div>
               </td>
