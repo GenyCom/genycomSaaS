@@ -20,11 +20,11 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Exporter CSV</span>
         </button>
-        <button class="btn-secondary-custom" title="Transférer entre dépôts">
+        <button class="btn-secondary-custom" @click="handleGlobalAction('transfer')" title="Transférer entre dépôts">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           <span>Mouvement Interne</span>
         </button>
-        <button class="btn-primary-custom" title="Effectuer un inventaire physique">
+        <button class="btn-primary-custom" @click="handleGlobalAction('inventory')" title="Effectuer un inventaire physique">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span>Nouvel Inventaire</span>
         </button>
@@ -153,6 +153,7 @@ const stock = ref([])
 const entrepots = ref([])
 const loading = ref(true)
 const searchQuery = ref('')
+const selectedWarehouse = ref('')
 
 // Modal state
 const isModalOpen = ref(false)
@@ -162,12 +163,21 @@ const selectedStock = ref(null)
 const selectedStockId = ref(null)
 
 const filteredStock = computed(() => {
-  if (!searchQuery.value) return stock.value
-  const q = searchQuery.value.toLowerCase()
-  return stock.value.filter(s => 
-    s.produit?.designation?.toLowerCase().includes(q) || 
-    s.produit?.reference?.toLowerCase().includes(q)
-  )
+  let filtered = stock.value
+
+  if (selectedWarehouse.value) {
+    filtered = filtered.filter(s => s.entrepot_id === selectedWarehouse.value)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(s => 
+      s.produit?.designation?.toLowerCase().includes(q) || 
+      s.produit?.reference?.toLowerCase().includes(q)
+    )
+  }
+
+  return filtered
 })
 
 const fetchData = async () => {
@@ -184,6 +194,50 @@ const fetchData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const exportCSV = () => {
+  if (filteredStock.value.length === 0) {
+    toast.error('Aucune donnée à exporter.')
+    return
+  }
+
+  const headers = ['Référence', 'Désignation', 'Entrepôt', 'Physique', 'Réservé', 'Disponible', 'État']
+  
+  const escapeCSV = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const rows = filteredStock.value.map(s => [
+    escapeCSV(s.produit?.reference),
+    escapeCSV(s.produit?.designation),
+    escapeCSV(s.entrepot?.nom),
+    s.quantite_physique,
+    s.quantite_reservee,
+    s.quantite_disponible,
+    getStatusLabel(s)
+  ])
+
+  // Ajout du BOM pour Excel
+  const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `etat_stock_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+const handleGlobalAction = (mode) => {
+  toast.info(`La fonction ${mode === 'transfer' ? 'Transfert Global' : 'Inventaire Global'} sera disponible dans la prochaine mise à jour. Utilisez les actions par article pour le moment.`)
 }
 
 const openAction = (item, mode) => {
