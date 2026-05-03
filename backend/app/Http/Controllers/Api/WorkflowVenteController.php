@@ -165,13 +165,10 @@ class WorkflowVenteController extends Controller
         return DB::transaction(function () use ($request, $bl) {
             $tenantId = $request->get('current_tenant')->id;
 
-            // Pour récupérer les prix (puisqu'ils ne sont pas sur le BL), on remonte au BC ou au Devis
-            $source = $bl->bonCommande ?: $bl->devis;
+            // Pour récupérer les prix, on remonte au BC ou au Devis. 
+            // Si c'est un BL direct (créé sans document amont), le BL lui-même contient les tarifs.
+            $source = $bl->bonCommande ?: ($bl->devis ?: $bl);
             
-            if (!$source) {
-                return response()->json(['message' => 'Impossible de trouver les tarifs source pour ce BL.'], 422);
-            }
-
             $facture = Facture::create([
                 'tenant_id'              => $tenantId,
                 'numero'                 => $this->numerotation->generer($tenantId, 'FACTURE'),
@@ -184,10 +181,10 @@ class WorkflowVenteController extends Controller
                 'total_ht'               => $source->total_ht,
                 'total_tva'              => $source->total_tva,
                 'total_ttc'              => $source->total_ttc,
-                'total_remise'           => $source->total_remise,
+                'total_remise'           => $source->total_remise ?? 0,
                 'devise_id'              => $source->devise_id,
                 'taux_change_document'   => $source->taux_change_document ?? 1.0,
-                'observations'           => $bl->observations ?: $source->observations,
+                'observations'           => $bl->observations ?: ($source->observations ?? null),
                 'condition_reglement_id' => $source->condition_reglement_id ?? null,
                 'mode_reglement_id'      => $source->mode_reglement_id ?? null,
                 'created_by'             => auth()->id() ?? $bl->created_by,
@@ -199,13 +196,13 @@ class WorkflowVenteController extends Controller
                     'facture_id'      => $facture->id,
                     'produit_id'      => $ligne->produit_id,
                     'designation'     => $ligne->designation,
-                    'description'     => $ligne->description,
-                    'quantite'        => $ligne->quantite,
-                    'unite'           => $ligne->unite,
+                    'description'     => $ligne->description ?? null,
+                    'quantite'        => $ligne->quantite ?? ($ligne->quantite_livree ?? 0),
+                    'unite'           => $ligne->unite ?? 'Unité',
                     'prix_unitaire'   => $ligne->prix_unitaire,
                     'taux_tva'        => $ligne->taux_tva,
-                    'remise_pourcent' => $ligne->remise_pourcent,
-                    'remise_montant'  => $ligne->remise_montant,
+                    'remise_pourcent' => $ligne->remise_pourcent ?? 0,
+                    'remise_montant'  => $ligne->remise_montant ?? 0,
                     'montant_ht'      => $ligne->montant_ht,
                     'montant_tva'     => $ligne->montant_tva,
                     'montant_ttc'     => $ligne->montant_ttc,
