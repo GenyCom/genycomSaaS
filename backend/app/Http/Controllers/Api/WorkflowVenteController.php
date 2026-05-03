@@ -129,6 +129,7 @@ class WorkflowVenteController extends Controller
 
                 // Sortie de stock si c'est un produit (pas un service)
                 if ($ligne->produit_id) {
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $request->input('entrepot_id'), 'produit' => $ligne->produit_id]);
                     $this->stockService->enregistrerMouvement(
                         $ligne->produit_id,
                         $ligne->quantite,
@@ -290,6 +291,7 @@ class WorkflowVenteController extends Controller
 
                 // Sortie de stock si c'est un produit physique
                 if ($ligne->produit_id) {
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $request->input('entrepot_id'), 'produit' => $ligne->produit_id]);
                     $this->stockService->enregistrerMouvement(
                         $ligne->produit_id,
                         $ligne->quantite,

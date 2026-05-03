@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\Stock;
@@ -40,131 +39,99 @@ class StockService
      */
     public function enregistrerMouvement($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId = 1, $entrepotId = null)
     {
+        // Debugging logs to identify who is calling this method
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller = isset($trace[1]['class']) ? "{$trace[1]['class']}@{$trace[1]['function']}" : "unknown";
+        \Log::info("STOCK_MVT: Calling enregistrerMouvement", [
+            'caller'   => $caller,
+            'produit'  => $produitId,
+            'qty'      => $quantite,
+            'entrepot' => $entrepotId,
+            'doc'      => "$documentType #$documentId"
+        ]);
+
         return DB::transaction(function () use ($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId, $entrepotId) {
             
-            $entrepotId = $entrepotId ?: $this->getDefaultEntrepotId($tenantId);
+            // Si aucun entrepôt n'est spécifié, on lève une exception pour forcer la sélection
+            if (!$entrepotId) {
+                throw new Exception("ERREUR CRITIQUE : entrepot_id manquant pour le mouvement de stock (Doc: $documentType #$documentId).");
+            }
 
-            // 1. Récupérer ou créer la ligne de stock
+            // 1. Récupérer ou créer la ligne de stock pour cet entrepôt spécifique
             $stock = Stock::firstOrCreate(
                 ['produit_id' => $produitId, 'entrepot_id' => $entrepotId, 'tenant_id' => $tenantId],
                 ['quantite' => 0]
             );
 
-            // 2. Vérification du stock pour les sorties
+            // 2. Gestion de la variation
             $isSortie = in_array($typeMouvement, ['sortie_vente', 'sortie_retour', 'ajustement_negatif', 'transfert_out']);
-            if ($isSortie && ($stock->quantite - $quantite) < 0) {
-                // On peut autoriser le stock négatif selon le paramétrage, ici on bloque par défaut
-                // throw new Exception("Stock insuffisant.");
-            }
+            $variation = $isSortie ? -$quantite : $quantite;
 
             // 3. Mise à jour physique
-            $variation = $isSortie ? -$quantite : $quantite;
             $stock->quantite += $variation;
             $stock->save();
 
-            // 4. Traçabilité
+            // 4. Traçabilité (Mouvement)
             return MouvementStock::create([
-                'tenant_id' => $tenantId,
-                'stock_id' => $stock->id,
-                'produit_id' => $produitId,
-                'type_mouvement' => $typeMouvement,
-                'quantite' => $quantite,
-                'document_type' => $documentType,
-                'document_id' => $documentId,
-                'created_by' => $userId,
+                'tenant_id'          => $tenantId,
+                'stock_id'           => $stock->id,
+                'produit_id'         => $produitId,
+                'type_mouvement'     => $typeMouvement,
+                'quantite'           => $quantite,
+                'document_type'      => $documentType,
+                'document_id'        => $documentId,
+                'created_by'         => $userId,
                 'entrepot_source_id' => ($typeMouvement === 'transfert_out') ? $entrepotId : null,
-                'entrepot_dest_id' => ($typeMouvement === 'transfert_in') ? $entrepotId : null,
+                'entrepot_dest_id'   => ($typeMouvement === 'transfert_in') ? $entrepotId : null,
+                'libelle'            => "Mouvement via $documentType #$documentId (" . ($isSortie ? 'Sortie' : 'Entrée') . ") - Caller: $caller"
             ]);
         });
     }
 
     /**
-     * Valide un Bon de Réception (BR)
+     * [OBSOLÈTE] Préférer appeler enregistrerMouvement directement depuis les contrôleurs pour passer l'entrepot_id.
      */
     public function validerBonReception($brId, $userId)
     {
+        \Log::warning("DEPRECATED validerBonReception called for BR #$brId");
         $lignes = LigneBonReception::where('br_id', $brId)->get();
         foreach ($lignes as $ligne) {
-            $this->enregistrerMouvement(
-                $ligne->produit_id,
-                $ligne->quantite_recue,
-                'entree_achat',
-                'BR',
-                $brId,
-                $userId,
-                $ligne->tenant_id
-            );
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite_recue, 'entree_achat', 'BR', $brId, $userId, $ligne->tenant_id);
         }
     }
 
     /**
-     * Valide un Bon de Livraison (BL)
+     * [OBSOLÈTE] Préférer appeler enregistrerMouvement directement depuis les contrôleurs pour passer l'entrepot_id.
      */
-    public function validerBonLivraison($blId, $userId)
+    public function _CRASH_TEST_validerBonLivraison($blId, $userId)
     {
+        \Log::warning("DEPRECATED validerBonLivraison called for BL #$blId");
         $lignes = LigneBonLivraison::where('bon_livraison_id', $blId)->get();
         foreach ($lignes as $ligne) {
-            $this->enregistrerMouvement(
-                $ligne->produit_id,
-                $ligne->quantite_livree,
-                'sortie_vente',
-                'BL',
-                $blId,
-                $userId,
-                $ligne->tenant_id
-            );
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite_livree, 'sortie_vente', 'BL', $blId, $userId, $ligne->tenant_id);
         }
     }
 
-    /**
-     * Valide un Avoir Client (Retour client -> Entrée de stock)
-     */
     public function validerAvoirClient($avoirId, $userId)
     {
         $avoir = \App\Models\AvoirClient::findOrFail($avoirId);
         $lignes = LigneAvoirClient::where('avoir_id', $avoirId)->get();
-        
         foreach ($lignes as $ligne) {
             if (!$ligne->produit_id) continue;
-            
-            $this->enregistrerMouvement(
-                $ligne->produit_id,
-                $ligne->quantite,
-                'entree_retour', // Entrée
-                'AVOIR_CLIENT',
-                $avoirId,
-                $userId,
-                $avoir->tenant_id
-            );
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'entree_retour', 'AVOIR_CLIENT', $avoirId, $userId, $avoir->tenant_id);
         }
     }
 
-    /**
-     * Valide un Avoir Fournisseur (Retour au fournisseur -> Sortie de stock)
-     */
     public function validerAvoirFournisseur($avoirId, $userId)
     {
         $avoir = \App\Models\AvoirFournisseur::findOrFail($avoirId);
         $lignes = LigneAvoirFournisseur::where('avoir_achat_id', $avoirId)->get();
-        
         foreach ($lignes as $ligne) {
             if (!$ligne->produit_id) continue;
-
-            $this->enregistrerMouvement(
-                $ligne->produit_id,
-                $ligne->quantite,
-                'sortie_retour', // Sortie
-                'AVOIR_FOURNISSEUR',
-                $avoirId,
-                $userId,
-                $avoir->tenant_id
-            );
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'sortie_retour', 'AVOIR_FOURNISSEUR', $avoirId, $userId, $avoir->tenant_id);
         }
     }
 
-    /**
-     * Ajustement manuel
-     */
     public function ajusterManual($produitId, $entrepotId, $quantite, $type, $userId, $tenantId = 1)
     {
         return $this->enregistrerMouvement($produitId, $quantite, $type, 'MANUAL', null, $userId, $tenantId, $entrepotId);
