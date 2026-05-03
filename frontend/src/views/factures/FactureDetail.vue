@@ -639,7 +639,7 @@ async function loadFactureData() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [cRes, pRes, prRes, mRes, tvaRes] = await Promise.all([
+    const [cRes, pRes, prRes, mRes, tvaRes, wRes] = await Promise.all([
       api.get('/clients', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),

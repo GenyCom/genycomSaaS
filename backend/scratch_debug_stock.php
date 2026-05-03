@@ -1,32 +1,18 @@
 <?php
 require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
-use App\Models\Tenant;
+use App\Models\MouvementStock;
+use App\Models\Stock;
 
-$tenant = Tenant::where('statut', 'actif')->first();
-Config::set('database.connections.tenant.database', $tenant->database_name);
-DB::purge('tenant');
-
-echo "Historique des mouvements pour Produit 3 (Peinture Gris Argent):\n";
-$mouvements = DB::connection('tenant')->table('mouvements_stock')
-    ->where('produit_id', 3)
-    ->orderBy('created_at')
+$mouvements = MouvementStock::with(['stock.entrepot'])
+    ->where('produit_id', 11) // ID for Licence MS SQL Server Std if possible, but I don't know it. 
+    // Let's just get the last 10 movements.
+    ->orderBy('id', 'desc')
+    ->limit(10)
     ->get();
 
-$total = 0;
 foreach ($mouvements as $m) {
-    $isEntree = in_array($m->type_mouvement, ['entree_achat', 'entree_retour', 'ajustement_positif', 'transfert_in']);
-    $qty = $isEntree ? $m->quantite : -$m->quantite;
-    $total += $qty;
-    echo "ID: {$m->id} | Date: {$m->created_at} | Type: {$m->type_mouvement} | Qty: {$qty} | Cumul: {$total}\n";
-}
-
-echo "\nQuantité actuelle en table stocks:\n";
-$stocks = DB::connection('tenant')->table('stocks')->where('produit_id', 3)->get();
-foreach ($stocks as $s) {
-    echo "ID Stock: {$s->id} | Entrepot: {$s->entrepot_id} | Quantité: {$s->quantite}\n";
+    echo "ID: {$m->id}, Type: {$m->type_mouvement}, Qty: {$m->quantite}, Entrepot: " . ($m->stock->entrepot->nom ?? 'N/A') . ", Doc: {$m->document_type} #{$m->document_id}\n";
 }
