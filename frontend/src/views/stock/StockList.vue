@@ -16,17 +16,9 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <button class="btn-secondary-custom" @click="exportCSV" title="Exporter en CSV">
+        <button class="btn-primary-custom" @click="exportCSV" title="Exporter en CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Exporter CSV</span>
-        </button>
-        <button class="btn-secondary-custom" @click="handleGlobalAction('transfer')" title="Transférer entre dépôts">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <span>Mouvement Interne</span>
-        </button>
-        <button class="btn-primary-custom" @click="handleGlobalAction('inventory')" title="Effectuer un inventaire physique">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Nouvel Inventaire</span>
         </button>
       </div>
     </div>
@@ -234,10 +226,6 @@ const exportCSV = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-const handleGlobalAction = (mode) => {
-  toast.info(`La fonction ${mode === 'transfer' ? 'Transfert Global' : 'Inventaire Global'} sera disponible dans la prochaine mise à jour. Utilisez les actions par article pour le moment.`)
 }
 
 const openAction = (item, mode) => {
