@@ -46,4 +46,16 @@ class ReportingController extends Controller
     {
         return response()->json($this->reporting->inventoryValuation());
     }
+
+    public function payments(Request $request): JsonResponse
+    {
+        $start = $request->get('start', now()->startOfMonth()->toDateString());
+        $end = $request->get('end', now()->toDateString());
+        return response()->json($this->reporting->paymentsJournal($start, $end));
+    }
+
+    public function unpaid(): JsonResponse
+    {
+        return response()->json($this->reporting->unpaidInvoices());
+    }
 }

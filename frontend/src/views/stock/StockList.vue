@@ -16,6 +16,10 @@
         </div>
       </div>
       <div class="topbar-actions">
+        <button class="btn-secondary-custom" @click="exportCSV" title="Exporter en CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Exporter CSV</span>
+        </button>
         <button class="btn-secondary-custom" title="Transférer entre dépôts">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           <span>Mouvement Interne</span>
@@ -45,6 +49,12 @@
       <div class="search-wrapper">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input v-model="searchQuery" type="text" placeholder="Rechercher un produit par désignation ou référence..." />
+      </div>
+      <div class="warehouse-filter-wrapper">
+        <select v-model="selectedWarehouse" class="warehouse-select">
+          <option value="">Tous les entrepôts</option>
+          <option v-for="e in entrepots" :key="e.id" :value="e.id">{{ e.nom }}</option>
+        </select>
       </div>
     </div>
 
@@ -256,6 +266,14 @@ onMounted(fetchData)
   padding: 0 16px; border-radius: 8px; color: var(--c-muted);
 }
 .search-wrapper input { flex: 1; padding: 12px 0; border: none; background: transparent; outline: none; font-size: .9rem; color: var(--c-text); }
+.warehouse-filter-wrapper { width: 220px; }
+.warehouse-select {
+  width: 100%; padding: 11px 14px; border-radius: 8px;
+  border: 1.5px solid var(--c-border); background: #fff;
+  font-size: .9rem; font-weight: 600; color: var(--c-text);
+  outline: none; transition: all 0.2s; cursor: pointer;
+}
+.warehouse-select:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-bg); }
 
 /* ─── Table ─── */
 .table-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }

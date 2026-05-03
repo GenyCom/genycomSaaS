@@ -129,4 +129,106 @@ class ReportingService
 
         return (array) $res;
     }
+
+    /**
+     * État des règlements (Journal de caisse/banque)
+     */
+    public function paymentsJournal(string $start, string $end): array
+    {
+        $reglements = DB::connection('tenant')->table('reglements as r')
+            ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
+            ->where('r.tenant_id', $this->tid())
+            ->whereBetween('r.date_reglement', [$start, $end])
+            ->select('r.id', 'r.date_reglement as date', 'r.montant', 'r.payable_type', 'r.payable_id', 'mr.libelle as mode', 'r.numero_cheque', 'r.reference_virement', 'r.observations')
+            ->get();
+
+        $data = $reglements->map(function($reg) {
+            $tiers = "Inconnu";
+            $refDoc = "—";
+            
+            if ($reg->payable_type === 'App\\Models\\Facture') {
+                $facture = DB::connection('tenant')->table('factures as f')
+                    ->join('clients as c', 'c.id', '=', 'f.client_id')
+                    ->where('f.id', $reg->payable_id)
+                    ->select('c.societe', 'f.numero')
+                    ->first();
+                if ($facture) {
+                    $tiers = $facture->societe;
+                    $refDoc = "Facture Client " . $facture->numero;
+                }
+            } elseif ($reg->payable_type === 'App\\Models\\DetteFournisseur') {
+                $dette = DB::connection('tenant')->table('dettes_fournisseur as d')
+                    ->join('fournisseurs as fr', 'fr.id', '=', 'd.fournisseur_id')
+                    ->where('d.id', $reg->payable_id)
+                    ->select('fr.societe', 'd.numero')
+                    ->first();
+                if ($dette) {
+                    $tiers = $dette->societe;
+                    $refDoc = "Dette/BR Fournisseur " . $dette->numero;
+                }
+            }
+
+            return [
+                'date' => $reg->date,
+                'tiers' => $tiers,
+                'ref_doc' => $refDoc,
+                'montant' => (float) $reg->montant,
+                'mode' => $reg->mode ?? 'Espèces',
+                'reference' => $reg->numero_cheque ?: $reg->reference_virement ?: '—',
+                'observations' => $reg->observations,
+                'flux' => (str_contains($reg->payable_type, 'Facture') ? 'Entrée' : 'Sortie')
+            ];
+        });
+
+        // Ajouter aussi les paiements directs de factures d'achat si ils existent dans paiements_fournisseurs
+        $paiementsAchats = DB::connection('tenant')->table('paiements_fournisseurs as pf')
+            ->join('factures_achats as fa', 'fa.id', '=', 'pf.facture_achat_id')
+            ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
+            ->where('pf.tenant_id', $this->tid())
+            ->whereBetween('pf.date_paiement', [$start, $end])
+            ->select('pf.date_paiement as date', 'pf.montant', 'fr.societe', 'fa.numero', 'pf.mode_paiement as mode', 'pf.reference', 'pf.observations')
+            ->get()
+            ->map(fn($p) => [
+                'date' => $p->date,
+                'tiers' => $p->societe,
+                'ref_doc' => "Facture Achat " . $p->numero,
+                'montant' => (float) $p->montant,
+                'mode' => $p->mode,
+                'reference' => $p->reference ?: '—',
+                'observations' => $p->observations,
+                'flux' => 'Sortie'
+            ]);
+
+        return $data->concat($paiementsAchats)->sortByDesc('date')->values()->toArray();
+    }
+
+    /**
+     * État des factures impayées (Balance âgée simplifiée)
+     */
+    public function unpaidInvoices(): array
+    {
+        $clients = DB::connection('tenant')->table('factures as f')
+            ->join('clients as c', 'c.id', '=', 'f.client_id')
+            ->where('f.tenant_id', $this->tid())
+            ->whereNull('f.deleted_at')
+            ->where('f.est_reglee', 0)
+            ->whereNotNull('f.numero')
+            ->select('f.numero', 'f.date_facture', 'f.date_echeance', 'c.societe', 'f.total_ttc', 'f.montant_regle', DB::raw("(f.total_ttc - f.montant_regle) as reste_a_payer"), DB::raw("'client' as tiers_type"))
+            ->get();
+
+        $fournisseurs = DB::connection('tenant')->table('factures_achats as fa')
+            ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
+            ->where('fa.tenant_id', $this->tid())
+            ->whereNull('fa.deleted_at')
+            ->where('fa.statut', '!=', 'paye')
+            ->select('fa.numero', 'fa.date_facture', 'fa.date_echeance', 'fr.societe', 'fa.montant_ttc as total_ttc', 'fa.montant_paye as montant_regle', 'fa.reste_a_payer', DB::raw("'fournisseur' as tiers_type"))
+            ->get();
+
+        return [
+            'clients' => $clients->toArray(),
+            'fournisseurs' => $fournisseurs->toArray(),
+            'total_clients' => (float) $clients->sum('reste_a_payer'),
+            'total_fournisseurs' => (float) $fournisseurs->sum('reste_a_payer'),
+        ];
+    }
 }

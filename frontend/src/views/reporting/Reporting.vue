@@ -212,6 +212,111 @@
           </div>
         </div>
       </div>
+
+      <!-- Règlements -->
+      <div v-if="activeTab === 'payments'" class="tab-pane">
+        <div class="table-card">
+          <div class="card-header">
+            <h3>Journal des Règlements (Caisse/Banque)</h3>
+            <button @click="exportCSV(paymentData, 'journal_reglements')" class="btn-export">Exporter CSV</button>
+          </div>
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Tiers (Client/Fr)</th>
+                  <th>Référence Document</th>
+                  <th>Mode</th>
+                  <th>Info Paiement</th>
+                  <th class="text-right">Montant</th>
+                  <th class="text-center">Flux</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, idx) in paymentData" :key="idx">
+                  <td>{{ formatDate(item.date) }}</td>
+                  <td class="font-bold">{{ item.tiers }}</td>
+                  <td><span class="badge-code">{{ item.ref_doc }}</span></td>
+                  <td>{{ item.mode }}</td>
+                  <td class="text-xs text-muted">{{ item.reference }}</td>
+                  <td class="text-right font-bold" :class="item.flux === 'Entrée' ? 'text-success' : 'text-danger'">
+                    {{ item.flux === 'Entrée' ? '+' : '-' }} {{ formatMoney(item.montant) }}
+                  </td>
+                  <td class="text-center">
+                    <span :class="['type-badge', item.flux === 'Entrée' ? 'blue' : 'purple']">
+                      {{ item.flux.toUpperCase() }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="paymentData.length === 0">
+                  <td colspan="7" class="empty-state">Aucun règlement sur cette période</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Impayés -->
+      <div v-if="activeTab === 'unpaid'" class="tab-pane">
+        <div class="summary-cards mb-24">
+          <div class="mini-card accent">
+            <span class="label">Créances Clients (À encaisser)</span>
+            <span class="value">{{ formatMoney(unpaidData.total_clients) }}</span>
+          </div>
+          <div class="mini-card neg">
+            <span class="label">Dettes Fournisseurs (À décaisser)</span>
+            <span class="value">{{ formatMoney(unpaidData.total_fournisseurs) }}</span>
+          </div>
+        </div>
+
+        <div class="reporting-grid-2">
+          <div class="table-card">
+            <div class="card-header"><h3>Factures Clients Impayées</h3></div>
+            <div class="table-responsive">
+              <table class="report-table mini">
+                <thead>
+                  <tr>
+                    <th>N°</th>
+                    <th>Client</th>
+                    <th class="text-right">Reste à payer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(f, idx) in unpaidData.clients" :key="idx">
+                    <td><span class="badge-code">{{ f.numero }}</span></td>
+                    <td class="text-xs">{{ f.societe }}</td>
+                    <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="card-header"><h3>Factures Fournisseurs Impayées</h3></div>
+            <div class="table-responsive">
+              <table class="report-table mini">
+                <thead>
+                  <tr>
+                    <th>N°</th>
+                    <th>Fournisseur</th>
+                    <th class="text-right">Reste à payer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(f, idx) in unpaidData.fournisseurs" :key="idx">
+                    <td><span class="badge-code">{{ f.numero }}</span></td>
+                    <td class="text-xs">{{ f.societe }}</td>
+                    <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -239,10 +344,18 @@ const IconFinance = markRaw({
 const IconStock = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`
 })
+const IconPayments = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`
+})
+const IconUnpaid = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+})
 
 const tabs = [
   { id: 'sales', label: 'Ventes', icon: IconSales },
   { id: 'purchases', label: 'Achats & Dépenses', icon: IconPurchase },
+  { id: 'payments', label: 'Règlements', icon: IconPayments },
+  { id: 'unpaid', label: 'Impayés', icon: IconUnpaid },
   { id: 'finance', label: 'Finance & Projets', icon: IconFinance },
   { id: 'stock', label: 'Stock', icon: IconStock }
 ]
@@ -258,6 +371,8 @@ const salesData = ref({ journal: [], by_client: [], totals: { ht: 0, tva: 0, ttc
 const purchaseData = ref([])
 const financeData = ref({ vat: { collected_vat: 0, deductible_vat: 0, net_vat: 0 }, profitability: [] })
 const stockData = ref({ total_value_purchase: 0, total_value_sale: 0 })
+const paymentData = ref([])
+const unpaidData = ref({ clients: [], fournisseurs: [], total_clients: 0, total_fournisseurs: 0 })
 
 const clients = ref([])
 const suppliers = ref([])
@@ -286,11 +401,13 @@ async function fetchData() {
     fournisseur_id: filters.supplierId
   }
   try {
-    const [salesRes, purchaseRes, financeRes, stockRes] = await Promise.all([
+    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes] = await Promise.all([
       api.get('/reporting/sales', { params }),
       api.get('/reporting/purchases', { params }),
       api.get('/reporting/finance', { params }),
-      api.get('/reporting/stock')
+      api.get('/reporting/stock'),
+      api.get('/reporting/payments', { params }),
+      api.get('/reporting/unpaid')
     ])
 
     salesData.value = salesRes.data
@@ -305,6 +422,8 @@ async function fetchData() {
     purchaseData.value = purchaseRes.data
     financeData.value = financeRes.data
     stockData.value = stockRes.data
+    paymentData.value = paymentsRes.data
+    unpaidData.value = unpaidRes.data
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
   } finally {
@@ -404,17 +523,11 @@ onMounted(() => {
 .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
 .mt-4 { margin-top: 1rem; }
 
-.header-with-filter { display: flex; align-items: center; gap: 12px; flex: 1; }
-.filter-select { 
-  padding: 4px 8px; 
-  border-radius: 6px; 
-  border: 1px solid #e2e8f0; 
-  font-size: 0.8rem; 
-  color: #334155; 
-  font-weight: 600; 
-  outline: none;
-  background: white;
-  max-width: 250px;
-}
-.filter-select:focus { border-color: #3b82f6; }
+.reporting-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+.mb-24 { margin-bottom: 24px; }
+.mini-card.neg { border-left: 4px solid #ef4444; }
+.text-xs { font-size: 0.75rem; }
+.text-muted { color: #64748b; }
+.report-table.mini td { padding: 8px 16px; }
+.report-table.mini th { padding: 8px 16px; }
 </style>
