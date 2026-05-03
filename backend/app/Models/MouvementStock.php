@@ -21,8 +21,6 @@ class MouvementStock extends BaseModel
         'reference_document',
         'document_type',
         'document_id',
-        'entrepot_source_id',
-        'entrepot_dest_id',
         'prix_unitaire',
         'created_by'
     ];

@@ -50,7 +50,7 @@ class StockService
             'doc'      => "$documentType #$documentId"
         ]);
 
-        return DB::transaction(function () use ($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId, $entrepotId) {
+        return DB::connection('tenant')->transaction(function () use ($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId, $entrepotId, $caller) {
             
             // Si aucun entrepôt n'est spécifié, on lève une exception pour forcer la sélection
             if (!$entrepotId) {
@@ -72,6 +72,7 @@ class StockService
             $stock->save();
 
             // 4. Traçabilité (Mouvement)
+            // Note: On n'utilise pas entrepot_source_id/dest_id car les colonnes n'existent probablement pas encore en base
             return MouvementStock::create([
                 'tenant_id'          => $tenantId,
                 'stock_id'           => $stock->id,
@@ -81,8 +82,6 @@ class StockService
                 'document_type'      => $documentType,
                 'document_id'        => $documentId,
                 'created_by'         => $userId,
-                'entrepot_source_id' => ($typeMouvement === 'transfert_out') ? $entrepotId : null,
-                'entrepot_dest_id'   => ($typeMouvement === 'transfert_in') ? $entrepotId : null,
                 'libelle'            => "Mouvement via $documentType #$documentId (" . ($isSortie ? 'Sortie' : 'Entrée') . ") - Caller: $caller"
             ]);
         });
@@ -116,9 +115,12 @@ class StockService
     {
         $avoir = \App\Models\AvoirClient::findOrFail($avoirId);
         $lignes = LigneAvoirClient::where('avoir_id', $avoirId)->get();
+        // NOTE: Les avoirs n'ont pas encore de colonne entrepot_id, on utilise le défaut
+        $entrepotId = $this->getDefaultEntrepotId($avoir->tenant_id);
+
         foreach ($lignes as $ligne) {
             if (!$ligne->produit_id) continue;
-            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'entree_retour', 'AVOIR_CLIENT', $avoirId, $userId, $avoir->tenant_id);
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'entree_retour', 'AVOIR_CLIENT', $avoirId, $userId, $avoir->tenant_id, $entrepotId);
         }
     }
 
@@ -126,9 +128,12 @@ class StockService
     {
         $avoir = \App\Models\AvoirFournisseur::findOrFail($avoirId);
         $lignes = LigneAvoirFournisseur::where('avoir_achat_id', $avoirId)->get();
+        // NOTE: Les avoirs n'ont pas encore de colonne entrepot_id, on utilise le défaut
+        $entrepotId = $this->getDefaultEntrepotId($avoir->tenant_id);
+
         foreach ($lignes as $ligne) {
             if (!$ligne->produit_id) continue;
-            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'sortie_retour', 'AVOIR_FOURNISSEUR', $avoirId, $userId, $avoir->tenant_id);
+            $this->enregistrerMouvement($ligne->produit_id, $ligne->quantite, 'sortie_retour', 'AVOIR_FOURNISSEUR', $avoirId, $userId, $avoir->tenant_id, $entrepotId);
         }
     }
 
