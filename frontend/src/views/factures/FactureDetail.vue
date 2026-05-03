@@ -238,6 +238,12 @@
               <span class="info-label">Échéance de paiement</span>
               <input v-model="form.date_echeance" type="date" class="date-input-transparent" />
             </div>
+            <div class="info-item" v-if="!form.has_bl">
+              <span class="info-label">Entrepôt (Sortie Stock)</span>
+              <select v-model="form.entrepot_id" class="input-custom mt-1">
+                <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.nom }}</option>
+              </select>
+            </div>
           </div>
         </section>
         
@@ -373,6 +379,7 @@ const form = ref({
   montant_regle: 0,
   reglements: [],
   observations: '',
+  entrepot_id: null,
   lignes: []
 })
 
@@ -388,6 +395,7 @@ const clients = ref([])
 const products = ref([])
 const produits = ref([])
 const projects = ref([])
+const warehouses = ref([])
 const tauxTvaList = ref([]) 
 
 
@@ -636,7 +644,8 @@ onMounted(async () => {
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),
       api.get('/parametrage/referentiels/modes-reglement').catch(() => ({ data: { data: [] } })),
-      api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } }))
+      api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } })),
+      api.get('/parametrage/referentiels/entrepots')
     ])
     
     clients.value = cRes.data.data || cRes.data || []
@@ -644,6 +653,12 @@ onMounted(async () => {
     produits.value = products.value.filter(p => p.is_actif !== false)
     projects.value = prRes.data.data || prRes.data || []
     modesReglement.value = mRes.data.data || mRes.data || []
+    warehouses.value = wRes.data.data || wRes.data || []
+
+    if (!form.value.entrepot_id && warehouses.value.length > 0) {
+      const def = warehouses.value.find(w => w.is_default)
+      form.value.entrepot_id = def ? def.id : warehouses.value[0].id
+    }
     
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
     
@@ -662,7 +677,9 @@ async function executeGenerateBL() {
   showConfirmBL.value = false
   saving.value = true
   try {
-    const { data } = await api.post(`/workflow/facture-to-bl/${route.params.id}`)
+    const { data } = await api.post(`/workflow/facture-to-bl/${route.params.id}`, {
+      entrepot_id: form.value.entrepot_id
+    })
     toast.success(`BL ${data.numero} généré — stock mis à jour !`)
     setTimeout(() => router.push(`/bons-livraison/${data.id}`), 1200)
   } catch (err) {

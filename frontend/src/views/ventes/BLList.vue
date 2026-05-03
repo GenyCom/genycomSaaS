@@ -15,6 +15,12 @@
           <span class="breadcrumb-current">Bons de Livraison</span>
         </div>
       </div>
+      <div class="topbar-actions">
+        <router-link to="/bons-livraison/new" class="btn-create bl-theme-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Nouveau BL</span>
+        </router-link>
+      </div>
     </div>
 
     <div class="hero-header">
@@ -236,6 +242,14 @@ onMounted(async () => {
 
 /* ─── Topbar ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.topbar-actions { display: flex; gap: 10px; }
+.btn-create { 
+  display: flex; align-items: center; gap: 8px; padding: 8px 20px; 
+  border-radius: 10px; font-weight: 700; font-size: .85rem; 
+  text-decoration: none; transition: all .2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+.bl-theme-btn { background: #10B981; color: #fff; }
+.bl-theme-btn:hover { background: #059669; transform: translateY(-1px); }
 .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
 .breadcrumb-parent { color: var(--c-muted); font-weight: 500; }
 .breadcrumb-current { color: var(--c-text); font-weight: 700; }
