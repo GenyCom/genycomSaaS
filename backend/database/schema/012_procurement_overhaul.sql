@@ -195,3 +195,8 @@ CREATE TABLE IF NOT EXISTS `avoir_achat_lignes` (
 
 CREATE INDEX idx_factures_tenant_date ON factures(tenant_id, deleted_at, date_facture);
 CREATE INDEX idx_achats_tenant_reste ON factures_achats(tenant_id, deleted_at, reste_a_payer);
+
+ALTER TABLE `bcf` ADD COLUMN IF NOT EXISTS `projet_id` BIGINT UNSIGNED NULL AFTER `fournisseur_id`;
+ALTER TABLE `bcf` ADD COLUMN IF NOT EXISTS `entrepot_id` BIGINT UNSIGNED NULL AFTER `projet_id`;
+
+ALTER TABLE `bons_commande_client` ADD COLUMN IF NOT EXISTS `entrepot_id` BIGINT UNSIGNED NULL AFTER `devis_id`;
