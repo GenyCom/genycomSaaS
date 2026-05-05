@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `contrats` (
   KEY `contrats_client_id_foreign` (`client_id`),
   KEY `contrats_devise_id_foreign` (`devise_id`),
   CONSTRAINT `contrats_client_id_foreign` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `contrats_devise_id_foreign` FOREIGN KEY (`devise_id`) REFERENCES `devises` (`id`) ON DELETE SET NULL
+  CONSTRAINT `contrats_devise_id_foreign` FOREIGN KEY (`devise_id`) REFERENCES `devise` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
