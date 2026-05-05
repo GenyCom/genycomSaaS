@@ -17,6 +17,7 @@ class BonCommandeFournisseur extends BaseModel
         'date_commande',
         'date_livraison_prevue',
         'fournisseur_id',
+        'projet_id',
         'total_ht',
         'total_tva',
         'total_ttc',
@@ -36,6 +37,7 @@ class BonCommandeFournisseur extends BaseModel
     ];
 
     public function fournisseur()    { return $this->belongsTo(Fournisseur::class); }
+    public function projet()         { return $this->belongsTo(Projet::class); }
     public function devise()         { return $this->belongsTo(Devise::class); }
     public function etat()           { return $this->belongsTo(EtatDocument::class, 'etat_id'); }
     public function lignes()         { return $this->hasMany(LigneBonCommandeFournisseur::class, 'bcf_id')->orderBy('ordre'); }

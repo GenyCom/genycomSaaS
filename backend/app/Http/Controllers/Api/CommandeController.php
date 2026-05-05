@@ -31,6 +31,7 @@ class CommandeController extends Controller
         $data = $request->validate([
             'fournisseur_id'         => 'required|integer',
             'projet_id'              => 'nullable|integer',
+            'entrepot_id'            => 'nullable|integer',
             'date_commande'          => 'required|date',
             'date_livraison_prevue'  => 'nullable|date',
             'condition_reglement_id' => 'nullable|integer',
@@ -86,6 +87,7 @@ class CommandeController extends Controller
         $data = $request->validate([
             'fournisseur_id'         => 'required|integer',
             'projet_id'              => 'nullable|integer',
+            'entrepot_id'            => 'nullable|integer',
             'date_commande'          => 'required|date',
             'date_livraison_prevue'  => 'nullable|date',
             'condition_reglement_id' => 'nullable|integer',
@@ -127,7 +129,7 @@ class CommandeController extends Controller
     public function show(BonCommandeFournisseur $commande): JsonResponse
     {
         return response()->json(
-            $commande->load(['lignes.produit:id,reference,designation', 'fournisseur', 'etat', 'createur:id,nom,prenom'])
+            $commande->load(['lignes.produit:id,reference,designation', 'fournisseur', 'etat', 'projet', 'entrepot', 'createur:id,nom,prenom'])
         );
     }
 

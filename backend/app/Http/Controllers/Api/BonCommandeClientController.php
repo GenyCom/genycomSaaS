@@ -23,6 +23,7 @@ class BonCommandeClientController extends Controller
         $data = $request->validate([
             'client_id'              => 'required|integer',
             'projet_id'              => 'nullable|integer',
+            'entrepot_id'            => 'nullable|integer',
             'date_commande'          => 'required|date',
             'date_livraison_prevue'  => 'nullable|date',
             'observations'           => 'nullable|string',
@@ -86,7 +87,7 @@ class BonCommandeClientController extends Controller
 
     public function show($id): JsonResponse
     {
-        $bcc = BonCommandeClient::with(['lignes.produit', 'client', 'devis', 'bonsLivraison'])->findOrFail($id);
+        $bcc = BonCommandeClient::with(['lignes.produit', 'client', 'devis', 'projet', 'entrepot', 'bonsLivraison'])->findOrFail($id);
         return response()->json($bcc);
     }
 
@@ -97,6 +98,7 @@ class BonCommandeClientController extends Controller
         $data = $request->validate([
             'client_id'              => 'required|integer',
             'projet_id'              => 'nullable|integer',
+            'entrepot_id'            => 'nullable|integer',
             'date_commande'          => 'required|date',
             'date_livraison_prevue'  => 'nullable|date',
             'observations'           => 'nullable|string',
