@@ -490,6 +490,28 @@ onMounted(() => {
 .table-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
 .card-header h3 { font-size: 0.9rem; font-weight: 700; color: #334155; margin: 0; }
+
+.header-with-filter { display: flex; align-items: center; gap: 12px; }
+.filter-select {
+  padding: 6px 32px 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: all 0.2s;
+  min-width: 160px;
+  outline: none;
+}
+.filter-select:hover { border-color: #3b82f6; background-color: #f8fafc; }
+.filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
 .btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
 .table-responsive { overflow-x: auto; }
