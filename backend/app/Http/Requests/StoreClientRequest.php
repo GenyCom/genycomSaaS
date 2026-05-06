@@ -40,6 +40,7 @@ class StoreClientRequest extends FormRequest
             'commercial_id'         => 'nullable|integer',
             'plafond_credit'        => 'nullable|numeric|min:0',
             'delai_paiement'        => 'nullable|integer|min:0',
+            'solde_initial'         => 'nullable|numeric',
             'is_active'             => 'boolean',
         ];
     }

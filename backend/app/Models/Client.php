@@ -10,6 +10,26 @@ class Client extends BaseModel
     use BelongsToTenant, HasAuditColumns, SoftDeletes;
 
     protected $table = 'clients';
+    
+    protected static function booted()
+    {
+        static::saving(function ($client) {
+            if ($client->isDirty('solde_initial')) {
+                // On met à jour le montant_rest_du avant la sauvegarde
+                // On ne peut pas appeler recalculerEncours car il fait un saveQuietly
+                // On reproduit la logique ici pour le montant_rest_du
+                $facturesSum = $client->factures()
+                    ->where(function ($query) {
+                        $query->whereDoesntHave('etat', function($q) {
+                            $q->where('code', 'BRL');
+                        })->orWhereNull('etat_id');
+                    })
+                    ->sum('montant_restant');
+                
+                $client->montant_rest_du = ($client->solde_initial ?? 0) + $facturesSum;
+            }
+        });
+    }
 
     protected $fillable = [
         'tenant_id', 'code_client', 'societe', 'is_personne_physique',
