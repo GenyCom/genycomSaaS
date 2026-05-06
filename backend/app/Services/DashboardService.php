@@ -80,15 +80,21 @@ class DashboardService
     public function facturesImpayees(): array
     {
         try {
+            $tid = $this->tid();
             $q = DB::connection('tenant')->table('factures')
-                ->where('tenant_id', $this->tid())
+                ->where('tenant_id', $tid)
                 ->whereNull('deleted_at')
                 ->where('est_reglee', 0)
                 ->whereNotNull('numero');
 
+            $soldeInitial = (float) DB::connection('tenant')->table('clients')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->sum('solde_initial');
+
             return [
                 'count'   => $q->count(),
-                'montant' => (float) $q->sum(DB::raw('total_ttc - montant_regle')),
+                'montant' => ((float) $q->sum(DB::raw('total_ttc - montant_regle'))) + $soldeInitial,
             ];
         } catch (\Exception $e) { return ['count' => 0, 'montant' => 0]; }
     }
@@ -96,11 +102,19 @@ class DashboardService
     public function encoursClients(): float
     {
         try {
-            return (float) DB::connection('tenant')->table('factures')
-                ->where('tenant_id', $this->tid())
+            $tid = $this->tid();
+            $facturesEncours = (float) DB::connection('tenant')->table('factures')
+                ->where('tenant_id', $tid)
                 ->whereNull('deleted_at')
                 ->where('est_reglee', 0)
                 ->sum(DB::raw('total_ttc - montant_regle'));
+
+            $soldeInitial = (float) DB::connection('tenant')->table('clients')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->sum('solde_initial');
+
+            return $facturesEncours + $soldeInitial;
         } catch (\Exception $e) { return 0; }
     }
 

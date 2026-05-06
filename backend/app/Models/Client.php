@@ -18,7 +18,7 @@ class Client extends BaseModel
         'telephone', 'mobile', 'fax', 'email', 'site_web',
         'rib', 'banque', 'image_path', 'observations',
         'exempt_tva', 'type_client_id', 'plafond_credit', 'delai_paiement',
-        'montant_rest_du', 'commercial_id', 'created_by', 'if_fiscal', 'patente', 'is_active',
+        'montant_rest_du', 'commercial_id', 'created_by', 'if_fiscal', 'patente', 'is_active', 'solde_initial',
     ];
 
     protected $casts = [
@@ -27,6 +27,7 @@ class Client extends BaseModel
         'plafond_credit' => 'decimal:2',
         'montant_rest_du' => 'decimal:2',
         'is_active' => 'boolean',
+        'solde_initial' => 'decimal:2',
     ];
 
     protected $appends = ['display_name'];
@@ -67,7 +68,7 @@ class Client extends BaseModel
     // ─── Utils ───
     public function recalculerEncours(): void
     {
-        $this->montant_rest_du = $this->factures()
+        $this->montant_rest_du = ($this->solde_initial ?? 0) + $this->factures()
             ->where(function ($query) {
                 $query->whereDoesntHave('etat', function($q) {
                     $q->where('code', 'BRL'); // Exclure les brouillons

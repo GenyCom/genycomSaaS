@@ -219,6 +219,11 @@
               <input v-model="form.plafond_credit" type="number" class="money-input" />
             </div>
             <div class="form-group-custom">
+              <label>Solde Initial / Reste dû Migration (DH)</label>
+              <input v-model="form.solde_initial" type="number" class="money-input debt" placeholder="0.00" />
+              <p class="field-help">Montant dû par le client au moment de la migration.</p>
+            </div>
+            <div class="form-group-custom">
               <label>Banque</label>
               <input v-model="form.banque" type="text" />
             </div>
@@ -282,6 +287,7 @@ const form = ref({
   rib: '',
   exempt_tva: false,
   observations: '',
+  solde_initial: 0,
   is_active: true
 })
 
@@ -509,6 +515,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--c-accent); outli
 input.input-lg { font-size: 1.1rem; font-weight: 700; color: var(--c-accent); }
 input.mono { font-family: 'JetBrains Mono', monospace; font-weight: 600; text-transform: uppercase; }
 input.money-input { font-weight: 800; border-color: var(--c-accent); color: var(--c-accent); }
+input.money-input.debt { border-color: var(--c-danger); color: var(--c-danger); }
+.field-help { font-size: 0.65rem; color: var(--c-muted); margin-top: -4px; font-style: italic; }
 
 /* ─── NATURE SELECTOR (Premium Theme) ─── */
 .nature-selector {
