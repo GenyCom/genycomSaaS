@@ -29,7 +29,7 @@ class FactureController extends Controller
                 $sq->where('numero', 'like', "%{$v}%")
                    ->orWhereHas('client', fn($cq) => $cq->where('societe', 'like', "%{$v}%"));
             }))
-            ->orderBy($request->sort_by ?? 'date_facture', $request->sort_dir ?? 'desc');
+            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'desc');
 
         return response()->json($query->paginate($request->per_page ?? 20));
     }
