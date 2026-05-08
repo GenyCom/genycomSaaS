@@ -224,7 +224,7 @@ onMounted(async () => {
       id: p.id,
       nom: p.designation || p.nom,
       prix_achat: parseFloat(p.prix_achat) || 0,
-      tva: p.taux_tva || 20
+      tva: (p.taux_tva !== null && p.taux_tva !== undefined) ? p.taux_tva : 20
     }))
 
     if (!isNew.value) {
@@ -235,7 +235,7 @@ onMounted(async () => {
           ...l,
           prix_unitaire: parseFloat(l.prix_unitaire),
           quantite: parseFloat(l.quantite),
-          taux_tva: parseFloat(l.taux_tva) || 20
+          taux_tva: (l.taux_tva !== null && l.taux_tva !== undefined) ? parseFloat(l.taux_tva) : 20
         }))
       }
       if (form.value.fournisseur_id) {
@@ -267,9 +267,12 @@ function onProduitSelect(ligne) {
   if (ligne.produit_id) {
     const prod = produits.value.find(p => p.id === ligne.produit_id)
     if (prod) {
+      const defTva = tauxTvaList.value.find(t => t.is_default)
+      const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+      
       ligne.designation = prod.nom
       ligne.prix_unitaire = prod.prix_achat
-      ligne.taux_tva = parseFloat(prod.tva) || 20
+      ligne.taux_tva = (prod.tva !== null && prod.tva !== undefined) ? parseFloat(prod.tva) : defaultRate
     }
   }
 }

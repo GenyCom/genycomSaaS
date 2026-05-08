@@ -520,10 +520,13 @@ onMounted(async () => {
     try {
       const { data } = await api.get(`/produits/${route.params.id}`)
       const p = data.data || data
+      const defTva = tauxTvaList.value.find(t => t.is_default) || tauxTvaList.value[0]
+      const defaultRateStr = defTva ? String(parseFloat(defTva.taux)) : '20'
+      
       form.value = { 
         ...form.value, 
         ...p,
-        taux_tva: p.taux_tva !== null && p.taux_tva !== undefined ? String(parseFloat(p.taux_tva)) : '20',
+        taux_tva: p.taux_tva !== null && p.taux_tva !== undefined ? String(parseFloat(p.taux_tva)) : defaultRateStr,
         prix_ht_achat: p.prix_ht_achat || p.prix_achat_ht || 0,
         prix_ht_vente: p.prix_ht_vente || p.prix_vente_ht || 0,
         detail: p.detail || p.description || ''

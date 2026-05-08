@@ -320,7 +320,7 @@ function ajouterProduitAuDocument(produit) {
     unite: produit.unite || 'Unité',
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
-    taux_tva: parseFloat(produit.taux_tva) || 20,
+    taux_tva: (produit.taux_tva !== null && produit.taux_tva !== undefined) ? parseFloat(produit.taux_tva) : (tauxTvaList.value.find(t => t.is_default) ? parseFloat(tauxTvaList.value.find(t => t.is_default).taux) : 20),
     remise_pourcent: 0,
     montant_ht: 0,
     montant_tva: 0,
@@ -379,10 +379,13 @@ function removeLine(idx) {
 function onProduitSelect(ligne) {
   const p = products.value.find(prod => prod.id === ligne.produit_id)
   if (p) {
+    const defTva = tauxTvaList.value.find(t => t.is_default)
+    const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+    
     ligne.designation = p.designation
     ligne.prix_unitaire = parseFloat(p.prix_ht_vente || p.prix_vente_ht) || 0
     ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
-    ligne.taux_tva = parseFloat(p.taux_tva) || 20
+    ligne.taux_tva = (p.taux_tva !== null && p.taux_tva !== undefined) ? parseFloat(p.taux_tva) : defaultRate
     ligne.unite = p.unite || 'Unité'
   }
   recalculate()

@@ -77,7 +77,7 @@
                  <td style="font-weight: 500;">{{ item.designation }}</td>
                  <td style="text-align:right">{{ item.quantite }} {{ item.unite || '' }}</td>
                  <td style="text-align:right">{{ formatMoney(item.prix_unitaire) }}</td>
-                 <td style="text-align:right">{{ parseFloat(item.taux_tva || 20).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}%</td>
+                 <td style="text-align:right">{{ parseFloat(item.taux_tva ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}%</td>
                  <td style="text-align:right; font-weight: 600;">{{ formatMoney(item.montant_ht || (item.prix_unitaire * item.quantite)) }}</td>
                </tr>
                <tr v-if="lignes.length === 0">
@@ -241,7 +241,7 @@ const totalHT = computed(() => {
 })
 const totalTVA = computed(() => {
   if (docData.value.total_tva) return parseFloat(docData.value.total_tva)
-  return lignes.value.reduce((s, l) => s + (parseFloat(l.montant_tva) || (l.quantite * l.prix_unitaire * ((l.taux_tva || 20)/100))), 0)
+  return lignes.value.reduce((s, l) => s + (parseFloat(l.montant_tva) || (l.quantite * l.prix_unitaire * ((l.taux_tva ?? 0)/100))), 0)
 })
 const totalTTC = computed(() => {
   if (docData.value.total_ttc) return parseFloat(docData.value.total_ttc)

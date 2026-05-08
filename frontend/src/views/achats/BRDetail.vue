@@ -268,9 +268,12 @@ function removeLine(idx) { form.value.lignes.splice(idx, 1) }
 function onProduitSelect(ligne) {
   const p = produits.value.find(x => x.id === ligne.produit_id)
   if (p) {
+    const defTva = tauxTvaList.value.find(t => t.is_default)
+    const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+    
     ligne.designation = p.designation
     ligne.prix_unitaire = p.prix_ht_achat || 0
-    ligne.taux_tva = parseFloat(p.taux_tva) || 20
+    ligne.taux_tva = (p.taux_tva !== null && p.taux_tva !== undefined) ? parseFloat(p.taux_tva) : defaultRate
   }
 }
 

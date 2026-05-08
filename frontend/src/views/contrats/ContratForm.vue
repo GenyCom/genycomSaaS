@@ -344,7 +344,7 @@ function ajouterProduitAuDocument(produit) {
     quantite: 1,
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
-    taux_tva: parseFloat(produit.taux_tva) || 20,
+    taux_tva: (produit.taux_tva !== null && produit.taux_tva !== undefined) ? parseFloat(produit.taux_tva) : (tauxTvaList.value.find(t => t.is_default) ? parseFloat(tauxTvaList.value.find(t => t.is_default).taux) : 20),
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -405,7 +405,7 @@ function addLine() {
     quantite: 1, 
     prix_unitaire: 0, 
     prix_unitaire_display: '0,00',
-    taux_tva: 20,
+    taux_tva: tauxTvaList.value.find(t => t.is_default) ? parseFloat(tauxTvaList.value.find(t => t.is_default).taux) : 20,
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -421,10 +421,13 @@ function onProduitSelect(ligne) {
   if (ligne.produit_id) {
     const prod = products.value.find(p => p.id === ligne.produit_id)
     if (prod) {
+      const defTva = tauxTvaList.value.find(t => t.is_default)
+      const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+      
       ligne.designation = prod.designation
       ligne.prix_unitaire = parseFloat(prod.prix_ht_vente || prod.prix_vente) || 0
       ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
-      ligne.taux_tva = parseInt(prod.taux_tva) || 20
+      ligne.taux_tva = (prod.taux_tva !== null && prod.taux_tva !== undefined) ? parseFloat(prod.taux_tva) : defaultRate
     }
   }
   recalculate()
@@ -525,7 +528,7 @@ onMounted(async () => {
       
       if (rawData.lignes) {
         rawData.lignes.forEach(l => {
-          l.taux_tva = parseInt(l.taux_tva) || 0
+          l.taux_tva = parseFloat(l.taux_tva) || 0
           l.quantite = parseFloat(l.quantite) || 1;
           l.prix_unitaire = parseFloat(l.prix_unitaire) || 0;
           l.prix_unitaire_display = formatNumberInput(l.prix_unitaire);
