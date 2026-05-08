@@ -63,6 +63,27 @@ class Facture extends BaseModel
         $this->total_ttc = $this->lignes()->sum('montant_ttc');
         $this->total_remise = $this->lignes()->sum('remise_montant');
         $this->montant_restant = $this->total_ttc - $this->montant_regle;
+        
+        if ($this->montant_restant <= 0) {
+            if ($this->total_ttc > 0) {
+                $this->est_reglee = true;
+                // État PAY
+                $etatPaye = EtatDocument::where('tenant_id', $this->tenant_id)->where('type_document', 'facture')->where('code', 'PAY')->first();
+                if ($etatPaye) $this->etat_id = $etatPaye->id;
+            }
+        } else {
+            $this->est_reglee = false;
+            // Si on a déjà payé quelque chose
+            if ($this->montant_regle > 0) {
+                $etatPartiel = EtatDocument::where('tenant_id', $this->tenant_id)->where('type_document', 'facture')->where('code', 'PPY')->first();
+                if ($etatPartiel) $this->etat_id = $etatPartiel->id;
+            } else {
+                // Sinon validée (ou brouillon si c'est le cas, mais ici on est dans une facture probablement validée)
+                $etatValide = EtatDocument::where('tenant_id', $this->tenant_id)->where('type_document', 'facture')->where('code', 'VAL')->first();
+                if ($etatValide) $this->etat_id = $etatValide->id;
+            }
+        }
+
         $this->save();
         return $this;
     }

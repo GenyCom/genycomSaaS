@@ -141,4 +141,30 @@ class StockService
     {
         return $this->enregistrerMouvement($produitId, $quantite, $type, 'MANUAL', null, $userId, $tenantId, $entrepotId);
     }
+
+    /**
+     * Annuler tous les mouvements liés à un document et restaurer les stocks physiques.
+     */
+    public function annulerMouvementsDocument($documentType, $documentId, $tenantId)
+    {
+        return DB::connection('tenant')->transaction(function () use ($documentType, $documentId, $tenantId) {
+            $movements = MouvementStock::where('tenant_id', $tenantId)
+                ->where('document_type', $documentType)
+                ->where('document_id', $documentId)
+                ->get();
+
+            foreach ($movements as $mvt) {
+                $stock = Stock::find($mvt->stock_id);
+                if ($stock) {
+                    $isSortie = in_array($mvt->type_mouvement, ['sortie_vente', 'sortie_retour', 'ajustement_negatif', 'transfert_out']);
+                    // Si c'était une sortie (variation négative), on rajoute la quantité pour annuler.
+                    // Si c'était une entrée (variation positive), on soustrait la quantité pour annuler.
+                    $variationAInverser = $isSortie ? $mvt->quantite : -$mvt->quantite;
+                    $stock->quantite += $variationAInverser;
+                    $stock->save();
+                }
+                $mvt->delete();
+            }
+        });
+    }
 }

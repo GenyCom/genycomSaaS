@@ -51,6 +51,10 @@
         <div class="hero-type-badge"><span class="dot"></span>Facture de Vente</div>
         <h1 class="hero-name">{{ isNew ? 'Émettre une nouvelle facture' : 'Facture N° ' + form.numero }}</h1>
         <p class="hero-sub" v-if="selectedClientName">Client : <strong>{{ selectedClientName }}</strong></p>
+        <p class="hero-sub" v-if="form.bon_livraison">
+          Document lié : <strong>Bon de Livraison </strong>
+          <router-link :to="`/bons-livraison/${form.bon_livraison.id}`" class="linked-doc-link">{{ form.bon_livraison.numero }}</router-link>
+        </p>
       </div>
       <div v-if="!isNew" class="hero-status-badge info">
         {{ (form.etat?.libelle || 'Validée').toUpperCase() }}
@@ -110,6 +114,15 @@
             </div>
           </div>
         </section>
+
+        <div v-if="form.has_bl" class="sync-notice-box animate-pulse">
+          <div class="sync-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          </div>
+          <div class="sync-text">
+            <strong>Synchronisation automatique :</strong> Toute modification des montants ou quantités sera automatiquement répercutée sur le BL <strong>{{ form.bon_livraison?.numero }}</strong> et les mouvements de stock associés seront corrigés.
+          </div>
+        </div>
 
         <section class="info-card">
           <div class="card-header table-header-actions">
@@ -725,6 +738,19 @@ async function executeGenerateBL() {
 .amount-group { display: flex; align-items: baseline; gap: 6px; }
 .amount { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; color: #000; }
 .currency-dark { font-size: 0.8rem; font-weight: 700; color: #94A3B8; }
+
+.linked-doc-link { color: #4338CA; font-weight: 700; text-decoration: underline; margin-left: 4px; }
+.linked-doc-link:hover { color: #3730A3; }
+
+.sync-notice-box {
+  background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 12px;
+  padding: 14px 20px; margin-bottom: 24px; display: flex; gap: 16px; align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.sync-icon { width: 36px; height: 36px; background: #DBEAFE; color: #1D4ED8; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sync-text { font-size: 0.82rem; color: #1E40AF; line-height: 1.4; }
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .85; } }
 
 /* ─── Top Bar ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

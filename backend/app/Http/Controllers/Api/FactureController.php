@@ -98,12 +98,93 @@ class FactureController extends Controller
             'client_id'              => 'sometimes|integer',
             'date_facture'           => 'sometimes|date',
             'date_echeance'          => 'nullable|date',
+            'projet_id'              => 'nullable|integer',
             'condition_reglement_id' => 'nullable|integer',
             'observations'           => 'nullable|string',
+            'entrepot_id'            => 'nullable|integer',
+            'lignes'                 => 'sometimes|array|min:1',
+            'lignes.*.produit_id'    => 'nullable|integer',
+            'lignes.*.designation'   => 'required|string|max:255',
+            'lignes.*.quantite'      => 'required|numeric|min:0.01',
+            'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            'lignes.*.taux_tva'      => 'required|numeric|min:0',
         ]);
 
-        $facture->update($data);
-        return response()->json($facture->fresh('lignes', 'client', 'etat'));
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data, $facture, $request) {
+            $tenantId = $facture->tenant_id;
+            
+            // 1. Mise à jour de l'entête Facture
+            $facture->update(collect($data)->except(['lignes', 'entrepot_id'])->toArray());
+
+            // 2. Mise à jour des lignes de facture
+            if (isset($data['lignes'])) {
+                $facture->lignes()->delete();
+                foreach ($data['lignes'] as $index => $ligneData) {
+                    $ligneData['facture_id'] = $facture->id;
+                    $ligneData['tenant_id']  = $tenantId;
+                    $ligneData['ordre']      = $index + 1;
+                    LigneFacture::create($ligneData);
+                }
+                $facture->recalculerTotaux();
+            }
+
+            // 3. Synchronisation avec le BL associé (si présent)
+            $bl = $facture->bonLivraison;
+            if ($bl) {
+                // Mise à jour de l'entête BL
+                $bl->update([
+                    'client_id'    => $facture->client_id,
+                    'projet_id'    => $facture->projet_id,
+                    'total_ht'     => $facture->total_ht,
+                    'total_tva'    => $facture->total_tva,
+                    'total_ttc'    => $facture->total_ttc,
+                    'observations' => $facture->observations,
+                    'entrepot_id'  => $data['entrepot_id'] ?? $bl->entrepot_id,
+                ]);
+
+                // Mise à jour des lignes BL
+                if (isset($data['lignes'])) {
+                    // Annuler les anciens mouvements de stock
+                    $stockService = app(\App\Services\StockService::class);
+                    $stockService->annulerMouvementsDocument('BL', $bl->id, $tenantId);
+
+                    // Recréer les lignes BL et les nouveaux mouvements
+                    $bl->lignes()->delete();
+                    foreach ($data['lignes'] as $index => $ligneData) {
+                        $lbl = \App\Models\LigneBonLivraison::create([
+                            'tenant_id'        => $tenantId,
+                            'bon_livraison_id' => $bl->id,
+                            'produit_id'       => $ligneData['produit_id'] ?? null,
+                            'designation'      => $ligneData['designation'],
+                            'quantite_prevue'  => $ligneData['quantite'],
+                            'quantite_livree'  => $ligneData['quantite'],
+                            'prix_unitaire'    => $ligneData['prix_unitaire'],
+                            'taux_tva'         => $ligneData['taux_tva'],
+                            'montant_ht'       => ($ligneData['quantite'] * $ligneData['prix_unitaire']),
+                            'montant_tva'      => ($ligneData['quantite'] * $ligneData['prix_unitaire'] * ($ligneData['taux_tva'] / 100)),
+                            'montant_ttc'      => ($ligneData['quantite'] * $ligneData['prix_unitaire'] * (1 + $ligneData['taux_tva'] / 100)),
+                            'ordre'            => $index + 1,
+                        ]);
+
+                        // Nouveau mouvement de stock
+                        if ($lbl->produit_id) {
+                            $stockService->enregistrerMouvement(
+                                $lbl->produit_id,
+                                $lbl->quantite_livree,
+                                'sortie_vente',
+                                'BL',
+                                $bl->id,
+                                auth()->id(),
+                                $tenantId,
+                                $bl->entrepot_id
+                            );
+                        }
+                    }
+                }
+            }
+
+            return response()->json($facture->fresh(['lignes', 'client', 'etat', 'bonLivraison']));
+        });
     }
 
     public function destroy(Facture $facture): JsonResponse
