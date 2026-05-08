@@ -268,15 +268,15 @@
             <h3>Historique des Règlements</h3>
           </div>
           <div class="card-body p-0">
-            <table class="saas-table" style="border: none;">
+            <table class="saas-table payment-history-table" style="border: none;">
               <tbody>
                 <tr v-for="r in form.reglements" :key="r.id">
-                  <td>
+                  <td style="padding: 12px 16px;">
                     <div style="font-weight: 700; font-size: .8rem;">{{ formatDate(r.date_reglement) }}</div>
                     <div style="font-size: .7rem; color: #6B7280;">{{ r.mode_reglement?.libelle || 'Non spécifié' }}</div>
                   </td>
-                  <td class="text-right font-bold mono" style="color: #059669;">
-                    + {{ formatMoney(r.montant) }} DH
+                  <td class="text-right font-bold mono" style="padding: 12px 16px; white-space: nowrap;" :style="{ color: parseFloat(r.montant) < 0 ? '#E11D48' : '#059669' }">
+                    {{ parseFloat(r.montant) > 0 ? '+' : '' }} {{ formatMoney(r.montant) }} DH
                   </td>
                 </tr>
               </tbody>
@@ -884,4 +884,12 @@ async function executeGenerateBL() {
 .font-black { font-weight: 900; }
 .input-error { border-color: #EF4444 !important; background-color: #FEF2F2 !important; }
 .error-text { color: #EF4444; font-size: 0.65rem; font-weight: 600; margin-top: 2px; }
+
+.payment-history-table {
+  min-width: 0 !important;
+  table-layout: auto !important;
+}
+.payment-history-table td {
+  padding: 10px 14px !important;
+}
 </style>
