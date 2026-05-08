@@ -262,5 +262,53 @@ class FactureController extends Controller
             \App\Exceptions\ExceptionMailReporter::report($e);
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
+    /**
+     * Annule une facture et ses conséquences (règlements, stock du BL lié).
+     */
+    public function annuler(Request $request, int $id): JsonResponse
+    {
+        $tenantId = $request->get('current_tenant')->id ?? auth()->user()->tenant_id;
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($id, $tenantId) {
+            $facture = Facture::where('tenant_id', $tenantId)->findOrFail($id);
+            
+            // 1. Trouver ou créer l'état Annulé
+            $etatAnnule = \App\Models\EtatDocument::firstOrCreate(
+                ['tenant_id' => $tenantId, 'type_document' => 'facture', 'code' => 'ANN'],
+                ['libelle' => 'Annulée', 'couleur' => '#EF4444', 'is_system' => true]
+            );
+
+            // 2. Annuler les règlements (Suppression pour rétablir les encours)
+            $facture->reglements()->delete();
+            $facture->montant_regle = 0;
+            $facture->montant_restant = $facture->total_ttc;
+            $facture->est_reglee = false;
+
+            // 3. Si un BL est lié, on annule les mouvements de stock
+            $bl = $facture->bonLivraison;
+            if ($bl) {
+                $stockService = app(\App\Services\StockService::class);
+                $stockService->annulerMouvementsDocument('BL', $bl->id, $tenantId);
+                
+                $etatAnnuleBl = \App\Models\EtatDocument::firstOrCreate(
+                    ['tenant_id' => $tenantId, 'type_document' => 'bl', 'code' => 'ANN'],
+                    ['libelle' => 'Annulé', 'couleur' => '#EF4444', 'is_system' => true]
+                );
+                $bl->update(['etat_id' => $etatAnnuleBl->id, 'statut' => 'annule']);
+            }
+
+            // 4. Mettre à jour la facture
+            $facture->update(['etat_id' => $etatAnnule->id]);
+            
+            // 5. Recalculer encours client
+            if ($facture->client) {
+                $facture->client->recalculerEncours();
+            }
+
+            return response()->json([
+                'message' => 'Facture annulée avec succès. Règlements supprimés et stocks restaurés.',
+                'facture' => $facture->load('etat', 'bonLivraison')
+            ]);
+        });
     }
 }

@@ -45,6 +45,7 @@
           <option value="brouillon">Brouillon</option>
           <option value="valide">Validées</option>
           <option value="paye">Payées</option>
+          <option value="annule">Annulées</option>
         </select>
       </div>
     </div>
@@ -65,7 +66,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="f in items" :key="f.id" class="table-row">
+            <tr v-for="f in items" :key="f.id" class="table-row" :class="{'is-cancelled': f.statut === 'annule'}">
               <td>
                 <span class="code-badge mono">{{ f.numero }}</span>
               </td>
@@ -151,6 +152,7 @@ function getStatutClass(f) {
   const s = f.statut || 'brouillon'
   if (s === 'paye') return 'status-success'
   if (s === 'valide') return 'status-warning'
+  if (s === 'annule') return 'status-cancelled'
   return 'status-neutral'
 }
 

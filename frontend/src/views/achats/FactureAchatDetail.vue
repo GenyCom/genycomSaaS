@@ -9,6 +9,15 @@
 
     <div v-if="toast.show" class="toast-notification" :class="toast.type">{{ toast.message }}</div>
 
+    <ConfirmModal 
+      :show="showConfirmAnnuler"
+      title="Annuler cette facture d'achat"
+      message="Voulez-vous vraiment annuler cette facture d'achat ? Cette action est irréversible. Continuer ?"
+      confirmText="Oui, Annuler la facture"
+      @confirm="executeAnnuler"
+      @cancel="showConfirmAnnuler = false"
+    />
+
     <div class="topbar">
       <div class="topbar-left">
         <router-link to="/factures-achats" class="back-btn">
@@ -26,6 +35,11 @@
           <span>Imprimer</span>
         </button>
 
+        <button v-if="facture.statut !== 'annule'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          <span>Annuler</span>
+        </button>
+
         <button v-if="facture.statut === 'brouillon'" class="btn-save fa-theme-btn" @click="save" :disabled="saving">
            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
            <span>Valider la facture</span>
@@ -40,8 +54,10 @@
         <h1 class="hero-name">{{ facture.numero }}</h1>
         <p class="hero-sub" v-if="facture.fournisseur">Émetteur : <strong>{{ facture.fournisseur.societe }}</strong></p>
       </div>
-      <div class="hero-status-badge" :class="statutClass">{{ (facture.statut || 'Brouillon').toUpperCase() }}</div>
+      <div class="hero-status-badge" :class="[statutClass, { 'status-cancelled-hero': facture.statut === 'annule' }]">{{ (facture.statut || 'Brouillon').toUpperCase() }}</div>
     </div>
+
+    <div v-if="facture.statut === 'annule'" class="cancelled-watermark">ANNULÉE</div>
 
     <div class="kpi-strip">
       <div class="kpi-item neutral">
@@ -179,11 +195,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
+import ConfirmModal from '../../components/shared/ConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const saving = ref(false)
+const showConfirmAnnuler = ref(false)
 const facture = ref({})
 
 const isEnRetard = computed(() => {
@@ -228,6 +246,20 @@ async function save() {
 // Fonction pour l'impression
 function imprimer() {
   window.open(`/print/factures-achats/${route.params.id}`, '_blank')
+}
+
+async function executeAnnuler() {
+  showConfirmAnnuler.value = false
+  loading.value = true
+  try {
+    const { data } = await api.post(`/factures-achats/${route.params.id}/annuler`)
+    showToast(data.message)
+    loadData()
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Erreur lors de l\'annulation', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadData() {

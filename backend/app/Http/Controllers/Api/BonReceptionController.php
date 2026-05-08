@@ -149,4 +149,20 @@ class BonReceptionController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
+
+    /**
+     * Annule un BR.
+     */
+    public function annuler(Request $request, int $id): JsonResponse
+    {
+        $tenantId = $request->get('current_tenant')->id;
+        $userId   = auth()->id();
+
+        try {
+            $this->cycleAchat->annulerBr($tenantId, $id, $userId);
+            return response()->json(['message' => 'Bon de réception annulé et stock mis à jour.']);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
 }

@@ -747,3 +747,37 @@ html[data-theme="dark"] .data-table tbody tr:nth-child(even) {
   .kpi-grid { grid-template-columns: repeat(1, 1fr); }
   .main-body { padding: 1rem; }
 }
+/* ─── Global Cancellation Styles ────────────────────────────── */
+.is-cancelled {
+  opacity: 0.6;
+  text-decoration: line-through;
+  filter: grayscale(0.8);
+  pointer-events: auto; /* Still allow viewing details */
+}
+.is-cancelled .status-pill, .is-cancelled .badge {
+  text-decoration: none !important;
+}
+
+.status-cancelled {
+  background: #FEE2E2 !important;
+  color: #991B1B !important;
+  border: 1px dashed #F87171 !important;
+}
+
+.cancelled-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(220, 38, 38, 0.08);
+  pointer-events: none;
+  z-index: 0;
+  text-transform: uppercase;
+  letter-spacing: 1rem;
+}
+
+.danger-text { color: #DC2626 !important; border-color: #FCA5A5 !important; }
+.danger-text:hover { background: #FEF2F2 !important; }
+

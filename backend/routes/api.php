@@ -71,6 +71,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
 
     // Factures
     Route::apiResource('factures', FactureController::class);
+    Route::post('factures/{id}/annuler', [FactureController::class, 'annuler']);
     Route::apiResource('avoirs-clients', AvoirClientController::class);
     Route::post('avoirs-clients/{id}/valider', [AvoirClientController::class, 'valider']);
     Route::post('factures/{facture}/valider', [FactureController::class, 'valider']);
@@ -109,10 +110,13 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     // Modules Ventes
     Route::apiResource('bons-commande-client', BonCommandeClientController::class);
     Route::apiResource('bons-livraison', BonLivraisonController::class);
+    Route::post('bons-livraison/{id}/annuler', [BonLivraisonController::class, 'annuler']);
 
     // Modules Achats
     Route::apiResource('bons-reception', BonReceptionController::class);
+    Route::post('bons-reception/{id}/annuler', [BonReceptionController::class, 'annuler']);
     Route::apiResource('factures-achats', FactureAchatController::class);
+    Route::post('factures-achats/{id}/annuler', [FactureAchatController::class, 'annuler']);
     Route::apiResource('avoirs-fournisseurs', AvoirFournisseurController::class);
     Route::post('avoirs-fournisseurs/{id}/valider', [AvoirFournisseurController::class, 'valider']);
     Route::apiResource('dettes', DetteController::class)->only(['index', 'show']);

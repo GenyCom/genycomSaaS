@@ -16,6 +16,15 @@
       @cancel="showConfirmBL = false"
     ></ConfirmModal>
 
+    <ConfirmModal
+      :show="showConfirmAnnuler"
+      title="Annuler cette facture"
+      message="Attention : Cette action annulera la facture, supprimera TOUS les règlements associés et restaurera les stocks du BL lié s'il existe. Cette action est irréversible. Continuer ?"
+      confirmText="Oui, Annuler la facture"
+      @confirm="executeAnnuler"
+      @cancel="showConfirmAnnuler = false"
+    ></ConfirmModal>
+
     <div class="topbar">
       <div class="topbar-left">
         <router-link to="/factures" class="back-btn" title="Retour aux factures">
@@ -32,11 +41,11 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           <span>Imprimer PDF</span>
         </button>
-        <button v-if="!isNew && !form.has_bl" class="btn-secondary-custom accent-text" @click="showConfirmBL = true" :disabled="saving">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          <span>Générer BL</span>
+        <button v-if="!isNew && form.etat?.code !== 'ANN'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true" :disabled="saving">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          <span>Annuler Facture</span>
         </button>
-        <button class="btn-save billing-theme-btn" @click="save" :disabled="saving">
+        <button v-if="form.etat?.code !== 'ANN'" class="btn-save billing-theme-btn" @click="save" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span>Enregistrer</span>
         </button>
@@ -56,10 +65,12 @@
           <router-link :to="`/bons-livraison/${form.bon_livraison.id}`" class="linked-doc-link">{{ form.bon_livraison.numero }}</router-link>
         </p>
       </div>
-      <div v-if="!isNew" class="hero-status-badge info">
+      <div v-if="!isNew" class="hero-status-badge info" :class="{ 'status-cancelled-hero': form.etat?.code === 'ANN' }">
         {{ (form.etat?.libelle || 'Validée').toUpperCase() }}
       </div>
     </div>
+
+    <div v-if="form.etat?.code === 'ANN'" class="cancelled-watermark">ANNULÉE</div>
 
     <div class="kpi-strip">
       <div class="kpi-item neutral">
@@ -377,6 +388,7 @@ const isNew = computed(() => route.params.id === 'new')
 const loading = ref(false)
 const saving = ref(false)
 const showConfirmBL = ref(false)
+const showConfirmAnnuler = ref(false)
 const errors = reactive({})
 
 const form = ref({
@@ -614,6 +626,20 @@ async function save() {
 
 function imprimer() { window.open(`/print/facture/${route.params.id}`, '_blank') }
 
+async function executeAnnuler() {
+  showConfirmAnnuler.value = false
+  saving.value = true
+  try {
+    const { data } = await api.post(`/factures/${route.params.id}/annuler`)
+    toast.success(data.message)
+    await loadFactureData()
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation')
+  } finally {
+    saving.value = false
+  }
+}
+
 async function enregistrerReglement() {
   if (reglement.value.montant === null || reglement.value.montant === undefined || parseFloat(reglement.value.montant) === 0) {
     toast.error('Veuillez saisir un montant valide.'); 
@@ -748,8 +774,18 @@ async function executeGenerateBL() {
 }
 .sync-icon { width: 36px; height: 36px; background: #DBEAFE; color: #1D4ED8; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sync-text { font-size: 0.82rem; color: #1E40AF; line-height: 1.4; }
-.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .85; } }
+.danger-text { color: #DC2626 !important; border-color: #FCA5A5 !important; }
+.danger-text:hover { background: #FEF2F2 !important; }
+
+.status-cancelled-hero { background: #FEE2E2 !important; color: #991B1B !important; border: 1.5px dashed #F87171; }
+
+.cancelled-watermark {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 8rem; font-weight: 900; color: rgba(220, 38, 38, 0.1);
+  pointer-events: none; z-index: 0; text-transform: uppercase; letter-spacing: 1rem;
+}
+
+.content-grid { position: relative; z-index: 1; }
 
 /* ─── Top Bar ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

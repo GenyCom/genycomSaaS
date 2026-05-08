@@ -60,7 +60,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="br in items" :key="br.id" class="table-row">
+            <tr v-for="br in items" :key="br.id" class="table-row" :class="{'is-cancelled': br.statut === 'annule'}">
               <td>
                 <span class="code-badge mono">{{ br.numero }}</span>
               </td>
@@ -75,7 +75,7 @@
                 <span v-else class="text-muted text-xs">—</span>
               </td>
               <td class="text-center">
-                <span class="status-pill" :class="br.statut === 'valide' ? 'status-success' : 'status-warning'">
+                <span class="status-pill" :class="br.statut === 'valide' ? 'status-success' : (br.statut === 'annule' ? 'status-cancelled' : 'status-warning')">
                   {{ br.statut?.toUpperCase() || 'BROUILLON' }}
                 </span>
               </td>

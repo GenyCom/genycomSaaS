@@ -63,7 +63,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="b in filteredBls" :key="b.id" class="table-row">
+            <tr v-for="b in filteredBls" :key="b.id" class="table-row" :class="{'is-cancelled': b.statut === 'annule'}">
               <td>
                 <span class="code-badge mono">{{ b.numero }}</span>
               </td>

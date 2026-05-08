@@ -7,13 +7,17 @@
       </div>
     </Transition>
 
-    <ConfirmModal 
-      :show="showConfirmModal"
-      title="Générer la Facture"
-      message="Voulez-vous générer la Facture à partir de ce Bon de Livraison ? Cette opération créera un nouveau document financier."
-      confirmText="Générer la Facture"
       @confirm="executeTransform"
       @cancel="showConfirmModal = false"
+    />
+
+    <ConfirmModal 
+      :show="showConfirmAnnuler"
+      title="Annuler ce Bon de Livraison"
+      message="Attention : Cette action annulera le BL et RESTAURERA les stocks (mouvements inverses). Si ce BL est déjà facturé, l'annulation pourrait créer des incohérences. Continuer ?"
+      confirmText="Oui, Annuler le BL"
+      @confirm="executeAnnuler"
+      @cancel="showConfirmAnnuler = false"
     />
 
     <div class="topbar">
@@ -28,21 +32,21 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <button v-if="!isNew" class="btn-secondary-custom" @click="imprimer">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          <span>Imprimer BL</span>
+        <button v-if="!isNew && bl.statut !== 'annule'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          <span>Annuler BL</span>
         </button>
-        
+
         <button v-if="isNew" class="btn-save bl-theme-btn" @click="save" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span>Enregistrer</span>
         </button>
 
-        <button v-if="!isNew && !bl.facture_id" class="btn-save bl-theme-btn" @click="transformToFacture" :disabled="transforming">
+        <button v-if="!isNew && !bl.facture_id && bl.statut !== 'annule'" class="btn-save bl-theme-btn" @click="transformToFacture" :disabled="transforming">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Générer la Facture</span>
         </button>
-        <router-link v-else-if="!isNew" :to="`/factures/${bl.facture_id}`" class="hero-status-badge success hover-link">
+        <router-link v-else-if="!isNew && bl.facture_id" :to="`/factures/${bl.facture_id}`" class="hero-status-badge success hover-link">
            FACTURE : {{ bl.facture?.numero || 'VOIR' }}
         </router-link>
       </div>
@@ -60,12 +64,16 @@
       <div 
         v-if="!isNew && bl.etat" 
         class="hero-status-badge-dynamic" 
-        :style="{ backgroundColor: bl.etat.color + '20', color: bl.etat.color, borderColor: bl.etat.color + '40' }"
+        :class="{ 'status-cancelled-hero': bl.statut === 'annule' }"
+        :style="bl.statut !== 'annule' ? { backgroundColor: bl.etat.color + '20', color: bl.etat.color, borderColor: bl.etat.color + '40' } : {}"
       >
         {{ bl.etat.libelle }}
       </div>
+      <div v-else-if="!isNew && bl.statut === 'annule'" class="hero-status-badge-dynamic status-cancelled-hero">ANNULÉ</div>
       <div v-else-if="!isNew" class="hero-status-badge success">LIVRÉ</div>
     </div>
+
+    <div v-if="bl.statut === 'annule'" class="cancelled-watermark">ANNULÉ</div>
 
     <div class="kpi-strip">
       <div class="kpi-item neutral">
@@ -271,6 +279,7 @@ const loading = ref(true)
 const transforming = ref(false)
 const saving = ref(false)
 const showConfirmModal = ref(false)
+const showConfirmAnnuler = ref(false)
 
 const form = ref({
   client_id: '',
@@ -370,6 +379,25 @@ async function executeTransform() {
   } finally {
     transforming.value = false
   }
+}
+
+async function executeAnnuler() {
+  showConfirmAnnuler.value = false
+  saving.value = true
+  try {
+    const { data } = await api.post(`/bons-livraison/${route.params.id}/annuler`)
+    toast.success(data.message)
+    await loadBL()
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function loadBL() {
+  const { data } = await api.get(`/bons-livraison/${route.params.id}`)
+  bl.value = data
 }
 
 async function imprimer() {
@@ -536,4 +564,17 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .toast-notification.success { background: #10b981; color: #fff; }
 .toast-notification.error { background: #ef4444; color: #fff; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.danger-text { color: #DC2626 !important; border-color: #FCA5A5 !important; }
+.danger-text:hover { background: #FEF2F2 !important; }
+
+.status-cancelled-hero { background: #FEE2E2 !important; color: #991B1B !important; border: 1.5px dashed #F87171; }
+
+.cancelled-watermark {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 8rem; font-weight: 900; color: rgba(220, 38, 38, 0.1);
+  pointer-events: none; z-index: 0; text-transform: uppercase; letter-spacing: 1rem;
+}
+
+.content-grid { position: relative; z-index: 1; }
+
 </style>

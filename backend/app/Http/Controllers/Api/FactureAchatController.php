@@ -164,5 +164,27 @@ class FactureAchatController extends Controller
         }
 
         $facture->save();
+    /**
+     * Annule une facture d'achat.
+     */
+    public function annuler(Request $request, int $id): JsonResponse
+    {
+        $tenantId = $request->get('current_tenant')->id;
+
+        return \DB::transaction(function () use ($id, $tenantId) {
+            $facture = FactureAchat::where('tenant_id', $tenantId)->findOrFail($id);
+            
+            // On peut rajouter la restauration de stock si un BR est lié, mais ici on gère le statut simple
+            $facture->update([
+                'statut' => 'annule',
+                'montant_paye' => 0,
+                'reste_a_payer' => $facture->montant_ttc
+            ]);
+
+            return response()->json([
+                'message' => 'Facture d\'achat annulée avec succès.',
+                'facture' => $facture
+            ]);
+        });
     }
 }

@@ -167,6 +167,60 @@ class CycleAchatService
     }
 
     /**
+     * Annule un BR, restaure les stocks et change son statut.
+     */
+    public function annulerBr(int $tenantId, int $idBr, int $userId): void
+    {
+        $this->db()->beginTransaction();
+        try {
+            $br = $this->db()->select("SELECT * FROM br WHERE id = ? LIMIT 1", [$idBr]);
+            if (empty($br)) throw new \Exception("Bon de réception introuvable.");
+            $br = $br[0];
+
+            // Vérifier si une facture est liée via la table pivot br_facture
+            $facture = $this->db()->select("SELECT facture_achat_id FROM br_facture WHERE br_id = ? LIMIT 1", [$idBr]);
+            if (!empty($facture)) {
+                throw new \Exception("Impossible d'annuler ce bon car il a déjà été facturé.");
+            }
+
+            // Récupérer les lignes pour annuler le stock
+            $lignes = $this->db()->select("SELECT * FROM br_lignes WHERE br_id = ?", [$idBr]);
+
+            foreach ($lignes as $ligne) {
+                if ($ligne->produit_id) {
+                    // On fait un incrément négatif pour déduire du stock
+                    $this->incrementerStock($tenantId, (int) $ligne->produit_id, -((float) $ligne->quantite_recue), [
+                        'reference_document' => 'ANNULATION ' . $br->numero,
+                        'document_type'      => 'BonReception',
+                        'document_id'        => $idBr,
+                        'user_id'            => $userId,
+                        'type_mouvement'     => 'annulation_achat'
+                    ]);
+                }
+            }
+
+            // Changer le statut au lieu de supprimer
+            $this->db()->update("UPDATE br SET statut = 'annule', updated_at = NOW() WHERE id = ?", [$idBr]);
+
+            // Si lié à un BCF, remettre le BCF en état non reçu (optionnel)
+            if ($br->bcf_id) {
+                $etatBrouillon = $this->db()->table('etat_document')
+                    ->where('type_document', 'bcf')
+                    ->where('code', 'BROUILLON')
+                    ->first();
+                if ($etatBrouillon) {
+                    $this->db()->update("UPDATE bcf SET etat_id = ? WHERE id = ?", [$etatBrouillon->id, $br->bcf_id]);
+                }
+            }
+
+            $this->db()->commit();
+        } catch (\Throwable $e) {
+            $this->db()->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
      * Supprime un BR et annule les mouvements de stock.
      */
     public function supprimerBr(int $tenantId, int $idBr, int $userId): void

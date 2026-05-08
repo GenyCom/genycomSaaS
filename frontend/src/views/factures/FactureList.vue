@@ -72,7 +72,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="f in filteredFactures" :key="f.id" class="table-row">
+            <tr v-for="f in filteredFactures" :key="f.id" class="table-row" :class="{'is-cancelled': f.etat === 'Annulée'}">
               <td>
                 <span class="code-badge mono">{{ f.numero }}</span>
               </td>
@@ -178,7 +178,8 @@ function getEtatClass(etat) {
     'Partielle': 'status-warning',
     'Ouverte': 'status-info',
     'Brouillon': 'status-neutral',
-    'En retard': 'status-danger'
+    'En retard': 'status-danger',
+    'Annulée': 'status-cancelled'
   }
   return map[etat] || 'status-neutral'
 }

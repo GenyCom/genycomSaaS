@@ -133,4 +133,36 @@ class BonLivraisonController extends Controller
         $bl->delete();
         return response()->json(['message' => 'Bon de livraison supprimé avec succès.']);
     }
+
+    /**
+     * Annule un BL et ses mouvements de stock.
+     */
+    public function annuler(Request $request, int $id): JsonResponse
+    {
+        $tenantId = $request->get('current_tenant')->id;
+
+        return \DB::transaction(function () use ($id, $tenantId) {
+            $bl = BonLivraison::where('tenant_id', $tenantId)->findOrFail($id);
+            
+            // 1. Restaurer les stocks
+            $stockService = app(\App\Services\StockService::class);
+            $stockService->annulerMouvementsDocument('BL', $bl->id, $tenantId);
+
+            // 2. Changer l'état
+            $etatAnnule = \App\Models\EtatDocument::firstOrCreate(
+                ['tenant_id' => $tenantId, 'type_document' => 'bl', 'code' => 'ANN'],
+                ['libelle' => 'Annulé', 'couleur' => '#EF4444', 'is_system' => true]
+            );
+
+            $bl->update([
+                'statut' => 'annule',
+                'etat_id' => $etatAnnule->id
+            ]);
+
+            return response()->json([
+                'message' => 'Bon de livraison annulé et stocks restaurés.',
+                'bl' => $bl->load('etat')
+            ]);
+        });
+    }
 }

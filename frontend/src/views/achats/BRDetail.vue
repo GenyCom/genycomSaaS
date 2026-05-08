@@ -7,13 +7,17 @@
       </div>
     </Transition>
 
-    <ConfirmModal 
-      :show="showConfirm"
-      title="Générer la facture d'achat"
-      message="Voulez-vous générer la facture d'achat pour ce bon de réception ? Cette opération créera un nouveau document financier fournisseur."
-      confirmText="Générer la facture"
       @confirm="executeTransform"
       @cancel="showConfirm = false"
+    />
+
+    <ConfirmModal 
+      :show="showConfirmAnnuler"
+      title="Annuler ce Bon de Réception"
+      message="Attention : Cette action annulera le BR et RESTAURERA les stocks (mouvements inverses). Si ce BR est déjà facturé, l'annulation est impossible. Continuer ?"
+      confirmText="Oui, Annuler le BR"
+      @confirm="executeAnnuler"
+      @cancel="showConfirmAnnuler = false"
     />
 
     <div class="topbar">
@@ -28,7 +32,12 @@
         </div>
       </div>
       <div class="topbar-actions">
-        <button v-if="!isNew && !hasFacture" class="btn-secondary-custom accent-text" @click="transformToFactureAchat" :disabled="saving">
+        <button v-if="!isNew && brData.statut !== 'annule'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          <span>Annuler BR</span>
+        </button>
+
+        <button v-if="!isNew && !hasFacture && brData.statut !== 'annule'" class="btn-secondary-custom accent-text" @click="transformToFactureAchat" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Facturer l'achat</span>
         </button>
@@ -49,8 +58,12 @@
         <h1 class="hero-name">{{ isNew ? 'Établir une réception directe' : (brData.numero || 'Bon de Réception') }}</h1>
         <p class="hero-sub" v-if="brData.fournisseur_societe || form.fournisseur_id">Expéditeur : <strong>{{ brData.fournisseur_societe || selectedSupplierName || '...' }}</strong></p>
       </div>
-      <div v-if="!isNew" class="hero-status-badge success">REÇU</div>
+      <div v-if="!isNew" class="hero-status-badge success" :class="{ 'status-cancelled-hero': brData.statut === 'annule' }">
+        {{ brData.statut === 'annule' ? 'ANNULÉ' : 'REÇU' }}
+      </div>
     </div>
+
+    <div v-if="brData.statut === 'annule'" class="cancelled-watermark">ANNULÉ</div>
 
     <div class="kpi-strip">
       <div class="kpi-item neutral">
@@ -225,6 +238,10 @@ const showConfirm = ref(false)
 const hasFacture = computed(() => !!brData.value.facture_achat_id)
 
 const brData = ref({})
+const loading = ref(true)
+const saving = ref(false)
+const showConfirm = ref(false)
+const showConfirmAnnuler = ref(false)
 const form = ref({
   fournisseur_id: '',
   date_reception: new Date().toISOString().substring(0, 10),
@@ -314,6 +331,28 @@ async function executeTransform() {
   } catch (e) {
     toast.error('Erreur: ' + (e.response?.data?.message || e.message))
   } finally { saving.value = false }
+}
+
+async function executeAnnuler() {
+  showConfirmAnnuler.value = false
+  loading.value = true
+  try {
+    const { data } = await api.post(`/bons-reception/${route.params.id}/annuler`)
+    toast.success(data.message)
+    await loadBR()
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Erreur lors de l\'annulation')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadBR() {
+  const { data } = await api.get(`/bons-reception/${route.params.id}`)
+  const raw = data.data || data
+  brData.value = raw
+  form.value.lignes = raw.lignes || []
+  form.value.observations = raw.observations || ''
 }
 
 onMounted(async () => {
