@@ -19,6 +19,7 @@ class BR extends BaseModel
         'fournisseur_id',
         'entrepot_id',
         'statut',
+        'etat_id',
         'observations',
         'created_by'
     ];
@@ -35,6 +36,11 @@ class BR extends BaseModel
     public function fournisseur()
     {
         return $this->belongsTo(Fournisseur::class);
+    }
+
+    public function etat()
+    {
+        return $this->belongsTo(EtatDocument::class, 'etat_id');
     }
 
     public function lignes()

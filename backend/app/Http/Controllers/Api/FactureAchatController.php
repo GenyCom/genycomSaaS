@@ -176,9 +176,14 @@ class FactureAchatController extends Controller
         return \DB::transaction(function () use ($id, $tenantId) {
             $facture = FactureAchat::where('tenant_id', $tenantId)->findOrFail($id);
             
-            // On peut rajouter la restauration de stock si un BR est lié, mais ici on gère le statut simple
+            $etatAnnule = \App\Models\EtatDocument::firstOrCreate(
+                ['tenant_id' => $tenantId, 'type_document' => 'facture_achat', 'code' => 'ANN'],
+                ['libelle' => 'Annulée', 'couleur' => '#EF4444', 'is_system' => true]
+            );
+
             $facture->update([
                 'statut' => 'annule',
+                'etat_id' => $etatAnnule->id,
                 'montant_paye' => 0,
                 'reste_a_payer' => $facture->montant_ttc
             ]);

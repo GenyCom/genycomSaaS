@@ -23,6 +23,7 @@ class FactureAchat extends BaseModel
         'montant_paye',
         'reste_a_payer',
         'statut',
+        'etat_id',
         'devise_id',
         'taux_change_document',
         'observations',
@@ -43,6 +44,11 @@ class FactureAchat extends BaseModel
     public function devise()
     {
         return $this->belongsTo(Devise::class);
+    }
+
+    public function etat()
+    {
+        return $this->belongsTo(EtatDocument::class, 'etat_id');
     }
 
     public function lignes()

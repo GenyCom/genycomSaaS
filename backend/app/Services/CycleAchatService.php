@@ -199,8 +199,14 @@ class CycleAchatService
                 }
             }
 
+            // Trouver ou créer l'état Annulé pour le BR
+            $etatAnnule = \App\Models\EtatDocument::firstOrCreate(
+                ['tenant_id' => $tenantId, 'type_document' => 'br', 'code' => 'ANN'],
+                ['libelle' => 'Annulé', 'couleur' => '#EF4444', 'is_system' => true]
+            );
+
             // Changer le statut au lieu de supprimer
-            $this->db()->update("UPDATE br SET statut = 'annule', updated_at = NOW() WHERE id = ?", [$idBr]);
+            $this->db()->update("UPDATE br SET statut = 'annule', etat_id = ?, updated_at = NOW() WHERE id = ?", [$etatAnnule->id, $idBr]);
 
             // Si lié à un BCF, remettre le BCF en état non reçu (optionnel)
             if ($br->bcf_id) {
