@@ -16,6 +16,13 @@
       @cancel="showConfirmModal = false"
     />
 
+    <StockWarningModal
+      :show="showStockWarningModal"
+      :items="insufficientItems"
+      @confirm="forceTransform"
+      @cancel="showStockWarningModal = false"
+    />
+
     <div class="topbar">
       <div class="topbar-left">
         <router-link to="/bons-commande-client" class="back-btn" title="Retour aux commandes">
@@ -273,6 +280,7 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
+import StockWarningModal from '../../components/shared/StockWarningModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -281,6 +289,8 @@ const saving = ref(false)
 const loading = ref(true)
 const transforming = ref(false)
 const showConfirmModal = ref(false)
+const showStockWarningModal = ref(false)
+const insufficientItems = ref([])
 
 const form = ref({
   numero: '',
@@ -488,18 +498,29 @@ async function transformToBL() {
   showConfirmModal.value = true
 }
 
-async function executeTransform() {
+async function executeTransform(force = false) {
   showConfirmModal.value = false
+  showStockWarningModal.value = false
   transforming.value = true
   try {
     const { data } = await api.post(`/workflow/bc-to-bl/${route.params.id}`, {
-      entrepot_id: form.value.entrepot_id
+      entrepot_id: form.value.entrepot_id,
+      force: force
     })
     toast.success('Bon de Livraison généré avec succès !')
     setTimeout(() => router.push(`/bons-livraison/${data.id}`), 1000)
   } catch (err) {
-    toast.error('Erreur lors de la génération du BL.')
+    if (err.response?.status === 422 && err.response.data.error === 'INSUFFICIENT_STOCK') {
+      insufficientItems.value = err.response.data.manquants
+      showStockWarningModal.value = true
+    } else {
+      toast.error('Erreur lors de la génération du BL.')
+    }
   } finally { transforming.value = false }
+}
+
+async function forceTransform() {
+  await executeTransform(true)
 }
 
 async function imprimer() { window.open(`/print/bcc/${route.params.id}`, '_blank') }

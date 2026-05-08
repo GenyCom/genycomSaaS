@@ -166,5 +166,36 @@ class StockService
                 $mvt->delete();
             }
         });
+    /**
+     * Vérifier la disponibilité du stock pour une liste de produits
+     */
+    public function checkDisponibilite(array $lignes, $tenantId, $entrepotId): array
+    {
+        $manquants = [];
+
+        foreach ($lignes as $ligne) {
+            if (!$ligne['produit_id']) continue;
+
+            $stock = Stock::where('produit_id', $ligne['produit_id'])
+                ->where('entrepot_id', $entrepotId)
+                ->where('tenant_id', $tenantId)
+                ->first();
+
+            $quantiteDisponible = $stock ? $stock->quantite : 0;
+            $quantiteRequise = (float) $ligne['quantite'];
+
+            if ($quantiteDisponible < $quantiteRequise) {
+                $produit = \App\Models\Produit::find($ligne['produit_id']);
+                $manquants[] = [
+                    'produit_id' => $ligne['produit_id'],
+                    'designation' => $produit ? $produit->designation : "Produit inconnu",
+                    'disponible' => $quantiteDisponible,
+                    'requis' => $quantiteRequise,
+                    'manquant' => $quantiteRequise - $quantiteDisponible
+                ];
+            }
+        }
+
+        return $manquants;
     }
 }

@@ -90,6 +90,25 @@ class WorkflowVenteController extends Controller
     {
         return DB::transaction(function () use ($request, $bcc) {
             $tenantId = $request->get('current_tenant')->id;
+            $entrepotId = $request->input('entrepot_id');
+
+            // --- VÉRIFICATION DISPONIBILITÉ STOCK ---
+            if (!$request->boolean('force')) {
+                $lignesBcc = $bcc->lignes->map(fn($l) => [
+                    'produit_id' => $l->produit_id,
+                    'quantite' => $l->quantite
+                ])->toArray();
+
+                $manquants = $this->stockService->checkDisponibilite($lignesBcc, $tenantId, $entrepotId);
+
+                if (!empty($manquants)) {
+                    return response()->json([
+                        'error' => 'INSUFFICIENT_STOCK',
+                        'message' => 'Stock insuffisant pour certains articles.',
+                        'manquants' => $manquants
+                    ], 422);
+                }
+            }
 
             $bl = BonLivraison::create([
                 'tenant_id'              => $tenantId,
