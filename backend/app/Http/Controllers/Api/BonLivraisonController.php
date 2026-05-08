@@ -58,6 +58,24 @@ class BonLivraisonController extends Controller
         $userId   = auth()->id();
 
         return \DB::transaction(function () use ($data, $tenantId, $userId, $request) {
+            // 1. Vérification disponibilité stock (si non forcé)
+            if (!$request->boolean('force')) {
+                $lignesStock = collect($data['lignes'])->map(fn($l) => [
+                    'produit_id' => $l['produit_id'] ?? null,
+                    'quantite' => $l['quantite_livree']
+                ])->toArray();
+
+                $manquants = app(\App\Services\StockService::class)->checkDisponibilite($lignesStock, $tenantId, $data['entrepot_id']);
+
+                if (!empty($manquants)) {
+                    return response()->json([
+                        'error' => 'INSUFFICIENT_STOCK',
+                        'message' => 'Stock insuffisant pour certains articles.',
+                        'manquants' => $manquants
+                    ], 422);
+                }
+            }
+
             $numero = app(\App\Services\NumerotationService::class)->generer($tenantId, 'BL');
             
             $bl = BonLivraison::create([

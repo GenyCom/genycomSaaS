@@ -20,6 +20,13 @@
       @cancel="showConfirmAnnuler = false"
     />
 
+    <StockWarningModal
+      :show="showStockWarningModal"
+      :items="insufficientItems"
+      @confirm="forceSave"
+      @cancel="showStockWarningModal = false"
+    />
+
     <div class="topbar">
       <div class="topbar-left">
         <router-link to="/bons-livraison" class="back-btn" title="Retour aux livraisons">
@@ -270,6 +277,7 @@ import { useRouter, useRoute } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
+import StockWarningModal from '../../components/shared/StockWarningModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -280,6 +288,8 @@ const transforming = ref(false)
 const saving = ref(false)
 const showConfirmModal = ref(false)
 const showConfirmAnnuler = ref(false)
+const showStockWarningModal = ref(false)
+const insufficientItems = ref([])
 
 const form = ref({
   client_id: '',
@@ -346,19 +356,30 @@ function onProduitSelect(ligne) {
   }
 }
 
-async function save() {
+async function save(force = false) {
   if (!form.value.client_id) return toast.error('Sélectionnez un client')
   if (!form.value.entrepot_id) return toast.error('Sélectionnez un entrepôt')
   if (form.value.lignes.length === 0) return toast.error('Ajoutez au moins un article')
 
   saving.value = true
+  showStockWarningModal.value = false
   try {
-    const { data } = await api.post('/bons-livraison', form.value)
+    const payload = { ...form.value, force: force }
+    const { data } = await api.post('/bons-livraison', payload)
     toast.success('Bon de livraison créé avec succès !')
     setTimeout(() => router.push('/bons-livraison'), 1000)
   } catch (e) {
-    toast.error('Erreur: ' + (e.response?.data?.message || e.message))
+    if (e.response?.status === 422 && e.response.data.error === 'INSUFFICIENT_STOCK') {
+      insufficientItems.value = e.response.data.manquants
+      showStockWarningModal.value = true
+    } else {
+      toast.error('Erreur: ' + (e.response?.data?.message || e.message))
+    }
   } finally { saving.value = false }
+}
+
+async function forceSave() {
+  await save(true)
 }
 
 async function transformToFacture() {
