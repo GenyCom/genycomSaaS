@@ -284,17 +284,17 @@
           </div>
         </section>
 
-        <section v-if="!isNew && (form.total_ttc - (form.montant_regle || 0)) > 0" class="info-card mb-4">
+        <section v-if="!isNew" class="info-card mb-4">
           <div class="card-header">
-            <div class="card-header-icon" style="background: #F0FDF4; color: #059669;">
+            <div class="card-header-icon" :style="{ background: (form.total_ttc - form.montant_regle) <= 0 ? '#F0FDF4' : '#FFF7ED', color: (form.total_ttc - form.montant_regle) <= 0 ? '#059669' : '#C2410C' }">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <h3>Encaisser un Paiement</h3>
+            <h3>Encaisser / Corriger un Paiement</h3>
           </div>
           <div class="card-body edit-form">
             <div class="form-group-custom">
-              <label>Montant Encaissé (DH) *</label>
-              <input v-model="reglement.montant" type="number" step="0.01" :max="form.total_ttc - (form.montant_regle || 0)" class="input-custom mono" style="font-size: 1.1rem; font-weight: bold; color: #059669;" />
+              <label>Montant (DH) *</label>
+              <input v-model="reglement.montant" type="number" step="0.01" class="input-custom mono" :style="{ fontSize: '1.1rem', fontWeight: 'bold', color: reglement.montant < 0 ? '#E11D48' : '#059669' }" />
               <span style="font-size: 0.7rem; color: #6B7280; margin-top: 4px;">Reste à payer : {{ formatMoney(form.total_ttc - (form.montant_regle || 0)) }} DH</span>
             </div>
             <div class="form-group-custom">
@@ -310,19 +310,18 @@
             </div>
             <div class="form-group-custom">
               <label>Réf / Observations</label>
-              <textarea v-model="reglement.observations" rows="2" class="input-custom" placeholder="N° de chèque, référence virement..."></textarea>
+              <textarea v-model="reglement.observations" rows="2" class="input-custom" placeholder="N° de chèque, référence virement, correction..."></textarea>
             </div>
-            <button class="btn-save" @click="enregistrerReglement" :disabled="saving" style="width: 100%; justify-content: center; margin-top: 8px;">
-              {{ saving ? 'Traitement...' : 'Valider l\'Encaissement' }}
+            <button class="btn-save" @click="enregistrerReglement" :disabled="saving" :style="{ width: '100%', justifyContent: 'center', marginTop: '8px', background: reglement.montant < 0 ? '#E11D48' : '' }">
+              {{ saving ? 'Traitement...' : (reglement.montant < 0 ? 'Valider la Correction (Remboursement)' : 'Valider l\'Encaissement') }}
             </button>
           </div>
         </section>
 
-        <section v-else-if="!isNew" class="info-card mb-4">
-          <div class="card-body" style="padding: 30px; text-align: center; background: #ECFDF5;">
-            <div style="font-size: 2.5rem; margin-bottom: 8px;">✅</div>
-            <p style="font-weight: 800; color: #059669; font-size: 1.1rem; text-transform: uppercase;">Facture Soldée</p>
-            <p class="text-muted" style="font-size: .85rem;">Le client a réglé la totalité.</p>
+        <section v-if="!isNew && (form.total_ttc - form.montant_regle) <= 0" class="info-card mb-4">
+          <div class="card-body" style="padding: 20px 30px; text-align: center; background: #ECFDF5;">
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">✅</div>
+            <p style="font-weight: 800; color: #059669; font-size: 0.9rem; text-transform: uppercase; margin: 0;">Facture Soldée</p>
           </div>
         </section>
 
@@ -616,7 +615,7 @@ async function save() {
 function imprimer() { window.open(`/print/facture/${route.params.id}`, '_blank') }
 
 async function enregistrerReglement() {
-  if (!reglement.value.montant || parseFloat(reglement.value.montant) <= 0) {
+  if (reglement.value.montant === null || reglement.value.montant === undefined || parseFloat(reglement.value.montant) === 0) {
     toast.error('Veuillez saisir un montant valide.'); 
     return;
   }
@@ -624,7 +623,7 @@ async function enregistrerReglement() {
   saving.value = true;
   try {
     await api.post(`/factures/${route.params.id}/reglement`, reglement.value);
-    toast.success('Encaissement enregistré avec succès !');
+    toast.success('Règlement/Correction enregistré avec succès !');
     
     reglement.value.montant = '';
     reglement.value.observations = '';
@@ -632,7 +631,7 @@ async function enregistrerReglement() {
     await loadFactureData();
     
   } catch (err) {
-    toast.error(err.response?.data?.message || 'Erreur lors de l\'encaissement.');
+    toast.error(err.response?.data?.message || 'Erreur lors de l\'enregistrement.');
   } finally {
     saving.value = false;
   }

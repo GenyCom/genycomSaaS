@@ -220,7 +220,7 @@ class FactureController extends Controller
     public function reglement(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
-            'montant'           => 'required|numeric|min:0.01',
+            'montant'           => 'required|numeric',
             'date_reglement'    => 'required|date',
             'mode_reglement_id' => 'nullable|integer',
             'observations'      => 'nullable|string',
@@ -234,12 +234,9 @@ class FactureController extends Controller
 
             $facture = Facture::where('tenant_id', $tenantId)->findOrFail($id);
 
-            $resteAPayer = $facture->total_ttc - $facture->montant_regle;
-            if ($resteAPayer <= 0) {
-                throw new \Exception("Cette facture est déjà totalement réglée.");
-            }
-
-            $montantAPayer = min((float) $data['montant'], $resteAPayer);
+            // On autorise désormais tout montant (positif ou négatif) même si la facture est soldée, 
+            // pour permettre les corrections manuelles suite à un changement de montant de facture.
+            $montantAPayer = (float) $data['montant'];
 
             $facture->reglements()->create([
                 'tenant_id'         => $tenantId,
