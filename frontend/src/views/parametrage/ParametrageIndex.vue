@@ -115,7 +115,7 @@
         </div>
       </section>
 
-      <section class="info-card">
+      <section class="info-card mb-4">
         <div class="card-header">
           <div class="card-header-icon settings-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
           <h3>Immatriculations Légales</h3>
@@ -144,9 +144,58 @@
               <label>Numéro d'affiliation CNSS</label>
               <input v-model="form.cnss" type="text" />
             </div>
-            <div class="form-group-custom" style="visibility: hidden;">
-              </div>
+            <div class="form-group-custom" style="visibility: hidden;"></div>
           </div>
+        </div>
+      </section>
+
+      <section class="info-card">
+        <div class="card-header">
+          <div class="card-header-icon settings-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+          <h3>Numérotation des Documents</h3>
+        </div>
+        <div class="card-body edit-form">
+          <div class="form-row-custom">
+            <div class="form-group-custom">
+              <label>Factures Vente</label>
+              <select v-model="form.format_numero_facture">
+                <option value="FAC-{YYYY}{MM}-{SEQ}">Mensuelle (FAC-202605-0001)</option>
+                <option value="FAC-{YYYY}-{SEQ}">Annuelle (FAC-2026-0001)</option>
+              </select>
+            </div>
+            <div class="form-group-custom">
+              <label>Devis</label>
+              <select v-model="form.format_numero_devis">
+                <option value="DEV-{YYYY}{MM}-{SEQ}">Mensuelle (DEV-202605-0001)</option>
+                <option value="DEV-{YYYY}-{SEQ}">Annuelle (DEV-2026-0001)</option>
+              </select>
+            </div>
+            <div class="form-group-custom">
+              <label>Bons de Livraison (BL)</label>
+              <select v-model="form.format_numero_bl">
+                <option value="BL-{YYYY}{MM}-{SEQ}">Mensuelle (BL-202605-0001)</option>
+                <option value="BL-{YYYY}-{SEQ}">Annuelle (BL-2026-0001)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-custom">
+            <div class="form-group-custom">
+              <label>Bons de Réception (BR)</label>
+              <select v-model="form.format_numero_br">
+                <option value="BR-{YYYY}{MM}-{SEQ}">Mensuelle (BR-202605-0001)</option>
+                <option value="BR-{YYYY}-{SEQ}">Annuelle (BR-2026-0001)</option>
+              </select>
+            </div>
+            <div class="form-group-custom">
+              <label>Factures Achat</label>
+              <select v-model="form.format_numero_facture_achat">
+                <option value="FA-{YYYY}{MM}-{SEQ}">Mensuelle (FA-202605-0001)</option>
+                <option value="FA-{YYYY}-{SEQ}">Annuelle (FA-2026-0001)</option>
+              </select>
+            </div>
+            <div class="form-group-custom" style="visibility: hidden;"></div>
+          </div>
+          <p class="help-text mt-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Le format "Annuelle" ne réinitialise pas le compteur chaque mois.</p>
         </div>
       </section>
 
@@ -206,7 +255,12 @@ const form = ref({
   rc: '',
   if_fiscal: '',
   patente: '',
-  cnss: ''
+  cnss: '',
+  format_numero_facture: '',
+  format_numero_devis: '',
+  format_numero_bl: '',
+  format_numero_br: '',
+  format_numero_facture_achat: ''
 })
 
 onMounted(async () => {
