@@ -207,18 +207,41 @@ class ReportingService
      */
     public function unpaidInvoices(): array
     {
-        $clients = DB::connection('tenant')->table('factures as f')
+        $tid = $this->tid();
+
+        // 1. Factures clients impayées
+        $facturesClients = DB::connection('tenant')->table('factures as f')
             ->join('clients as c', 'c.id', '=', 'f.client_id')
-            ->where('f.tenant_id', $this->tid())
+            ->where('f.tenant_id', $tid)
             ->whereNull('f.deleted_at')
             ->where('f.est_reglee', 0)
             ->whereNotNull('f.numero')
             ->select('f.numero', 'f.date_facture', 'f.date_echeance', 'c.societe', 'f.total_ttc', 'f.montant_regle', DB::raw("(f.total_ttc - f.montant_regle) as reste_a_payer"), DB::raw("'client' as tiers_type"))
             ->get();
 
+        // 2. Clients avec solde initial (Dette de migration)
+        $soldesInitiaux = DB::connection('tenant')->table('clients')
+            ->where('tenant_id', $tid)
+            ->whereNull('deleted_at')
+            ->where('solde_initial', '!=', 0)
+            ->select(
+                DB::raw("'SOLDE INIT.' as numero"),
+                DB::raw("NULL as date_facture"),
+                DB::raw("NULL as date_echeance"),
+                'societe',
+                'solde_initial as total_ttc',
+                DB::raw("0 as montant_regle"),
+                'solde_initial as reste_a_payer',
+                DB::raw("'client' as tiers_type")
+            )
+            ->get();
+
+        $clients = $facturesClients->concat($soldesInitiaux);
+
+        // 3. Factures fournisseurs impayées
         $fournisseurs = DB::connection('tenant')->table('factures_achats as fa')
             ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
-            ->where('fa.tenant_id', $this->tid())
+            ->where('fa.tenant_id', $tid)
             ->whereNull('fa.deleted_at')
             ->where('fa.statut', '!=', 'paye')
             ->select('fa.numero', 'fa.date_facture', 'fa.date_echeance', 'fr.societe', 'fa.montant_ttc as total_ttc', 'fa.montant_paye as montant_regle', 'fa.reste_a_payer', DB::raw("'fournisseur' as tiers_type"))
