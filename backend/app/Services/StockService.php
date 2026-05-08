@@ -166,6 +166,7 @@ class StockService
                 $mvt->delete();
             }
         });
+	}
     /**
      * Vérifier la disponibilité du stock pour une liste de produits
      */

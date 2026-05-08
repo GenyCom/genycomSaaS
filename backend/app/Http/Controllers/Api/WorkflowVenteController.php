@@ -24,7 +24,7 @@ class WorkflowVenteController extends Controller
     ) {}
 
     /**
-     * Transforme un Devis en Bon de Commande Client.
+     * Transforme un Devis en Bon de Commande Client .
      */
     public function devisToBC(Request $request, Devis $devis): JsonResponse
     {
