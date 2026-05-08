@@ -164,6 +164,8 @@ class FactureAchatController extends Controller
         }
 
         $facture->save();
+    }
+
     /**
      * Annule une facture d'achat.
      */

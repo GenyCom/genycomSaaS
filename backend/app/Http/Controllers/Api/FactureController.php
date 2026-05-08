@@ -262,6 +262,8 @@ class FactureController extends Controller
             \App\Exceptions\ExceptionMailReporter::report($e);
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
+    }
+
     /**
      * Annule une facture et ses conséquences (règlements, stock du BL lié).
      */
