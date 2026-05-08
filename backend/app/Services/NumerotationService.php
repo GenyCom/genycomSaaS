@@ -71,7 +71,7 @@ class NumerotationService
                 'AVOIR'    => 'format_numero_avoir',
                 default    => null,
             };
-            if ($field && $entreprise->$field) {
+            if ($field && !is_null($entreprise->$field) && $entreprise->$field !== '') {
                 return $entreprise->$field;
             }
         }
