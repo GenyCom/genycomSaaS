@@ -37,6 +37,11 @@
         </div>
       </div>
       <div class="topbar-actions">
+        <button v-if="!isNew" class="btn-secondary-custom" @click="imprimer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span>Imprimer</span>
+        </button>
+
         <button v-if="!isNew && brData.statut !== 'annule'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           <span>Annuler BR</span>
@@ -355,6 +360,10 @@ async function loadBR() {
   brData.value = raw
   form.value.lignes = raw.lignes || []
   form.value.observations = raw.observations || ''
+}
+
+function imprimer() {
+  window.open(`/print/br/${route.params.id}`, '_blank')
 }
 
 onMounted(async () => {
