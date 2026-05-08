@@ -283,7 +283,7 @@ onMounted(loadData)
   padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; 
 }
 
-/* ─── Structure & Hero ─── */
+/* ─── Structure &  Hero ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .back-btn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #D5D9E2; background: #fff; display: flex; align-items: center; justify-content: center; color: var(--c-muted); text-decoration: none; }
 .topbar-actions { display: flex; gap: 10px; }

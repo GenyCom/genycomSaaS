@@ -257,7 +257,7 @@ onMounted(async () => {
   padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; 
 }
 
-/* ─── Topbar ─── */
+/* ─── Topbar  ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
 .breadcrumb-parent { color: var(--c-muted); font-weight: 500; }

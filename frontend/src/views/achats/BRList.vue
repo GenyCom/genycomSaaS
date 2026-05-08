@@ -219,7 +219,7 @@ onMounted(fetchData)
 .hero-type-badge { font-size: .65rem; font-weight: 700; text-transform: uppercase; color: #D97706; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
 .hero-type-badge .dot { width: 6px; height: 6px; background: #D97706; border-radius: 50%; }
 
-/* ─── Filters ─── */
+/* ─── Filters  ─── */
 .filters-card {
   display: flex; align-items: center; gap: 16px; background: #fff;
   padding: 12px 16px; border-radius: 12px; border: 1px solid var(--c-border);

@@ -135,7 +135,7 @@ class BonReceptionController extends Controller
             $this->db()->rollBack();
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
-    } // <---- C'EST CETTE ACCOLADE QUI MANQUAIT !
+    } // <----  C'EST CETTE ACCOLADE QUI MANQUAIT !
 
     public function destroy(Request $request, int $id): JsonResponse
     {

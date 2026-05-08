@@ -135,7 +135,7 @@ class BonLivraisonController extends Controller
     }
 
     /**
-     * Annule un BL et ses mouvements de stock.
+     * Annule un BL  et ses mouvements de stock.
      */
     public function annuler(Request $request, int $id): JsonResponse
     {

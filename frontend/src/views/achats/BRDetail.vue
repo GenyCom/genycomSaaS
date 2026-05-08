@@ -238,9 +238,6 @@ const showConfirm = ref(false)
 const hasFacture = computed(() => !!brData.value.facture_achat_id)
 
 const brData = ref({})
-const loading = ref(true)
-const saving = ref(false)
-const showConfirm = ref(false)
 const showConfirmAnnuler = ref(false)
 const form = ref({
   fournisseur_id: '',
@@ -414,7 +411,7 @@ onMounted(async () => {
 .btn-secondary-custom { background: #fff; color: var(--c-muted); border: 1.5px solid #D5D9E2; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; }
 .accent-text { color: var(--c-accent); border-color: var(--c-accent-bg); }
 
-/* ─── Hero Header ─── */
+/* ─── Hero Header ──── */
 .hero-header { display: flex; align-items: center; gap: 20px; background: #fff; padding: 16px 24px; border-radius: 16px; border: 1px solid var(--c-border); margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 .br-theme { background: linear-gradient(135deg, #F59E0B, #D97706); color: #fff; }
 .hero-avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; }

@@ -1,6 +1,6 @@
 <?php
 /**
- * GenyCom Web SaaS — Routes API
+ * GenyCom Web SaaS —  Routes API
  */
 
 use App\Http\Controllers\Api\{

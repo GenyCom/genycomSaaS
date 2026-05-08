@@ -164,7 +164,7 @@ async function fetchData() {
     })
     
     // On affiche les données brutes dans la console pour voir ce qui arrive
-    console.log("✅ Réponse API Factures Achats :", data);
+    console.log("✅ Réponse API Factures Achats : ", data);
     
     items.value = data.data || (Array.isArray(data) ? data : [])
     totalPages.value = data.last_page || 1

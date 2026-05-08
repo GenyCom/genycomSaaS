@@ -440,7 +440,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ─── Design Tokens ─── */
+/* ───  Design Tokens ─── */
 .bl-detail-view {
   --c-bg: #F7F8FA; --c-surface: #FFFFFF; --c-border: #E8EAEE;
   --c-text: #1A1D23; --c-muted: #6B7280; --c-accent: #10B981;

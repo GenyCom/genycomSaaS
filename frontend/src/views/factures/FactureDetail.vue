@@ -423,7 +423,7 @@ const warehouses = ref([])
 const tauxTvaList = ref([]) 
 
 
-// --- RECHERCHE INTELLIGENTE (DOUCHETTE & AUTOCOMPLETE) ---
+// ---  RECHERCHE INTELLIGENTE (DOUCHETTE & AUTOCOMPLETE) ---
 const searchQuery = ref('')
 const searchResults = ref([])
 

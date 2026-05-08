@@ -189,7 +189,7 @@ class FactureController extends Controller
 
     public function destroy(Facture $facture): JsonResponse
     {
-        // Vérifier les règlements
+        // Vérifier les  règlements
         if ($facture->reglements()->exists() || $facture->montant_regle > 0) {
             return response()->json([
                 'message' => 'Impossible de supprimer cette facture car elle possède des règlements enregistrés. Veuillez supprimer les règlements d\'abord.'

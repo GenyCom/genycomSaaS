@@ -38,7 +38,7 @@ class FactureAchatController extends Controller
     }
 
     /**
-     * Création d'une facture d'achat (manuelle).
+     * Création d'une facture d'achat (manuelle) .
      */
     public function store(Request $request): JsonResponse
     {

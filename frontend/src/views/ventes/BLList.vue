@@ -240,7 +240,7 @@ onMounted(async () => {
   padding: 12px 28px 48px; background: var(--c-bg); min-height: 100vh; 
 }
 
-/* ─── Topbar ─── */
+/* ─── Topbar  ─── */
 .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .topbar-actions { display: flex; gap: 10px; }
 .btn-create { 
