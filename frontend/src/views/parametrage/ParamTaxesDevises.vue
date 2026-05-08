@@ -31,6 +31,12 @@
                 <input type="number" step="0.01" v-model="tvaForm.data.taux" placeholder="Ex: 20" />
               </div>
             </div>
+            <div class="form-group-custom checkbox-group">
+                <label class="checkbox-label-custom">
+                    <input type="checkbox" v-model="tvaForm.data.is_default" :true-value="1" :false-value="0" />
+                    <span class="checkbox-text">Définir comme taux par défaut</span>
+                </label>
+            </div>
             <div class="form-actions">
               <button class="btn-save-mini" @click="saveTva" :disabled="loading">Sauvegarder</button>
               <button class="btn-cancel-mini" @click="tvaForm.show = false">Annuler</button>
@@ -47,7 +53,10 @@
             </thead>
             <tbody>
               <tr v-for="tva in tvas" :key="tva.id">
-                <td class="font-medium">{{ tva.libelle || 'TVA Personnalisée' }}</td>
+                <td class="font-medium">
+                  {{ tva.libelle || 'TVA Personnalisée' }}
+                  <span v-if="tva.is_default" class="badge-default-tva">Par défaut</span>
+                </td>
                 <td class="font-bold mono text-accent">{{ Number(tva.taux).toFixed(2) }} %</td>
                 <td>
                   <div class="actions-group">
@@ -187,10 +196,10 @@ const loadData = async () => {
 // ACTIONS TVA
 // ==========================================
 const openTvaForm = () => {
-  tvaForm.value = { show: true, isEdit: false, data: { taux: '', libelle: '' } }
+  tvaForm.value = { show: true, isEdit: false, data: { taux: '', libelle: '', is_default: 0 } }
 }
 const editTva = (item) => {
-  tvaForm.value = { show: true, isEdit: true, data: { ...item } }
+  tvaForm.value = { show: true, isEdit: true, data: { ...item, is_default: item.is_default ? 1 : 0 } }
 }
 const saveTva = async () => {
   if(!tvaForm.value.data.taux || !tvaForm.value.data.libelle) return toast.error("Remplissez tous les champs obligatoires.")
@@ -324,6 +333,12 @@ onMounted(() => {
 .text-accent { color: var(--c-accent); }
 
 .badge-principal { font-size: 0.6rem; background: var(--c-accent-bg); color: var(--c-accent); padding: 3px 6px; border-radius: 4px; margin-left: 6px; font-weight: 800; text-transform: uppercase; }
+
+.badge-default-tva { font-size: 0.6rem; background: #fef3c7; color: #92400e; padding: 3px 6px; border-radius: 4px; margin-left: 6px; font-weight: 800; text-transform: uppercase; }
+
+.checkbox-label-custom { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 4px; }
+.checkbox-label-custom input { width: 16px; height: 16px; cursor: pointer; }
+.checkbox-text { font-size: 0.75rem; font-weight: 600; color: var(--c-text); }
 
 /* ─── Actions Table ─── */
 .actions-group { display: flex; gap: 6px; justify-content: flex-end; }

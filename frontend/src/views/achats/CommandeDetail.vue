@@ -320,6 +320,9 @@ function ajouterProduitAuDocument(produit) {
   // Pour une commande fournisseur, on utilise le prix d'achat
   const pu = parseFloat(produit.prix_ht_achat) || 0
   
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+
   form.value.lignes.push({
     produit_id: produit.id,
     designation: produit.designation,
@@ -327,7 +330,7 @@ function ajouterProduitAuDocument(produit) {
     unite: produit.unite || 'Unité',
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
-    taux_tva: parseFloat(produit.taux_tva) || 20,
+    taux_tva: produit.taux_tva !== null ? parseFloat(produit.taux_tva) : defaultRate,
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -368,11 +371,14 @@ function formatMoney(val) {
 }
 
 function addLine() {
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+
   form.value.lignes.push({ 
     produit_id: '', designation: '', quantite: 1, unite: 'Unité', 
     prix_unitaire: 0, 
     prix_unitaire_display: '0,00',
-    taux_tva: 20, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
+    taux_tva: tvaRate, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
   })
 }
 
@@ -387,7 +393,7 @@ function onProduitSelect(ligne) {
     ligne.designation = p.designation
     ligne.prix_unitaire = parseFloat(p.prix_ht_achat) || 0
     ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
-    ligne.taux_tva = p.taux_tva || 20
+    ligne.taux_tva = parseFloat(p.taux_tva) || 20
     ligne.unite = p.unite || 'Unité'
   }
   recalculate()

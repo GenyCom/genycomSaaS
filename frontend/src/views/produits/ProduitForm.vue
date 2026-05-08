@@ -202,11 +202,9 @@
               <div class="form-group-custom">
                 <label>Taux TVA (%)</label>
                 <select v-model="form.taux_tva" @change="recalcTTC">
-                  <option value="20">20% (Standard)</option>
-                  <option value="14">14%</option>
-                  <option value="10">10%</option>
-                  <option value="7">7%</option>
-                  <option value="0">0%</option>
+                  <option v-for="t in tauxTvaList" :key="t.id" :value="String(parseFloat(t.taux))">
+                    {{ parseFloat(t.taux) }}% {{ t.libelle ? '(' + t.libelle + ')' : '' }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -330,6 +328,7 @@ const form = ref({
 })
 
 const familles = ref([])
+const tauxTvaList = ref([])
 const errors = reactive({})
 const toast = reactive({ show: false, message: '', type: 'success' })
 const fileInput = ref(null)
@@ -504,6 +503,17 @@ onMounted(async () => {
   try {
      const { data } = await api.get('/parametrage/referentiels/familles-produit')
      familles.value = data || []
+     
+     const { data: tvaData } = await api.get('/parametrage/referentiels/taux-tva')
+     tauxTvaList.value = tvaData.data || tvaData || []
+
+     if (isNew.value && tauxTvaList.value.length > 0) {
+       const defTva = tauxTvaList.value.find(t => t.is_default) || tauxTvaList.value[0]
+       if (defTva) {
+         form.value.taux_tva = String(parseFloat(defTva.taux))
+         recalcTTC()
+       }
+     }
   } catch (e) { console.error(e) }
 
   if (!isNew.value) {

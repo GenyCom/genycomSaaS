@@ -15,11 +15,13 @@ class TauxTva extends BaseModel
         'taux',
         'libelle',
         'detail',
-        'actif'
+        'actif',
+        'is_default'
     ];
 
     protected $casts = [
         'actif' => 'boolean',
+        'is_default' => 'boolean',
         'taux' => 'decimal:3'
     ];
 }

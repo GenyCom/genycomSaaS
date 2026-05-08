@@ -40,6 +40,7 @@ class ReferentielController extends Controller
                 'libelle' => 'nullable|string|max:100',
                 'detail'  => 'nullable|string|max:255',
                 'actif'   => 'boolean',
+                'is_default' => 'boolean',
             ],
             'devises' => [
                 'nom'            => "{$requiredOrSometimes}|string|max:100",
@@ -116,6 +117,11 @@ class ReferentielController extends Controller
         }
         
         $data = $request->validate($this->getRulesFor($type));
+
+        if ($data['is_default'] ?? false) {
+            $class::query()->update(['is_default' => false]);
+        }
+
         $item = $class::create($data);
         return response()->json($item, 201);
     }
@@ -140,6 +146,11 @@ class ReferentielController extends Controller
         
         $item = $class::findOrFail($id);
         $data = $request->validate($this->getRulesFor($type, true));
+
+        if ($data['is_default'] ?? false) {
+            $class::where('id', '!=', $id)->update(['is_default' => false]);
+        }
+
         $item->update($data);
         
         return response()->json($item);

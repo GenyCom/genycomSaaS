@@ -127,6 +127,7 @@
                   <th v-if="!isNew" style="width: 15%" class="text-center">Qté Comm.</th>
                   <th style="width: 15%" class="text-center">Qté Reçue</th>
                   <th style="width: 15%" class="text-right">P.U HT (Achat)</th>
+                  <th style="width: 12%" class="text-center">TVA</th>
                   <th style="width: 15%" class="text-right">Total HT</th>
                   <th v-if="isNew" style="width: 5%"></th>
                 </tr>
@@ -154,6 +155,12 @@
                   <td>
                     <input v-if="isNew" v-model="l.prix_unitaire" type="number" step="0.01" class="input-inline-table text-right mono" />
                     <span v-else class="text-right mono" style="display:block;">{{ formatMoney(l.prix_unitaire) }}</span>
+                  </td>
+                  <td>
+                    <select v-if="isNew" v-model="l.taux_tva" class="input-inline-table text-center">
+                      <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">{{ parseFloat(t.taux) }}%</option>
+                    </select>
+                    <span v-else class="text-center" style="display:block;">{{ parseFloat(l.taux_tva) || 0 }}%</span>
                   </td>
                   <td class="text-right mono font-bold">{{ formatMoney((l.quantite_recue || 0) * (l.prix_unitaire || 0)) }}</td>
                   <td v-if="isNew" class="text-center">
@@ -229,6 +236,7 @@ const form = ref({
 const fournisseurs = ref([])
 const produits = ref([])
 const warehouses = ref([])
+const tauxTvaList = ref([])
 
 const totalArticlesRecus = computed(() => {
   return form.value.lignes.reduce((sum, l) => sum + (parseFloat(l.quantite_recue) || 0), 0)
@@ -251,7 +259,9 @@ function formatDate(d) {
 }
 
 function addLine() {
-  form.value.lignes.push({ produit_id: '', designation: '', quantite_commandee: 0, quantite_recue: 1, prix_unitaire: 0 })
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+  form.value.lignes.push({ produit_id: '', designation: '', quantite_commandee: 0, quantite_recue: 1, prix_unitaire: 0, taux_tva: tvaRate })
 }
 function removeLine(idx) { form.value.lignes.splice(idx, 1) }
 
@@ -260,6 +270,7 @@ function onProduitSelect(ligne) {
   if (p) {
     ligne.designation = p.designation
     ligne.prix_unitaire = p.prix_ht_achat || 0
+    ligne.taux_tva = parseFloat(p.taux_tva) || 20
   }
 }
 
@@ -305,14 +316,16 @@ async function executeTransform() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [fRes, pRes, wRes] = await Promise.all([
+    const [fRes, pRes, wRes, tvaRes] = await Promise.all([
       api.get('/fournisseurs', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
-      api.get('/parametrage/referentiels/entrepots')
+      api.get('/parametrage/referentiels/entrepots'),
+      api.get('/parametrage/referentiels/taux-tva')
     ])
     fournisseurs.value = fRes.data.data || fRes.data || []
     produits.value = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
     warehouses.value = wRes.data.data || wRes.data || []
+    tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
 
     // Set default warehouse
     if (!form.value.entrepot_id) {

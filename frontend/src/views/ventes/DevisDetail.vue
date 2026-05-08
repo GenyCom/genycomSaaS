@@ -361,10 +361,13 @@ function formatMoney(val) {
 }
 
 function addLine() {
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+  
   form.value.lignes.push({ 
     produit_id: '', designation: '', quantite: 1, unite: 'Unité', 
     prix_unitaire: 0, prix_unitaire_display: '0,00', 
-    taux_tva: 20, remise_pourcent: 0, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
+    taux_tva: tvaRate, remise_pourcent: 0, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
   })
 }
 

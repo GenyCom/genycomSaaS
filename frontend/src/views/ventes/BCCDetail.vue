@@ -211,8 +211,8 @@
                     </td>
                     <td class="td-center">
                       <select v-model="ligne.taux_tva" @change="recalculate" class="input-inline-table text-center tva-select">
-                        <option v-for="t in tauxTvaList" :key="t.id" :value="parseInt(t.taux)">
-                          {{ parseInt(t.taux) }}%
+                        <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">
+                          {{ parseFloat(t.taux) }}%
                         </option>
                       </select>
                     </td>
@@ -334,6 +334,9 @@ function ajouterProduitAuDocument(produit) {
   // Commande Client (Vente), donc on prend le prix de vente
   const pu = parseFloat(produit.prix_ht_vente || produit.prix_vente_ht) || 0
   
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+
   form.value.lignes.push({
     produit_id: produit.id,
     designation: produit.designation,
@@ -341,7 +344,7 @@ function ajouterProduitAuDocument(produit) {
     unite: produit.unite || 'Unité',
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
-    taux_tva: parseFloat(produit.taux_tva) || 20,
+    taux_tva: produit.taux_tva !== null ? parseFloat(produit.taux_tva) : defaultRate,
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -382,10 +385,13 @@ function formatMoney(val) {
 }
 
 function addLine() {
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+
   form.value.lignes.push({ 
     produit_id: '', designation: '', quantite: 1, unite: 'Unité', 
     prix_unitaire: 0, prix_unitaire_display: '0,00', 
-    taux_tva: 20, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
+    taux_tva: tvaRate, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
   })
 }
 

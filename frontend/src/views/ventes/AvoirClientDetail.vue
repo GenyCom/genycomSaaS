@@ -109,7 +109,7 @@
               <th style="width: 35%">Désignation & Produit</th>
               <th style="width: 12%" class="text-right">Qté</th>
               <th style="width: 15%" class="text-right">P.U HT</th>
-              <th style="width: 15%" class="text-right">TVA %</th>
+              <th style="width: 15%" class="text-center">TVA %</th>
               <th style="width: 15%" class="text-right">Total HT</th>
               <th style="width: 8%"></th>
             </tr>
@@ -127,7 +127,11 @@
               </td>
               <td><input v-model="ligne.quantite" type="number" step="0.01" class="saas-input-table text-right font-mono" min="0.01" /></td>
               <td><input v-model="ligne.prix_unitaire" type="number" step="0.01" class="saas-input-table text-right font-mono" /></td>
-              <td><input v-model="ligne.taux_tva" type="number" class="saas-input-table text-right font-mono" /></td>
+              <td>
+                <select v-model="ligne.taux_tva" class="saas-input-table text-center font-mono">
+                  <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">{{ parseFloat(t.taux) }}%</option>
+                </select>
+              </td>
               <td class="text-right amount-cell">{{ formatMoney(ligne.quantite * ligne.prix_unitaire) }}</td>
               <td class="text-center">
                 <button class="action-btn delete mx-auto" title="Supprimer la ligne" @click="removeLine(idx)">
@@ -190,6 +194,7 @@ const form = ref({
 const clients = ref([])
 const produits = ref([])
 const factures = ref([])
+const tauxTvaList = ref([])
 
 const fetchFactures = async (clientId) => {
   if (!clientId) {
@@ -212,16 +217,18 @@ async function onClientChange() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [resCl, resPr] = await Promise.all([
+    const [resCl, resPr, resTva] = await Promise.all([
       api.get('/clients'),
-      api.get('/produits')
+      api.get('/produits'),
+      api.get('/parametrage/referentiels/taux-tva')
     ])
     clients.value = resCl.data.data || resCl.data
+    tauxTvaList.value = resTva.data.data || resTva.data || []
     produits.value = (resPr.data.data || resPr.data).map(p => ({
       id: p.id,
       nom: p.designation || p.nom,
       prix_vente: parseFloat(p.prix_vente) || 0,
-      tva: p.tva || 20
+      tva: p.taux_tva || 20
     }))
 
     if (!isNew.value) {
@@ -255,7 +262,9 @@ function formatDateDisplay(dateString) {
 }
 
 function addLine() {
-  form.value.lignes.push({ produit_id: '', designation: '', quantite: 1, prix_unitaire: 0, taux_tva: 20 })
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+  form.value.lignes.push({ produit_id: '', designation: '', quantite: 1, prix_unitaire: 0, taux_tva: tvaRate })
 }
 
 function onProduitSelect(ligne) {
@@ -264,7 +273,7 @@ function onProduitSelect(ligne) {
     if (prod) {
       ligne.designation = prod.nom
       ligne.prix_unitaire = prod.prix_vente
-      ligne.taux_tva = prod.tva
+      ligne.taux_tva = parseFloat(prod.tva) || 20
     }
   }
 }

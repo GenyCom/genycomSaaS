@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS `taux_tva` (
     `libelle`           VARCHAR(50) NOT NULL,
     `detail`            VARCHAR(255) NULL,
     `actif`             TINYINT(1) DEFAULT 1,
+    `is_default`        TINYINT(1) DEFAULT 0,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
 	`ordre` INT 		DEFAULT 0,

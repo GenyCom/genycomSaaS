@@ -125,23 +125,40 @@ class CycleAchatService
 
             $numeroDette = $this->numerotation->generer($tenantId, 'DETTE');
 
-            // 4. Insérer Dette (incluant devise et taux hérité du BR)
+            // 4. Insérer Facture d'Achat
             $this->db()->insert(
                 "INSERT INTO factures_achats
-                    (tenant_id, numero, fournisseur_id, bcf_id, br_id,
+                    (tenant_id, numero, fournisseur_id,
                      date_facture, date_echeance, montant_ht, montant_tva, montant_ttc,
                      montant_paye, reste_a_payer, devise_id, taux_change_document, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), ?, ?, ?, 0, ?, ?, ?, ?, NOW())",
+                 VALUES (?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), ?, ?, ?, 0, ?, ?, ?, ?, NOW())",
                 [
-                    $tenantId, $numeroDette, $br->fournisseur_id, $br->bcf_id ?? null, $idBr,
+                    $tenantId, $numeroDette, $br->fournisseur_id,
                     $totalHt, ($totalTtc - $totalHt), $totalTtc, $totalTtc, 
                     $br->devise_id, $br->taux_change_document ?? 1.0, $userId
                 ]
             );
-            $detteId = $this->db()->getPdo()->lastInsertId();
+            $factureId = $this->db()->getPdo()->lastInsertId();
+
+            // 5. Lier le BR à la facture via la table de pivot
+            $this->db()->insert(
+                "INSERT INTO br_facture (br_id, facture_achat_id) VALUES (?, ?)",
+                [$idBr, $factureId]
+            );
+
+            // 6. Insérer dans dettes_fournisseur pour le reporting financier
+            $this->db()->insert(
+                "INSERT INTO dettes_fournisseur 
+                (tenant_id, numero, fournisseur_id, facture_id, bon_reception_id, date_dette, date_echeance, montant_ht, montant_tva, montant_total, montant_restant, montant_regle, created_at) 
+                VALUES (?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), ?, ?, ?, ?, 0, NOW())",
+                [
+                    $tenantId, 'DT-' . $numeroDette, $br->fournisseur_id, $factureId, $idBr,
+                    $totalHt, ($totalTtc - $totalHt), $totalTtc, $totalTtc
+                ]
+            );
 
             $this->db()->commit();
-            return ['id' => (int) $detteId, 'numero' => $numeroDette];
+            return ['id' => (int) $factureId, 'numero' => $numeroDette];
 
         } catch (\Throwable $e) {
             $this->db()->rollBack();
@@ -160,8 +177,8 @@ class CycleAchatService
             if (empty($br)) throw new \Exception("Bon de réception introuvable.");
             $br = $br[0];
 
-            // Vérifier si une facture est liée
-            $facture = $this->db()->select("SELECT id FROM factures_achats WHERE br_id = ? LIMIT 1", [$idBr]);
+            // Vérifier si une facture est liée via la table pivot br_facture
+            $facture = $this->db()->select("SELECT facture_achat_id FROM br_facture WHERE br_id = ? LIMIT 1", [$idBr]);
             if (!empty($facture)) {
                 throw new \Exception("Impossible de supprimer ce bon car il a déjà été facturé.");
             }

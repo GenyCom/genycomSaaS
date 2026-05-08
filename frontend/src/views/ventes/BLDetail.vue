@@ -142,6 +142,7 @@
                   <th v-if="!isNew" style="width: 15%" class="text-center">Qté Comm.</th>
                   <th style="width: 15%" class="text-center">Qté Livrée</th>
                   <th style="width: 15%" class="text-right">P.U HT</th>
+                  <th style="width: 12%" class="text-center">TVA</th>
                   <th style="width: 15%" class="text-right">Total HT</th>
                   <th v-if="isNew" style="width: 5%"></th>
                 </tr>
@@ -169,6 +170,12 @@
                   <td>
                     <input v-if="isNew" v-model="l.prix_unitaire" type="number" step="0.01" class="input-inline-table text-right mono" />
                     <span v-else class="text-right mono" style="display:block;">{{ formatMoney(l.prix_unitaire) }}</span>
+                  </td>
+                  <td>
+                    <select v-if="isNew" v-model="l.taux_tva" class="input-inline-table text-center">
+                      <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">{{ parseFloat(t.taux) }}%</option>
+                    </select>
+                    <span v-else class="text-center" style="display:block;">{{ parseFloat(l.taux_tva) }}%</span>
                   </td>
                   <td class="text-right mono font-bold">{{ formatMoney((l.quantite_livree || 0) * (l.prix_unitaire || 0)) }}</td>
                   <td v-if="isNew" class="text-center">
@@ -224,7 +231,7 @@
               <span class="total-value-bl">{{ formatMoney(totalHT) }} DH</span>
             </div>
             <div class="total-row-bl">
-              <span class="total-label-bl">TVA Totale (20%)</span>
+              <span class="total-label-bl">TVA Totale</span>
               <span class="total-value-bl">{{ formatMoney(totalTVA) }} DH</span>
             </div>
 			<div class="total-row-bl main-total-bl">
@@ -276,6 +283,7 @@ const form = ref({
 const clients = ref([])
 const produits = ref([])
 const warehouses = ref([])
+const tauxTvaList = ref([])
 
 const totalArticlesLivres = computed(() => {
   const items = isNew.value ? form.value.lignes : bl.value.lignes
@@ -286,7 +294,14 @@ const totalHT = computed(() => {
   const items = isNew.value ? form.value.lignes : bl.value.lignes
   return items?.reduce((acc, curr) => acc + (parseFloat(curr.quantite_livree) || 0) * (parseFloat(curr.prix_unitaire) || 0), 0) || 0
 })
-const totalTVA = computed(() => totalHT.value * 0.20)
+const totalTVA = computed(() => {
+  const items = isNew.value ? form.value.lignes : bl.value.lignes
+  return items?.reduce((acc, curr) => {
+    const ht = (parseFloat(curr.quantite_livree) || 0) * (parseFloat(curr.prix_unitaire) || 0)
+    const tva = ht * ((parseFloat(curr.taux_tva) || 0) / 100)
+    return acc + tva
+  }, 0) || 0
+})
 const totalTTC = computed(() => totalHT.value + totalTVA.value)
 
 const selectedClientName = computed(() => {
@@ -304,7 +319,9 @@ function formatDate(d) {
 }
 
 function addLine() {
-  form.value.lignes.push({ produit_id: '', designation: '', quantite_livree: 1, prix_unitaire: 0 })
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+  form.value.lignes.push({ produit_id: '', designation: '', quantite_livree: 1, prix_unitaire: 0, taux_tva: tvaRate })
 }
 function removeLine(idx) { form.value.lignes.splice(idx, 1) }
 
@@ -313,6 +330,7 @@ function onProduitSelect(ligne) {
   if (p) {
     ligne.designation = p.designation
     ligne.prix_unitaire = p.prix_ht_vente || p.prix_vente_ht || 0
+    ligne.taux_tva = parseFloat(p.taux_tva) || 20
   }
 }
 
@@ -361,13 +379,15 @@ onMounted(async () => {
     const requests = [
       api.get('/clients', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
-      api.get('/parametrage/referentiels/entrepots')
+      api.get('/parametrage/referentiels/entrepots'),
+      api.get('/parametrage/referentiels/taux-tva')
     ]
-    const [cRes, pRes, wRes] = await Promise.all(requests)
+    const [cRes, pRes, wRes, tvaRes] = await Promise.all(requests)
     
     clients.value = cRes.data.data || cRes.data || []
     produits.value = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
     warehouses.value = wRes.data.data || wRes.data || []
+    tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
 
     if (!form.value.entrepot_id) {
       const def = warehouses.value.find(w => w.is_default)
