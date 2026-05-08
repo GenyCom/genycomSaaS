@@ -3,8 +3,8 @@ import api from '../services/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: JSON.parse(localStorage.getItem('genycom_user') || 'null'),
-    token: localStorage.getItem('genycom_token') || null,
+    user: JSON.parse(sessionStorage.getItem('genycom_user') || 'null'),
+    token: sessionStorage.getItem('genycom_token') || null,
     loading: false,
     error: null,
   }),
@@ -26,8 +26,8 @@ export const useAuthStore = defineStore('auth', {
         const { data } = await api.post('/login', { email, password })
         this.token = data.token
         this.user = data.user
-        localStorage.setItem('genycom_token', data.token)
-        localStorage.setItem('genycom_user', JSON.stringify(data.user))
+        sessionStorage.setItem('genycom_token', data.token)
+        sessionStorage.setItem('genycom_user', JSON.stringify(data.user))
         return data
       } catch (err) {
         this.error = err.response?.data?.errors?.email?.[0] 
@@ -46,8 +46,8 @@ export const useAuthStore = defineStore('auth', {
         const { data } = await api.post('/register', formData)
         this.token = data.token
         this.user = data.user
-        localStorage.setItem('genycom_token', data.token)
-        localStorage.setItem('genycom_user', JSON.stringify(data.user))
+        sessionStorage.setItem('genycom_token', data.token)
+        sessionStorage.setItem('genycom_user', JSON.stringify(data.user))
         return data
       } catch (err) {
         this.error = err.response?.data?.message || "Erreur d'inscription"
@@ -65,8 +65,8 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.token = null
         this.user = null
-        localStorage.removeItem('genycom_token')
-        localStorage.removeItem('genycom_user')
+        sessionStorage.removeItem('genycom_token')
+        sessionStorage.removeItem('genycom_user')
       }
     },
 
@@ -74,7 +74,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await api.get('/me')
         this.user = data.user
-        localStorage.setItem('genycom_user', JSON.stringify(data.user))
+        sessionStorage.setItem('genycom_user', JSON.stringify(data.user))
       } catch {
         this.logout()
       }
@@ -82,13 +82,13 @@ export const useAuthStore = defineStore('auth', {
 
     setUser(newUser) {
       this.user = newUser
-      localStorage.setItem('genycom_user', JSON.stringify(newUser))
+      sessionStorage.setItem('genycom_user', JSON.stringify(newUser))
     },
 
     setEntrepriseInfo(entrepriseData) {
       if (this.user) {
         this.user.entreprise = entrepriseData
-        localStorage.setItem('genycom_user', JSON.stringify(this.user))
+        sessionStorage.setItem('genycom_user', JSON.stringify(this.user))
       }
     }
   },

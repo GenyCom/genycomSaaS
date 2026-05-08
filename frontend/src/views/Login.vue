@@ -53,8 +53,8 @@ onMounted(() => {
   // Always clear any existing session when landing on the login page
   auth.token = null
   auth.user = null
-  localStorage.removeItem('genycom_token')
-  localStorage.removeItem('genycom_user')
+  sessionStorage.removeItem('genycom_token')
+  sessionStorage.removeItem('genycom_user')
 
   const lastEmail = localStorage.getItem('genycom_last_email')
   if (lastEmail) {

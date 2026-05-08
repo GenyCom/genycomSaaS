@@ -11,14 +11,14 @@ const api = axios.create({
 
 // Intercepteur: ajouter le token automatiquement
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('genycom_token')
+  const token = sessionStorage.getItem('genycom_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
 
   // Ajout dynamique du header Tenant pour le multi-SaaS
   try {
-    const rawUser = localStorage.getItem('genycom_user');
+    const rawUser = sessionStorage.getItem('genycom_user');
     if (rawUser && rawUser !== 'undefined') {
       const userData = JSON.parse(rawUser) || {};
       const tenantId = userData.current_tenant_id || userData.tenant_id || userData.tenant?.id;
@@ -39,8 +39,8 @@ api.interceptors.response.use(
   (error) => {
     // Session expirée
     if (error.response?.status === 401) {
-      localStorage.removeItem('genycom_token')
-      localStorage.removeItem('genycom_user')
+      sessionStorage.removeItem('genycom_token')
+      sessionStorage.removeItem('genycom_user')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
