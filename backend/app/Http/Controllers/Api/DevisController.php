@@ -22,8 +22,7 @@ class DevisController extends Controller
                 $sq->where('numero', 'like', "%{$v}%")
                    ->orWhereHas('client', fn($cq) => $cq->where('societe', 'like', "%{$v}%"));
             }))
-            ->orderBy($request->sort_by ?? 'date_devis', $request->sort_dir ?? 'desc')
-            ->orderBy('id', 'desc');
+            ->orderBy($request->sort_by ?? 'id', $request->sort_dir ?? 'desc');
 
         return response()->json($query->paginate($request->per_page ?? 20));
     }

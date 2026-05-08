@@ -27,7 +27,7 @@ class BonLivraisonController extends Controller
                 });
             })
             ->when($request->statut, fn($q, $v) => $q->where('statut', $v))
-            ->orderBy('created_at', 'desc');
+            ->orderBy('id', 'desc');
         return response()->json($query->paginate($request->per_page ?? 20));
     }
 

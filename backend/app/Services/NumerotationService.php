@@ -66,7 +66,7 @@ class NumerotationService
 
     private function getFormat(int $tenantId, string $type): string
     {
-        $entreprise = Entreprise::where('tenant_id', $tenantId)->first();
+        $entreprise = Entreprise::first();
         
         if ($entreprise) {
             $field = match($type) {
