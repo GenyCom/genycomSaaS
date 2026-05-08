@@ -21,34 +21,44 @@ class NumerotationService
         $mois  = (int) $date->format('m');
         
         return DB::connection('tenant')->transaction(function () use ($tenantId, $typeDocument, $date, $annee, $mois) {
-            // 1. Récupérer le format personnalisé pour déterminer la périodicité
+            // 1. Récupérer le format personnalisé
             $format = $this->getFormat($tenantId, $typeDocument);
             
-            // 2. Déterminer si on utilise une séquence mensuelle ou annuelle
-            // Si le format ne contient pas {MM}, on utilise mois = 0 pour une suite annuelle
+            // LOG DE DÉBOGAGE
+            \Log::info("NumerotationService: Type=$typeDocument, Format=$format, Date=" . $date->format('Y-m-d'));
+
+            // 2. Déterminer la périodicité (Mensuelle si {MM} est présent, sinon Annuelle)
             $useMonth = str_contains($format, '{MM}');
             $moisSequence = $useMonth ? $mois : 0;
 
-            // 3. Récupérer ou créer la séquence avec verrouillage
-            $sequence = SequenceNumerotation::lockForUpdate()->firstOrCreate(
-                [
-                    'tenant_id'     => $tenantId,
-                    'type_document' => $typeDocument,
-                    'prefixe'       => $this->getPrefixe($typeDocument),
-                    'annee'         => $annee,
-                    'mois'          => $moisSequence,
-                ],
-                ['dernier_numero' => 0]
-            );
-            
-            $sequence->dernier_numero++;
-            $sequence->save();
-            
-            $seq = str_pad($sequence->dernier_numero, 4, '0', STR_PAD_LEFT);
+            // 3. Récupérer la séquence avec verrouillage
+            $seqRecord = SequenceNumerotation::where('tenant_id', $tenantId)
+                ->where('type_document', $typeDocument)
+                ->where('annee', $annee)
+                ->where('mois', $moisSequence)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$seqRecord) {
+                $seqRecord = SequenceNumerotation::create([
+                    'tenant_id'      => $tenantId,
+                    'type_document'  => $typeDocument,
+                    'prefixe'        => $this->getPrefixe($typeDocument),
+                    'annee'          => $annee,
+                    'mois'           => $moisSequence,
+                    'dernier_numero' => 0,
+                ]);
+            }
+
+            $seq = $seqRecord->dernier_numero + 1;
+            $seqRecord->update(['dernier_numero' => $seq]);
+
+            // 4. Formater le numéro
+            $seqStr = str_pad((string)$seq, 4, '0', STR_PAD_LEFT);
             
             return str_replace(
                 ['{YYYY}', '{YY}', '{MM}', '{DD}', '{SEQ}'],
-                [$annee, $date->format('y'), $date->format('m'), $date->format('d'), $seq],
+                [$annee, $date->format('y'), $date->format('m'), $date->format('d'), $seqStr],
                 $format
             );
         });
