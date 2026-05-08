@@ -7,6 +7,11 @@
       </div>
     </Transition>
 
+    <ConfirmModal 
+      :show="showConfirmModal"
+      title="Générer la Facture"
+      message="Voulez-vous générer la facture pour ce bon de livraison ? Cela créera une nouvelle facture brouillon basée sur ces articles."
+      confirmText="Générer la Facture"
       @confirm="executeTransform"
       @cancel="showConfirmModal = false"
     />

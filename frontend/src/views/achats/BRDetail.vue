@@ -7,6 +7,11 @@
       </div>
     </Transition>
 
+    <ConfirmModal 
+      :show="showConfirm"
+      title="Générer la Facture d'Achat"
+      message="Voulez-vous transformer ce Bon de Réception en Facture d'Achat ? Cela créera une nouvelle facture brouillon."
+      confirmText="Générer la Facture"
       @confirm="executeTransform"
       @cancel="showConfirm = false"
     />
