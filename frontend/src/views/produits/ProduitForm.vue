@@ -150,7 +150,12 @@
               </div>
               <div class="form-group-custom">
                 <label>Code Barre (EAN/UPC)</label>
-                <input v-model="form.code_barre" type="text" placeholder="Gencode..." />
+                <div class="input-with-action">
+                  <input v-model="form.code_barre" type="text" placeholder="Gencode..." />
+                  <button type="button" @click="generateBarcode" class="btn-action-inline" title="Générer un code EAN13 unique">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2z"/><path d="M7 7v10"/><path d="M10 7v10"/><path d="M13 7v10"/><path d="M17 7v10"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -413,6 +418,16 @@ function generateReference() {
   }, 400)
 }
 
+async function generateBarcode() {
+  try {
+    const { data } = await api.get('/produits-next-barcode')
+    if (data.barcode) form.value.code_barre = data.barcode
+    showToast('Code barre généré !')
+  } catch (e) {
+    showToast('Erreur lors de la génération', 'error')
+  }
+}
+
 function triggerUpload() {
   fileInput.value.click()
 }
@@ -637,6 +652,15 @@ input:focus { border-color: var(--c-accent); outline: none; box-shadow: 0 0 0 3p
 input.input-lg { font-size: 1.1rem; font-weight: 700; color: var(--c-accent); }
 input.mono { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--c-accent); }
 input.money-input { font-weight: 800; font-size: 1.1rem; border-color: var(--c-accent); color: var(--c-accent); }
+
+.input-with-action { display: flex; gap: 8px; }
+.input-with-action input { flex: 1; }
+.btn-action-inline {
+  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--c-border-mid);
+  background: #fff; color: var(--c-accent); cursor: pointer; transition: all .2s;
+}
+.btn-action-inline:hover { border-color: var(--c-accent); background: var(--c-accent-bg); }
 
 /* ─── Widgets ─── */
 .image-preview-zone {

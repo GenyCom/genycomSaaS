@@ -84,6 +84,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     Route::apiResource('fournisseurs', FournisseurController::class);
     Route::apiResource('produits', ProduitController::class);
     Route::get('produits-next-ref', [ProduitController::class, 'nextReference']);
+    Route::get('produits-next-barcode', [ProduitController::class, 'nextBarcode']);
     Route::apiResource('devis', DevisController::class);
     Route::apiResource('commandes', CommandeController::class);
     Route::post('stock/adjust', [StockController::class, 'adjust']);

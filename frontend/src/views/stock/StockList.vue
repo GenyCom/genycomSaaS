@@ -113,6 +113,15 @@
               </td>
             </tr>
           </tbody>
+          <tfoot v-if="filteredStock.length > 0">
+            <tr class="table-footer">
+              <td colspan="2" class="text-right font-bold">TOTAUX</td>
+              <td class="text-right font-bold">{{ totals.physique }}</td>
+              <td class="text-right font-bold text-muted">{{ totals.reservee }}</td>
+              <td class="text-right font-bold text-accent">{{ totals.disponible }}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -170,6 +179,15 @@ const filteredStock = computed(() => {
   }
 
   return filtered
+})
+
+const totals = computed(() => {
+  return filteredStock.value.reduce((acc, curr) => {
+    acc.physique += (parseFloat(curr.quantite_physique) || 0)
+    acc.reservee += (parseFloat(curr.quantite_reservee) || 0)
+    acc.disponible += (parseFloat(curr.quantite_disponible) || 0)
+    return acc
+  }, { physique: 0, reservee: 0, disponible: 0 })
 })
 
 const fetchData = async () => {
@@ -323,6 +341,10 @@ onMounted(fetchData)
 .saas-table th { background: #F9FAFB; padding: 14px 20px; font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); border-bottom: 1px solid var(--c-border); }
 .saas-table td { padding: 16px 20px; border-bottom: 1px solid var(--c-border); vertical-align: middle; color: var(--c-text); font-size: 0.9rem;}
 .table-row:hover { background: #F9FAFB; }
+
+.table-footer { background: #F8FAFC; border-top: 2px solid var(--c-border); }
+.table-footer td { padding: 14px 20px; font-size: 0.95rem; color: var(--c-text); }
+.font-bold { font-weight: 800; }
 
 .product-info { display: flex; flex-direction: column; gap: 4px; }
 .product-name { font-size: .95rem; font-weight: 700; color: var(--c-text); }

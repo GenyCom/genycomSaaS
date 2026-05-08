@@ -61,6 +61,40 @@ class ProduitController extends Controller
     }
 
     /**
+     * Generate a unique EAN13 barcode: 20 [8-digit sequential] [checksum]
+     */
+    private function generateEAN13(): string
+    {
+        $prefix = '20'; // Restricted distribution (internal use)
+        
+        // On récupère le dernier code barre généré commençant par 20
+        $lastBarcode = Produit::withoutGlobalScopes()
+            ->where('code_barre', 'like', $prefix . '%')
+            ->whereRaw('LENGTH(code_barre) = 13')
+            ->orderBy('code_barre', 'desc')
+            ->value('code_barre');
+
+        $nextNum = 1;
+        if ($lastBarcode) {
+            $base = substr($lastBarcode, 2, 10);
+            $nextNum = (int)$base + 1;
+        }
+
+        // 12 digits total before checksum
+        $code12 = $prefix . str_pad($nextNum, 10, '0', STR_PAD_LEFT);
+        
+        // Calculate EAN13 checksum
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $digit = (int)$code12[$i];
+            $sum += ($i % 2 === 0) ? $digit : $digit * 3;
+        }
+        $checksum = (10 - ($sum % 10)) % 10;
+
+        return $code12 . $checksum;
+    }
+
+    /**
      * Création sécurisée d'un produit.
      */
     public function store(StoreProduitRequest $request): JsonResponse
@@ -142,6 +176,15 @@ class ProduitController extends Controller
 
         return response()->json([
             'reference' => $this->generateReference($designation)
+        ]);
+    }
+    /**
+     * Return the next available barcode (EAN13).
+     */
+    public function nextBarcode(): JsonResponse
+    {
+        return response()->json([
+            'barcode' => $this->generateEAN13()
         ]);
     }
 }
