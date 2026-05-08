@@ -16,6 +16,7 @@ class Entreprise extends BaseModel
         'devise_id', 'exercice_debut',
         'format_numero_facture', 'format_numero_devis', 'format_numero_cmd',
         'format_numero_bl', 'format_numero_br', 'format_numero_avoir',
+        'format_numero_facture_achat', 'format_numero_bcc',
         'entete_impression', 'pied_page_impression', 'conditions_generales',
     ];
 

@@ -159,6 +159,7 @@
             <div class="form-group-custom">
               <label>Factures Vente</label>
               <select v-model="form.format_numero_facture">
+                <option value="">Choisir...</option>
                 <option value="FAC-{YYYY}{MM}-{SEQ}">Mensuelle (FAC-202605-0001)</option>
                 <option value="FAC-{YYYY}-{SEQ}">Annuelle (FAC-2026-0001)</option>
               </select>
@@ -166,6 +167,7 @@
             <div class="form-group-custom">
               <label>Devis</label>
               <select v-model="form.format_numero_devis">
+                <option value="">Choisir...</option>
                 <option value="DEV-{YYYY}{MM}-{SEQ}">Mensuelle (DEV-202605-0001)</option>
                 <option value="DEV-{YYYY}-{SEQ}">Annuelle (DEV-2026-0001)</option>
               </select>
@@ -173,6 +175,7 @@
             <div class="form-group-custom">
               <label>Bons de Livraison (BL)</label>
               <select v-model="form.format_numero_bl">
+                <option value="">Choisir...</option>
                 <option value="BL-{YYYY}{MM}-{SEQ}">Mensuelle (BL-202605-0001)</option>
                 <option value="BL-{YYYY}-{SEQ}">Annuelle (BL-2026-0001)</option>
               </select>
@@ -182,6 +185,7 @@
             <div class="form-group-custom">
               <label>Bons de Réception (BR)</label>
               <select v-model="form.format_numero_br">
+                <option value="">Choisir...</option>
                 <option value="BR-{YYYY}{MM}-{SEQ}">Mensuelle (BR-202605-0001)</option>
                 <option value="BR-{YYYY}-{SEQ}">Annuelle (BR-2026-0001)</option>
               </select>
@@ -189,6 +193,7 @@
             <div class="form-group-custom">
               <label>Factures Achat</label>
               <select v-model="form.format_numero_facture_achat">
+                <option value="">Choisir...</option>
                 <option value="FA-{YYYY}{MM}-{SEQ}">Mensuelle (FA-202605-0001)</option>
                 <option value="FA-{YYYY}-{SEQ}">Annuelle (FA-2026-0001)</option>
               </select>

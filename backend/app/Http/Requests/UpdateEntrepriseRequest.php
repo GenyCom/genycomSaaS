@@ -39,6 +39,8 @@ class UpdateEntrepriseRequest extends FormRequest
             'format_numero_bl'      => 'nullable|string|max:100',
             'format_numero_br'      => 'nullable|string|max:100',
             'format_numero_avoir'   => 'nullable|string|max:100',
+            'format_numero_facture_achat' => 'nullable|string|max:100',
+            'format_numero_bcc'     => 'nullable|string|max:100',
             'entete_impression'     => 'nullable|string',
             'pied_page_impression'  => 'nullable|string',
             'conditions_generales'  => 'nullable|string',
