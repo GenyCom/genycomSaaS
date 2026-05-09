@@ -160,6 +160,39 @@
             </button>
           </div>
           <div class="card-body p-0">
+            <div class="product-search-bar-container" v-if="isNew">
+              <div class="search-input-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input 
+                  type="text" 
+                  v-model="searchQuery" 
+                  @input="onSearchInput"
+                  @keydown.enter.prevent="selectFirstProduct"
+                  placeholder="Scanner un code-barres ou rechercher (référence, désignation)..." 
+                  class="search-input"
+                />
+                
+                <ul v-if="searchResults.length > 0" class="search-dropdown">
+                  <li 
+                    v-for="prod in searchResults" 
+                    :key="prod.id" 
+                    @click="ajouterProduitAuDocument(prod)"
+                    class="search-item"
+                  >
+                    <div class="prod-info">
+                      <span class="prod-ref" v-if="prod.reference || prod.code_barre">[{{ prod.reference || prod.code_barre }}]</span>
+                      <span class="prod-name">{{ prod.designation }}</span>
+                    </div>
+                    <div class="prod-price">{{ formatMoney(prod.prix_ht_vente || prod.prix_vente_ht || 0) }} DH HT</div>
+                  </li>
+                </ul>
+
+                <div v-if="searchQuery.length >= 2 && searchResults.length === 0" class="search-dropdown empty-result">
+                  Aucun article trouvé pour "{{ searchQuery }}"
+                </div>
+              </div>
+            </div>
+
             <table class="saas-table">
               <thead>
                 <tr>
@@ -205,6 +238,11 @@
                   <td class="text-right mono font-bold">{{ formatMoney((l.quantite_livree || 0) * (l.prix_unitaire || 0)) }}</td>
                   <td v-if="isNew" class="text-center">
                     <button @click="removeLine(idx)" class="btn-row-delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+                  </td>
+                </tr>
+                <tr v-if="isNew && form.lignes.length === 0">
+                  <td colspan="7" class="text-center" style="padding: 40px; color: var(--c-muted); font-style: italic; font-size: 0.85rem;">
+                    Utilisez la barre de recherche ci-dessus pour scanner ou ajouter un article.
                   </td>
                 </tr>
               </tbody>
@@ -313,6 +351,50 @@ const clients = ref([])
 const produits = ref([])
 const warehouses = ref([])
 const tauxTvaList = ref([])
+
+// --- RECHERCHE INTELLIGENTE (DOUCHETTE & AUTOCOMPLETE) ---
+const searchQuery = ref('')
+const searchResults = ref([])
+
+function onSearchInput() {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (q.length < 2) {
+    searchResults.value = []
+    return
+  }
+  searchResults.value = produits.value.filter(p => 
+    (p.designation && p.designation.toLowerCase().includes(q)) || 
+    (p.reference && p.reference.toLowerCase().includes(q)) || 
+    (p.code_barre && p.code_barre.toLowerCase().includes(q))
+  ).slice(0, 10) 
+}
+
+function selectFirstProduct() {
+  if (searchResults.value.length > 0) {
+    ajouterProduitAuDocument(searchResults.value[0])
+  } else if (searchQuery.value.length > 0) {
+    toast.error("Article introuvable pour cette recherche/scan.")
+    searchQuery.value = ''
+    searchResults.value = []
+  }
+}
+
+function ajouterProduitAuDocument(produit) {
+  const pu = produit.prix_ht_vente || produit.prix_vente_ht || 0
+  const defTva = tauxTvaList.value.find(t => t.is_default)
+  const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+
+  form.value.lignes.push({
+    produit_id: produit.id,
+    designation: produit.designation,
+    quantite_livree: 1,
+    prix_unitaire: pu,
+    taux_tva: (produit.taux_tva !== null && produit.taux_tva !== undefined) ? parseFloat(produit.taux_tva) : defaultRate
+  })
+  searchQuery.value = ''
+  searchResults.value = []
+}
+// ---------------------------------------------------------
 
 const totalArticlesLivres = computed(() => {
   const items = isNew.value ? form.value.lignes : bl.value.lignes
@@ -539,6 +621,23 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .select-inline-table { width: 100%; border: 1px solid #E2E8F0; border-radius: 6px; font-weight: 700; color: var(--c-accent); padding: 8px 10px; background: #fff; margin-bottom: 6px; }
 .input-inline-sub { width: 100%; border: 1px solid #E2E8F0; border-radius: 6px; font-size: .85rem; color: var(--c-text); padding: 10px; min-height: 50px; font-family: inherit; resize: vertical; display: block; }
 .input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px; background: #fff; }
+
+/* ─── BARRE DE RECHERCHE (AUTOCOMPLETE / DOUCHETTE) ─── */
+.product-search-bar-container { padding: 16px 20px; border-bottom: 1px dashed var(--c-border); background: #FCFDFE; }
+.search-input-wrapper { position: relative; max-width: 600px; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94A3B8; }
+.search-input { width: 100%; padding: 12px 14px 12px 42px; font-size: .9rem; border: 1.5px solid var(--c-accent); border-radius: 10px; box-shadow: 0 0 0 3px var(--c-accent-bg); transition: all 0.2s; background: #fff; outline: none; }
+.search-input:focus { border-color: #059669; box-shadow: 0 0 0 4px #D1FAE5; }
+
+.search-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; margin-bottom: 0; background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 50; max-height: 280px; overflow-y: auto; list-style: none; padding: 0; }
+.search-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; cursor: pointer; transition: background 0.2s; }
+.search-item:last-child { border-bottom: none; }
+.search-item:hover { background: #F8FAFC; }
+.prod-info { display: flex; align-items: center; gap: 10px; }
+.prod-ref { font-family: 'JetBrains Mono', monospace; font-size: .75rem; font-weight: 700; color: var(--c-accent); background: var(--c-accent-bg); padding: 3px 6px; border-radius: 4px; }
+.prod-name { font-weight: 600; color: var(--c-text); font-size: .85rem; }
+.prod-price { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #10B981; font-size: .85rem; }
+.empty-result { padding: 16px; text-align: center; color: var(--c-muted); font-size: .85rem; font-style: italic; }
 
 /* ─── Informations Card ─── */
 .info-item { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; display: flex; flex-direction: column; gap: 6px; }
