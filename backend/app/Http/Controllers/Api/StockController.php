@@ -40,13 +40,15 @@ class StockController extends Controller
             'motif' => 'nullable|string|max:255'
         ]);
 
+        $tenantId = $request->get('current_tenant')->id;
+
         $this->stockService->ajusterManual(
             $data['produit_id'],
             $data['entrepot_id'] ?? null,
             $data['quantite'],
             $data['type'],
             auth()->id(),
-            1 // tenant_id
+            $tenantId
         );
 
         return response()->json(['message' => 'Stock ajusté avec succès']);
@@ -63,13 +65,15 @@ class StockController extends Controller
         ]);
 
         try {
+            $tenantId = $request->get('current_tenant')->id;
+            
             // Logique de transfert (directement via service pour transaction atomique)
-            DB::transaction(function() use ($data) {
+            DB::transaction(function() use ($data, $tenantId) {
                 $this->stockService->enregistrerMouvement(
-                    $data['produit_id'], $data['quantite'], 'transfert_out', 'TRANSFER', null, auth()->id(), 1, $data['entrepot_source_id']
+                    $data['produit_id'], $data['quantite'], 'transfert_out', 'TRANSFER', null, auth()->id(), $tenantId, $data['entrepot_source_id']
                 );
                 $this->stockService->enregistrerMouvement(
-                    $data['produit_id'], $data['quantite'], 'transfert_in', 'TRANSFER', null, auth()->id(), 1, $data['entrepot_dest_id']
+                    $data['produit_id'], $data['quantite'], 'transfert_in', 'TRANSFER', null, auth()->id(), $tenantId, $data['entrepot_dest_id']
                 );
             });
             return response()->json(['message' => 'Transfert effectué']);

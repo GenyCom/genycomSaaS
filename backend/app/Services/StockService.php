@@ -20,7 +20,7 @@ class StockService
     /**
      * Obtenir ou créer l'entrepôt par défaut
      */
-    public function getDefaultEntrepotId($tenantId = 1)
+    public function getDefaultEntrepotId($tenantId)
     {
         // 1. Chercher d'abord un entrepôt marqué comme par défaut
         $entrepot = Entrepot::where('tenant_id', $tenantId)->where('is_default', true)->first();
@@ -48,7 +48,7 @@ class StockService
     /**
      * Enregistrer un mouvement de stock
      */
-    public function enregistrerMouvement($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId = 1, $entrepotId = null)
+    public function enregistrerMouvement($produitId, $quantite, $typeMouvement, $documentType, $documentId, $userId, $tenantId, $entrepotId = null)
     {
         // Debugging logs to identify who is calling this method
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
@@ -148,7 +148,7 @@ class StockService
         }
     }
 
-    public function ajusterManual($produitId, $entrepotId, $quantite, $type, $userId, $tenantId = 1)
+    public function ajusterManual($produitId, $entrepotId, $quantite, $type, $userId, $tenantId)
     {
         return $this->enregistrerMouvement($produitId, $quantite, $type, 'MANUAL', null, $userId, $tenantId, $entrepotId);
     }
