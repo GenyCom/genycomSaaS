@@ -22,14 +22,25 @@ class StockService
      */
     public function getDefaultEntrepotId($tenantId = 1)
     {
+        // 1. Chercher d'abord un entrepôt marqué comme par défaut
         $entrepot = Entrepot::where('tenant_id', $tenantId)->where('is_default', true)->first();
+        
         if (!$entrepot) {
-            $entrepot = Entrepot::create([
-                'tenant_id' => $tenantId,
-                'code' => 'DEP-PPAL',
-                'nom' => 'Dépôt Principal',
-                'is_default' => true
-            ]);
+            // 2. Si aucun n'est par défaut, chercher si le code DEP-PPAL existe déjà (pour éviter le doublon SQL)
+            $entrepot = Entrepot::where('tenant_id', $tenantId)->where('code', 'DEP-PPAL')->first();
+            
+            if ($entrepot) {
+                // On le marque comme défaut pour la prochaine fois
+                $entrepot->update(['is_default' => true]);
+            } else {
+                // 3. Sinon seulement on le crée
+                $entrepot = Entrepot::create([
+                    'tenant_id' => $tenantId,
+                    'code' => 'DEP-PPAL',
+                    'nom' => 'Dépôt Principal',
+                    'is_default' => true
+                ]);
+            }
         }
         return $entrepot->id;
     }
