@@ -103,6 +103,7 @@
                 </span>
               </td>
               <td class="text-right">
+                <div class="actions-group">
                   <button @click="imprimerTicket(f.id)" class="action-btn" title="Ticket de Caisse">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h16a2 2 0 0 1 2 2v18l-3-3-3 3-3-3-3 3-3-3-3 3V4a2 2 0 0 1 2-2z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
                   </button>
