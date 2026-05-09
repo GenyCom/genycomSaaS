@@ -93,15 +93,18 @@ class ReportingService
             ->leftJoin('produits as p', 'p.id', '=', 'lf.produit_id')
             ->where('f.tenant_id', $tid)
             ->whereNull('f.deleted_at')
+            ->whereNotNull('f.numero') // Uniquement factures validées
             ->whereBetween('f.date_facture', [$start, $end])
-            ->select('lf.montant_ht', 'lf.quantite', 'p.prix_revient', 'p.is_service')
+            ->select('lf.montant_ht', 'lf.montant_ttc', 'lf.quantite', 'p.prix_revient', 'p.is_service')
             ->get();
 
         $caHt = 0;
+        $caTtc = 0;
         $cogs = 0; // Cost of Goods Sold
 
         foreach ($lignes as $l) {
             $caHt += (float) $l->montant_ht;
+            $caTtc += (float) $l->montant_ttc;
             // Pour les services, le coût est généralement considéré comme 0 ou géré via les charges fixes (dépenses)
             if ($l->prix_revient && !$l->is_service) {
                 $cogs += (float) $l->quantite * (float) $l->prix_revient;
@@ -120,6 +123,7 @@ class ReportingService
             ],
             'profitability' => [
                 'chiffre_affaires_ht' => (float) $caHt,
+                'chiffre_affaires_ttc' => (float) $caTtc,
                 'cout_ventes_ht'      => (float) $cogs,
                 'marge_brute'         => (float) $margeBrute,
                 'charges_fixes'       => (float) $depensesDirectes,
@@ -140,17 +144,19 @@ class ReportingService
             ->leftJoin('produits as p', 'p.id', '=', 'lf.produit_id')
             ->where('f.tenant_id', $tid)
             ->whereNull('f.deleted_at')
+            ->whereNotNull('f.numero')
             ->whereBetween('f.date_facture', [$start, $end])
-            ->select('f.date_facture as date', 'lf.montant_ht', 'lf.quantite', 'p.prix_revient', 'p.is_service')
+            ->select('f.date_facture as date', 'lf.montant_ht', 'lf.montant_ttc', 'lf.quantite', 'p.prix_revient', 'p.is_service')
             ->get();
 
         $daily = [];
         foreach ($sales as $s) {
             $d = $s->date;
             if (!isset($daily[$d])) {
-                $daily[$d] = ['date' => $d, 'ca' => 0, 'cogs' => 0, 'profit' => 0];
+                $daily[$d] = ['date' => $d, 'ca' => 0, 'ca_ttc' => 0, 'cogs' => 0, 'profit' => 0];
             }
             $daily[$d]['ca'] += (float) $s->montant_ht;
+            $daily[$d]['ca_ttc'] += (float) ($s->montant_ttc ?? ($s->montant_ht * 1.2)); // Fallback simple si besoin
             if ($s->prix_revient && !$s->is_service) {
                 $daily[$d]['cogs'] += (float) $s->quantite * (float) $s->prix_revient;
             }

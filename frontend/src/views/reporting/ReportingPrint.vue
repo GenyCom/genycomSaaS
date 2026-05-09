@@ -55,6 +55,10 @@
         <h3>Rentabilité & Bénéfice Net</h3>
         <div class="summary-grid">
           <div class="summary-item">
+            <span class="label">Chiffre d'Affaires TTC</span>
+            <span class="value">{{ formatMoney(data.profitability.chiffre_affaires_ttc) }}</span>
+          </div>
+          <div class="summary-item">
             <span class="label">Chiffre d'Affaires HT</span>
             <span class="value">{{ formatMoney(data.profitability.chiffre_affaires_ht) }}</span>
           </div>

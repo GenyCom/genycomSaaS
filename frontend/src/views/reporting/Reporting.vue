@@ -349,8 +349,13 @@
         </div>
 
         <div class="profit-summary-strip mt-4">
+          <div class="profit-metric highlight">
+            <span class="p-label">Chiffre d'Affaires (TTC)</span>
+            <span class="p-value">{{ formatMoney(cashData.profitability.chiffre_affaires_ttc) }}</span>
+            <span class="p-sub">Comparaison Dashboard</span>
+          </div>
           <div class="profit-metric">
-            <span class="p-label">Chiffre d'Affaires HT</span>
+            <span class="p-label">CA Hors Taxes (HT)</span>
             <span class="p-value">{{ formatMoney(cashData.profitability.chiffre_affaires_ht) }}</span>
           </div>
           <div class="profit-metric">
