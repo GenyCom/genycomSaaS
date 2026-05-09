@@ -139,7 +139,7 @@
             <h3>Articles de la réception</h3>
             <button v-if="isNew" class="btn-add-line" @click="addLine">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Ajouter
+              Ajouter une ligne
             </button>
           </div>
           <div class="card-body p-0">
@@ -474,8 +474,6 @@ onMounted(async () => {
       brData.value = raw
       form.value.lignes = raw.lignes || []
       form.value.observations = raw.observations || ''
-    } else {
-      addLine()
     }
   } catch (e) {
     console.error(e)
@@ -534,6 +532,7 @@ onMounted(async () => {
 .card-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #F9FAFB; border-bottom: 1px solid var(--c-border); }
 .card-header h3 { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin: 0; }
 .card-header-icon { width: 28px; height: 28px; border-radius: 7px; background: #FFFBEB; color: #F59E0B; display: flex; align-items: center; justify-content: center; }
+.table-header-actions { justify-content: space-between; }
 
 /* ─── Forms ─── */
 .edit-form { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
