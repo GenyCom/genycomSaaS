@@ -126,14 +126,6 @@
           </div>
         </section>
 
-        <div v-if="form.has_bl" class="sync-notice-box animate-pulse">
-          <div class="sync-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-          </div>
-          <div class="sync-text">
-            <strong>Synchronisation automatique :</strong> Toute modification des montants ou quantités sera automatiquement répercutée sur le BL <strong>{{ form.bon_livraison?.numero }}</strong> et les mouvements de stock associés seront corrigés.
-          </div>
-        </div>
 
         <section class="info-card">
           <div class="card-header table-header-actions">
@@ -199,7 +191,8 @@
                         <option value="">-- Texte libre / Service --</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                       </select>
-                      <textarea v-model="ligne.designation" class="input-inline-sub" placeholder="Description personnalisée..."></textarea>
+                      <textarea v-model="ligne.designation" class="input-inline-sub" :class="{ 'input-error': errors[`ligne_${idx}_designation`] }" placeholder="Description personnalisée..."></textarea>
+                      <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">La désignation est requise</span>
                     </td>
                     <td class="td-center">
                       <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
@@ -370,6 +363,15 @@
           </div>
         </section>
 
+      </div>
+    </div>
+
+    <div v-if="form.has_bl" class="sync-notice-box animate-pulse mt-6">
+      <div class="sync-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+      </div>
+      <div class="sync-text">
+        <strong>Synchronisation automatique :</strong> Toute modification des montants ou quantités sera automatiquement répercutée sur le BL <strong>{{ form.bon_livraison?.numero }}</strong> et les mouvements de stock associés seront corrigés.
       </div>
     </div>
   </div>
@@ -573,25 +575,29 @@ function validateForm() {
   let isValid = true
 
   if (!form.value.client_id) {
-    errors.client_id = "Le client est requis"
+    errors.client_id = "Veuillez sélectionner un client"
     isValid = false
   }
   if (!form.value.date_facture) {
-    errors.date_facture = "La date est requise"
+    errors.date_facture = "La date de facture est obligatoire"
     isValid = false
   }
 
   if (!form.value.lignes || form.value.lignes.length === 0) {
-    toast.error('La facture doit contenir au moins une ligne.')
+    toast.error('La facture doit contenir au moins un article.')
     return false
   }
 
   form.value.lignes.forEach((l, idx) => {
     if (!l.designation || l.designation.trim() === '') {
-       toast.error(`Désignation manquante à la ligne ${idx + 1}`)
+       errors[`ligne_${idx}_designation`] = true
        isValid = false
     }
   })
+
+  if (!isValid) {
+    toast.warning('Certains champs obligatoires sont manquants ou incorrects.')
+  }
 
   return isValid
 }

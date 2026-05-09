@@ -112,10 +112,11 @@
             <div class="form-row-custom">
               <div class="form-group-custom">
                 <label>Fournisseur *</label>
-                <select v-model="form.fournisseur_id">
+                <select v-model="form.fournisseur_id" :class="{ 'input-error': errors.fournisseur_id }">
                   <option value="" disabled>Choisir un fournisseur...</option>
                   <option v-for="f in fournisseurs" :key="f.id" :value="f.id">{{ f.societe }}</option>
                 </select>
+                <span v-if="errors.fournisseur_id" class="error-text">{{ errors.fournisseur_id }}</span>
               </div>
               <div class="form-group-custom">
                 <label>Date Réception</label>
@@ -124,11 +125,12 @@
             </div>
             <div class="form-group-custom mt-2">
               <label>Dépôt de Stockage (Entrepôt) *</label>
-              <select v-model="form.entrepot_id" class="accent-select">
+              <select v-model="form.entrepot_id" class="accent-select" :class="{ 'input-error': errors.entrepot_id }">
                 <option v-for="e in warehouses" :key="e.id" :value="e.id">
                   {{ e.nom }} {{ e.is_default ? '(Par défaut)' : '' }}
                 </option>
               </select>
+              <span v-if="errors.entrepot_id" class="error-text">{{ errors.entrepot_id }}</span>
             </div>
           </div>
         </section>
@@ -195,7 +197,8 @@
                         <option value="">-- Texte libre --</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                       </select>
-                      <textarea v-model="l.designation" class="input-inline-sub" placeholder="Description..."></textarea>
+                      <textarea v-model="l.designation" class="input-inline-sub" :class="{ 'input-error': errors[`ligne_${idx}_designation`] }" placeholder="Description..."></textarea>
+                      <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">Désignation requise</span>
                     </template>
                     <template v-else>
                       <div class="article-name">{{ l.designation }}</div>
@@ -298,6 +301,7 @@ const fournisseurs = ref([])
 const produits = ref([])
 const warehouses = ref([])
 const tauxTvaList = ref([])
+const errors = reactive({})
 
 // --- RECHERCHE INTELLIGENTE (DOUCHETTE & AUTOCOMPLETE) ---
 const searchQuery = ref('')
@@ -383,10 +387,38 @@ function onProduitSelect(ligne) {
   }
 }
 
+function validateForm() {
+  Object.keys(errors).forEach(key => delete errors[key])
+  let isValid = true
+
+  if (!form.value.fournisseur_id) {
+    errors.fournisseur_id = "Fournisseur requis"
+    isValid = false
+  }
+  if (!form.value.entrepot_id) {
+    errors.entrepot_id = "Entrepôt requis"
+    isValid = false
+  }
+  if (form.value.lignes.length === 0) {
+    toast.error('Ajoutez au moins une ligne d\'article')
+    return false
+  }
+
+  form.value.lignes.forEach((l, idx) => {
+    if (!l.designation || l.designation.trim() === '') {
+       errors[`ligne_${idx}_designation`] = true
+       isValid = false
+    }
+  })
+
+  if (!isValid) {
+    toast.warning('Veuillez remplir les champs obligatoires.')
+  }
+  return isValid
+}
+
 async function save() {
-  if (!form.value.fournisseur_id) { toast.error('Sélectionnez un fournisseur'); return }
-  if (!form.value.entrepot_id) { toast.error('Sélectionnez un entrepôt'); return }
-  if (form.value.lignes.length === 0) { toast.error('Ajoutez au moins une ligne'); return }
+  if (!validateForm()) return
   
   const payload = {
     ...form.value,
@@ -606,5 +638,7 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .toast-notification.success { background: #10b981; color: #fff; }
 .toast-notification.error { background: #ef4444; color: #fff; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.input-error { border-color: #EF4444 !important; background-color: #FEF2F2 !important; }
+.error-text { color: #EF4444; font-size: 0.65rem; font-weight: 600; margin-top: 2px; }
 </style>
 

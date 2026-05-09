@@ -33,8 +33,8 @@ class StoreProduitRequest extends FormRequest
             'unite'                 => 'nullable|string|max:50',
             'image_path'            => 'nullable|string|max:500',
             'image_upload'          => 'nullable|image|max:5120',
-            'stock_initial'         => 'nullable|numeric|min:0',
-            'stock_actuel'          => 'nullable|numeric|min:0',
+            'stock_initial'         => 'nullable|numeric',
+            'stock_actuel'          => 'nullable|numeric',
             'stock_min'             => 'nullable|numeric|min:0',
             'stock_max'             => 'nullable|numeric|min:0',
             'seuil_alerte'          => 'nullable|numeric|min:0',
@@ -45,6 +45,18 @@ class StoreProduitRequest extends FormRequest
             'is_perissable'         => 'boolean',
             'is_lot'                => 'boolean',
             'garantie_mois'         => 'nullable|integer|min:0',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'designation.required' => 'La désignation du produit est obligatoire.',
+            'prix_ht_vente.required' => 'Le prix de vente HT est obligatoire.',
+            'stock_actuel.numeric' => 'Le stock actuel doit être un nombre.',
+            'reference.unique' => 'Cette référence est déjà utilisée par un autre produit.',
+            'taux_tva.max' => 'Le taux de TVA ne peut pas dépasser 100%.',
+            'taux_tva.min' => 'Le taux de TVA ne peut pas être négatif.',
         ];
     }
 }
