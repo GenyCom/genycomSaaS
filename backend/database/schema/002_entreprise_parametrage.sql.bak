@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `entreprise` (
     `conditions_generales`  TEXT NULL,
     
     -- Formats de numérotation
-    `format_numero_facture` VARCHAR(50) DEFAULT 'FAC-{YYYY}{MM}-{SEQ}',
+    `format_numero_facture` VARCHAR(50) DEFAULT 'FAC-{YYYY}-{SEQ}',
     `format_numero_devis`   VARCHAR(50) DEFAULT 'DV-{YYYY}{MM}-{SEQ}',
     `format_numero_bcc`     VARCHAR(50) DEFAULT 'BCC-{YYYY}{MM}-{SEQ}',
     `format_numero_bl`      VARCHAR(50) DEFAULT 'BL-{YYYY}{MM}-{SEQ}',
