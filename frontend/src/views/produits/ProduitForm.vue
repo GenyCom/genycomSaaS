@@ -244,6 +244,19 @@
 
             <div class="form-row-custom">
               <div class="form-group-custom">
+                <label>Stock Initial (Ouverture)</label>
+                <input v-model="form.stock_initial" type="number" step="0.01" :disabled="!isNew" :class="{ 'input-readonly': !isNew }" />
+                <small v-if="isNew" class="help-text">Définit le stock de départ et crée un mouvement initial.</small>
+              </div>
+              <div class="form-group-custom">
+                <label>Stock Actuel (Lecture seule)</label>
+                <input :value="form.stock_actuel" type="number" step="0.01" disabled class="input-readonly font-bold" />
+                <small class="help-text">Mis à jour via les BL, BR et ajustements.</small>
+              </div>
+            </div>
+
+            <div class="form-row-custom">
+              <div class="form-group-custom">
                 <label>Stock de Sécurité (Min)</label>
                 <input v-model="form.stock_min" type="number" />
               </div>
@@ -317,6 +330,8 @@ const form = ref({
   seuil_alerte: 10,
   emplacement_stock: '',
   delai_appro: 0,
+  stock_initial: 0,
+  stock_actuel: 0,
   poids: 0,
   dimensions: '',
   is_perissable: false,
@@ -468,6 +483,7 @@ async function save() {
       prix_ht_vente: parseFloat(form.value.prix_ht_vente) || 0,
       marge_pourcentage: parseFloat(form.value.marge_pourcentage) || 0,
       taux_tva: parseFloat(form.value.taux_tva) || 0,
+      stock_initial: parseFloat(form.value.stock_initial) || 0,
       famille_id: parseInt(form.value.famille_id) || null
     }
 

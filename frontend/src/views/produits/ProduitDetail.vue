@@ -170,6 +170,18 @@
             <div class="data-grid">
                <div class="data-row">
                  <div class="data-item">
+                   <span class="data-label">Stock Actuel</span>
+                   <span class="data-value font-black" :class="form.stock_actuel <= form.stock_min ? 'text-danger' : 'text-success'">
+                     {{ form.stock_actuel }} {{ form.unite }}
+                   </span>
+                 </div>
+                 <div class="data-item">
+                   <span class="data-label">Stock Initial</span>
+                   <span class="data-value">{{ form.stock_initial }} {{ form.unite }}</span>
+                 </div>
+               </div>
+               <div class="data-row">
+                 <div class="data-item">
                    <span class="data-label">Stock de Sécurité</span>
                    <span class="data-value">{{ form.stock_min }} {{ form.unite }}</span>
                  </div>
@@ -233,6 +245,8 @@ const form = ref({
   taux_tva: '20',
   prix_ttc_vente: 0,
   unite: 'Unité',
+  stock_initial: 0,
+  stock_actuel: 0,
   stock_min: 0,
   seuil_alerte: 0,
   emplacement_stock: '',
