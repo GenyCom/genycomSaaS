@@ -37,6 +37,10 @@
         </div>
       </div>
       <div class="topbar-actions">
+        <button v-if="!isNew" class="btn-secondary-custom" @click="imprimerTicket" title="Imprimer Ticket (80mm)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 2h16a2 2 0 0 1 2 2v18l-3-3-3 3-3-3-3 3-3-3-3 3V4a2 2 0 0 1 2-2z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
+          <span>Ticket</span>
+        </button>
         <button v-if="!isNew" class="btn-secondary-custom" @click="imprimer">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           <span>Imprimer PDF</span>
@@ -631,6 +635,7 @@ async function save() {
 }
 
 function imprimer() { window.open(`/print/facture/${route.params.id}`, '_blank') }
+function imprimerTicket() { window.open(`/print/ticket/${route.params.id}`, '_blank') }
 
 async function executeAnnuler() {
   showConfirmAnnuler.value = false

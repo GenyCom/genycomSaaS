@@ -103,7 +103,9 @@
                 </span>
               </td>
               <td class="text-right">
-                <div class="actions-group">
+                  <button @click="imprimerTicket(f.id)" class="action-btn" title="Ticket de Caisse">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h16a2 2 0 0 1 2 2v18l-3-3-3 3-3-3-3 3-3-3-3 3V4a2 2 0 0 1 2-2z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
+                  </button>
                   <router-link :to="`/factures/${f.id}`" class="action-btn view" title="Détails">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </router-link>
@@ -187,6 +189,10 @@ function getEtatClass(etat) {
 function isOverdue(date) {
   if (!date) return false
   return new Date(date) < new Date()
+}
+
+function imprimerTicket(id) {
+  window.open(`/print/ticket/${id}`, '_blank')
 }
 
 async function handleDelete(id) {

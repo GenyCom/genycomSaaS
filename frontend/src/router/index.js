@@ -9,6 +9,12 @@ const routes = [
     meta: { guest: true },
   },
   {
+    path: '/print/ticket/:id',
+    name: 'FactureTicket',
+    component: () => import('../views/factures/FactureTicket.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('../views/Register.vue'),
