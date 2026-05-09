@@ -160,7 +160,7 @@ class ReportingService
             $day['profit'] = $day['ca'] - $day['cogs'];
         }
 
-        return array_values(collect($daily)->sortBy('date')->toArray());
+        return array_values(collect($daily)->sortByDesc('date')->toArray());
     }
 
     /**

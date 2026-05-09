@@ -6,7 +6,20 @@
         <p class="page-subtitle">Suivi détaillé de votre performance commerciale et financière</p>
       </div>
       <div class="header-right">
-        <div class="date-picker-group">
+        <div class="period-quick-filter">
+          <select v-model="selectedPeriod" @change="handlePeriodChange" class="filter-select period">
+            <option value="today">Aujourd'hui</option>
+            <option value="yesterday">Hier</option>
+            <option value="this_week">Cette semaine</option>
+            <option value="last_week">La semaine dernière</option>
+            <option value="this_month">Ce mois-ci</option>
+            <option value="last_month">Le mois dernier</option>
+            <option value="this_quarter">Ce trimestre</option>
+            <option value="this_year">Cette année</option>
+            <option value="custom">Personnalisé</option>
+          </select>
+        </div>
+        <div class="date-picker-group" v-if="selectedPeriod === 'custom'">
           <div class="input-field">
             <label>Du</label>
             <input type="date" v-model="dateRange.start" @change="fetchData" />
@@ -444,6 +457,7 @@ const tabs = [
 
 const activeTab = ref('sales')
 const loading = ref(false)
+const selectedPeriod = ref('this_month')
 const dateRange = reactive({
   start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
   end: new Date().toISOString().split('T')[0]
@@ -518,6 +532,60 @@ async function fetchData() {
   } finally {
     loading.value = false
   }
+}
+
+function handlePeriodChange() {
+  const now = new Date()
+  let start = new Date()
+  let end = new Date()
+
+  switch (selectedPeriod.value) {
+    case 'today':
+      start = new Date(now)
+      break
+    case 'yesterday':
+      start = new Date(now)
+      start.setDate(now.getDate() - 1)
+      end = new Date(start)
+      break
+    case 'this_week':
+      const day = now.getDay()
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1) // Lundi
+      start = new Date(now.setDate(diff))
+      end = new Date()
+      break
+    case 'last_week':
+      const lastWeekNow = new Date()
+      const lday = lastWeekNow.getDay()
+      const ldiff = lastWeekNow.getDate() - lday - 6 // Lundi précédent
+      start = new Date(lastWeekNow.setDate(ldiff))
+      end = new Date(start)
+      end.setDate(start.getDate() + 6)
+      break
+    case 'this_month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1)
+      end = new Date()
+      break
+    case 'last_month':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      end = new Date(now.getFullYear(), now.getMonth(), 0)
+      break
+    case 'this_quarter':
+      const quarter = Math.floor(now.getMonth() / 3)
+      start = new Date(now.getFullYear(), quarter * 3, 1)
+      end = new Date()
+      break
+    case 'this_year':
+      start = new Date(now.getFullYear(), 0, 1)
+      end = new Date()
+      break
+    case 'custom':
+      return // On ne fait rien, l'utilisateur choisit manuellement
+  }
+
+  dateRange.start = start.toISOString().split('T')[0]
+  dateRange.end = end.toISOString().split('T')[0]
+  fetchData()
 }
 
 function formatMoney(val) {
@@ -605,6 +673,7 @@ onMounted(() => {
 }
 .filter-select:hover { border-color: #3b82f6; background-color: #f8fafc; }
 .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.filter-select.period { min-width: 140px; background-color: white; border-color: #e2e8f0; }
 
 .btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .btn-export.secondary { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
