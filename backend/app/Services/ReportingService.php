@@ -216,6 +216,7 @@ class ReportingService
             ->whereNull('f.deleted_at')
             ->where('f.est_reglee', 0)
             ->whereNotNull('f.numero')
+            ->whereRaw('(f.total_ttc - f.montant_regle) > 0.01')
             ->select('f.numero', 'f.date_facture', 'f.date_echeance', 'c.societe', 'f.total_ttc', 'f.montant_regle', DB::raw("(f.total_ttc - f.montant_regle) as reste_a_payer"), DB::raw("'client' as tiers_type"))
             ->get();
 
@@ -223,7 +224,7 @@ class ReportingService
         $soldesInitiaux = DB::connection('tenant')->table('clients')
             ->where('tenant_id', $tid)
             ->whereNull('deleted_at')
-            ->where('solde_initial', '!=', 0)
+            ->where('solde_initial', '>', 0.01)
             ->select(
                 DB::raw("'SOLDE INIT.' as numero"),
                 DB::raw("NULL as date_facture"),
@@ -244,6 +245,7 @@ class ReportingService
             ->where('fa.tenant_id', $tid)
             ->whereNull('fa.deleted_at')
             ->where('fa.statut', '!=', 'paye')
+            ->where('fa.reste_a_payer', '>', 0.01)
             ->select('fa.numero', 'fa.date_facture', 'fa.date_echeance', 'fr.societe', 'fa.montant_ttc as total_ttc', 'fa.montant_paye as montant_regle', 'fa.reste_a_payer', DB::raw("'fournisseur' as tiers_type"))
             ->get();
 

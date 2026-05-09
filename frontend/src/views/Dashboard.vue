@@ -402,7 +402,7 @@ onMounted(refreshData)
 
 .bar-wrapper { width: 100%; max-width: 38px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; cursor: pointer; }
 
-.bar { width: 100%; background: linear-gradient(180deg, #4338CA 0%, #818CF8 100%); border-radius: 6px 6px 0 0; transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; box-shadow: 0 4px 10px rgba(67, 56, 202, 0.25); }
+.bar { width: 100%; background: #3b82f6; border-radius: 6px 6px 0 0; transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 .empty-bar { background: #F1F5F9; box-shadow: none; border-radius: 4px; }
 .bar-wrapper:hover .bar { opacity: 0.8; transform: scaleY(1.02); transform-origin: bottom; }
 
