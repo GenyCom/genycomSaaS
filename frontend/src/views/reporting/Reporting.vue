@@ -317,6 +317,84 @@
           </div>
         </div>
       </div>
+
+      <!-- Caisse & Bénéfice -->
+      <div v-if="activeTab === 'cashflow'" class="tab-pane">
+        <div class="summary-cards">
+          <div class="mini-card success">
+            <span class="label">Total Encaissé (Tiers)</span>
+            <span class="value">{{ formatMoney(cashData.cash_flow.encaissements) }}</span>
+          </div>
+          <div class="mini-card neg">
+            <span class="label">Total Décaissements</span>
+            <span class="value">{{ formatMoney(cashData.cash_flow.decaissements) }}</span>
+          </div>
+          <div class="mini-card" :class="cashData.cash_flow.solde_caisse >= 0 ? 'accent' : 'neg'">
+            <span class="label">Flux de Trésorerie</span>
+            <span class="value">{{ formatMoney(cashData.cash_flow.solde_caisse) }}</span>
+          </div>
+        </div>
+
+        <div class="profit-summary-strip mt-4">
+          <div class="profit-metric">
+            <span class="p-label">Chiffre d'Affaires HT</span>
+            <span class="p-value">{{ formatMoney(cashData.profitability.chiffre_affaires_ht) }}</span>
+          </div>
+          <div class="profit-metric">
+            <span class="p-label">Coût des Ventes (Achats)</span>
+            <span class="p-value text-muted">- {{ formatMoney(cashData.profitability.cout_ventes_ht) }}</span>
+          </div>
+          <div class="profit-metric">
+            <span class="p-label">Charges Fixes (Dépenses)</span>
+            <span class="p-value text-muted">- {{ formatMoney(cashData.profitability.charges_fixes) }}</span>
+          </div>
+          <div class="profit-metric highlight">
+            <span class="p-label">Bénéfice Net</span>
+            <span class="p-value" :class="cashData.profitability.benefice_net >= 0 ? 'text-success' : 'text-danger'">
+              {{ formatMoney(cashData.profitability.benefice_net) }}
+            </span>
+            <span class="p-sub" v-if="cashData.profitability.marge_pct">Marge : {{ cashData.profitability.marge_pct }}%</span>
+          </div>
+        </div>
+
+        <div class="table-card mt-4">
+          <div class="card-header">
+            <h3>Détail Journalier (Caisse & Bénéfice)</h3>
+            <div class="header-actions">
+              <button @click="printPDF" class="btn-export secondary mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimer PDF
+              </button>
+              <button @click="exportCSV(cashData.daily_summary, 'caisse_benefice_journalier')" class="btn-export">Exporter CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-right">Chiffre d'Affaires HT</th>
+                  <th class="text-right">Coût Achats HT</th>
+                  <th class="text-right">Marge Brute HT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="day in cashData.daily_summary" :key="day.date">
+                  <td class="font-bold">{{ formatDate(day.date) }}</td>
+                  <td class="text-right font-bold">{{ formatMoney(day.ca) }}</td>
+                  <td class="text-right text-muted">{{ formatMoney(day.cogs) }}</td>
+                  <td class="text-right font-bold" :class="(day.ca - day.cogs) >= 0 ? 'text-success' : 'text-danger'">
+                    {{ formatMoney(day.ca - day.cogs) }}
+                  </td>
+                </tr>
+                <tr v-if="cashData.daily_summary.length === 0">
+                  <td colspan="4" class="empty-state">Aucune activité sur cette période</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -348,12 +426,16 @@ const IconPayments = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`
 })
 const IconUnpaid = markRaw({
-  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2.2 0 0 0 1.71 3h16.94a2.2 0 0 0 1.71-3L13.71 3.86a2.2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+})
+const IconCash = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M17 21v-2a1 1 0 0 1 1-1h1M7 21v-2a1 1 0 0 0-1-1H5M20 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2"/><circle cx="12" cy="14" r="3"/></svg>`
 })
 
 const tabs = [
   { id: 'sales', label: 'Ventes', icon: IconSales },
   { id: 'purchases', label: 'Achats & Dépenses', icon: IconPurchase },
+  { id: 'cashflow', label: 'Caisse & Bénéfice', icon: IconCash },
   { id: 'payments', label: 'Règlements', icon: IconPayments },
   { id: 'unpaid', label: 'Impayés', icon: IconUnpaid },
   { id: 'finance', label: 'Finance & Projets', icon: IconFinance },
@@ -373,6 +455,11 @@ const financeData = ref({ vat: { collected_vat: 0, deductible_vat: 0, net_vat: 0
 const stockData = ref({ total_value_purchase: 0, total_value_sale: 0 })
 const paymentData = ref([])
 const unpaidData = ref({ clients: [], fournisseurs: [], total_clients: 0, total_fournisseurs: 0 })
+const cashData = ref({
+  cash_flow: { encaissements: 0, decaissements: 0, solde_caisse: 0 },
+  profitability: { chiffre_affaires_ht: 0, cout_ventes_ht: 0, marge_brute: 0, charges_fixes: 0, benefice_net: 0, marge_pct: 0 },
+  daily_summary: []
+})
 
 const clients = ref([])
 const suppliers = ref([])
@@ -401,13 +488,14 @@ async function fetchData() {
     fournisseur_id: filters.supplierId
   }
   try {
-    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes] = await Promise.all([
+    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes, cashRes] = await Promise.all([
       api.get('/reporting/sales', { params }),
       api.get('/reporting/purchases', { params }),
       api.get('/reporting/finance', { params }),
       api.get('/reporting/stock'),
       api.get('/reporting/payments', { params }),
-      api.get('/reporting/unpaid')
+      api.get('/reporting/unpaid'),
+      api.get('/reporting/cash-flow', { params })
     ])
 
     salesData.value = salesRes.data
@@ -424,6 +512,7 @@ async function fetchData() {
     stockData.value = stockRes.data
     paymentData.value = paymentsRes.data
     unpaidData.value = unpaidRes.data
+    cashData.value = cashRes.data
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
   } finally {
@@ -450,6 +539,11 @@ function exportCSV(data, filename) {
   link.setAttribute("download", `${filename}_${dateRange.start}_to_${dateRange.end}.csv`)
   document.body.appendChild(link)
   link.click()
+}
+
+function printPDF() {
+  const url = `/print-report/cash-flow?start=${dateRange.start}&end=${dateRange.end}`
+  window.open(url, '_blank')
 }
 
 onMounted(() => {
@@ -512,7 +606,9 @@ onMounted(() => {
 .filter-select:hover { border-color: #3b82f6; background-color: #f8fafc; }
 .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 
-.btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn-export.secondary { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
+.mr-2 { margin-right: 0.5rem; }
 
 .table-responsive { overflow-x: auto; }
 .report-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -552,4 +648,42 @@ onMounted(() => {
 .text-muted { color: #64748b; }
 .report-table.mini td { padding: 8px 16px; }
 .report-table.mini th { padding: 8px 16px; }
+
+/* Profit Strip */
+.profit-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+.profit-metric {
+  background: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.profit-metric.highlight {
+  background: #f8fafc;
+  border-left: 4px solid #3b82f6;
+}
+.p-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.p-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+.p-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #3b82f6;
+}
 </style>

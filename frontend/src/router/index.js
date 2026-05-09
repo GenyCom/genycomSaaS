@@ -98,6 +98,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/print-report/cash-flow',
+    name: 'ReportingPrint',
+    component: () => import('../views/reporting/ReportingPrint.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue'),

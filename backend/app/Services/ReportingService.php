@@ -55,6 +55,114 @@ class ReportingService
         return $achats->concat($depenses)->sortByDesc('date_facture')->values()->toArray();
     }
 
+    public function cashAndProfitReport(string $start, string $end): array
+    {
+        $tid = $this->tid();
+
+        // 1. Encaissements (Paiements reçus des clients)
+        $encaissements = DB::connection('tenant')->table('reglements')
+            ->where('tenant_id', $tid)
+            ->where('payable_type', 'App\Models\Facture')
+            ->whereBetween('date_reglement', [$start, $end])
+            ->sum('montant');
+
+        // 2. Décaissements (Paiements aux fournisseurs + Dépenses directes)
+        $paiementsFournisseurs = DB::connection('tenant')->table('reglements')
+            ->where('tenant_id', $tid)
+            ->where('payable_type', 'App\Models\DetteFournisseur')
+            ->whereBetween('date_reglement', [$start, $end])
+            ->sum('montant');
+        
+        $paiementsAchatsDirects = DB::connection('tenant')->table('paiements_fournisseurs')
+            ->where('tenant_id', $tid)
+            ->whereBetween('date_paiement', [$start, $end])
+            ->sum('montant');
+
+        $depensesDirectes = DB::connection('tenant')->table('depenses')
+            ->where('tenant_id', $tid)
+            ->whereNull('deleted_at')
+            ->whereBetween('date_depense', [$start, $end])
+            ->sum('montant');
+
+        $decaissements = $paiementsFournisseurs + $paiementsAchatsDirects + $depensesDirectes;
+
+        // 3. Calcul de la rentabilité (Bénéfice)
+        // On récupère toutes les lignes de factures sur la période
+        $lignes = DB::connection('tenant')->table('ligne_facture as lf')
+            ->join('factures as f', 'f.id', '=', 'lf.facture_id')
+            ->leftJoin('produits as p', 'p.id', '=', 'lf.produit_id')
+            ->where('f.tenant_id', $tid)
+            ->whereNull('f.deleted_at')
+            ->whereBetween('f.date_facture', [$start, $end])
+            ->select('lf.montant_ht', 'lf.quantite', 'p.prix_revient', 'p.is_service')
+            ->get();
+
+        $caHt = 0;
+        $cogs = 0; // Cost of Goods Sold
+
+        foreach ($lignes as $l) {
+            $caHt += (float) $l->montant_ht;
+            // Pour les services, le coût est généralement considéré comme 0 ou géré via les charges fixes (dépenses)
+            if ($l->prix_revient && !$l->is_service) {
+                $cogs += (float) $l->quantite * (float) $l->prix_revient;
+            }
+        }
+
+        $margeBrute = $caHt - $cogs;
+        $beneficeNet = $margeBrute - (float) $depensesDirectes;
+
+        return [
+            'period' => ['start' => $start, 'end' => $end],
+            'cash_flow' => [
+                'encaissements' => (float) $encaissements,
+                'decaissements' => (float) $decaissements,
+                'solde_caisse'  => (float) ($encaissements - $decaissements),
+            ],
+            'profitability' => [
+                'chiffre_affaires_ht' => (float) $caHt,
+                'cout_ventes_ht'      => (float) $cogs,
+                'marge_brute'         => (float) $margeBrute,
+                'charges_fixes'       => (float) $depensesDirectes,
+                'benefice_net'        => (float) $beneficeNet,
+                'marge_pct'           => $caHt > 0 ? round(($beneficeNet / $caHt) * 100, 2) : 0
+            ],
+            // Détails journaliers pour le graphique / tableau
+            'daily_summary' => $this->dailyProfitSummary($start, $end, $tid)
+        ];
+    }
+
+    private function dailyProfitSummary(string $start, string $end, int $tid): array
+    {
+        // On pourrait faire une requête groupée par jour, mais pour la précision du COGS par ligne,
+        // on traite les données par date.
+        $sales = DB::connection('tenant')->table('ligne_facture as lf')
+            ->join('factures as f', 'f.id', '=', 'lf.facture_id')
+            ->leftJoin('produits as p', 'p.id', '=', 'lf.produit_id')
+            ->where('f.tenant_id', $tid)
+            ->whereNull('f.deleted_at')
+            ->whereBetween('f.date_facture', [$start, $end])
+            ->select('f.date_facture as date', 'lf.montant_ht', 'lf.quantite', 'p.prix_revient', 'p.is_service')
+            ->get();
+
+        $daily = [];
+        foreach ($sales as $s) {
+            $d = $s->date;
+            if (!isset($daily[$d])) {
+                $daily[$d] = ['date' => $d, 'ca' => 0, 'cogs' => 0, 'profit' => 0];
+            }
+            $daily[$d]['ca'] += (float) $s->montant_ht;
+            if ($s->prix_revient && !$s->is_service) {
+                $daily[$d]['cogs'] += (float) $s->quantite * (float) $s->prix_revient;
+            }
+        }
+
+        foreach ($daily as &$day) {
+            $day['profit'] = $day['ca'] - $day['cogs'];
+        }
+
+        return array_values(collect($daily)->sortBy('date')->toArray());
+    }
+
     /**
      * Analyse du CA par Client
      */

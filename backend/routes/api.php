@@ -146,6 +146,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
         Route::get('/stock', [ReportingController::class, 'stock']);
         Route::get('/payments', [ReportingController::class, 'payments']);
         Route::get('/unpaid', [ReportingController::class, 'unpaid']);
+        Route::get('/cash-flow', [ReportingController::class, 'cashFlow']);
     });
 });
 
