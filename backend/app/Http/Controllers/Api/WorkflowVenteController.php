@@ -90,8 +90,8 @@ class WorkflowVenteController extends Controller
     {
         return DB::transaction(function () use ($request, $bcc) {
             $tenantId = $request->get('current_tenant')->id;
-            $entrepotId = $request->input('entrepot_id');
-
+            $entrepotId = $request->input('entrepot_id') ?: $this->stockService->getDefaultEntrepotId($tenantId);
+            
             // --- VÉRIFICATION DISPONIBILITÉ STOCK ---
             if (!$request->boolean('force')) {
                 $lignesBcc = $bcc->lignes->map(fn($l) => [
@@ -118,7 +118,7 @@ class WorkflowVenteController extends Controller
                 'devis_id'               => $bcc->devis_id,
                 'projet_id'              => $bcc->projet_id,
                 'bon_commande_client_id' => $bcc->id,
-                'entrepot_id'            => $request->input('entrepot_id'),
+                'entrepot_id'            => $entrepotId,
                 'statut'                 => 'valide',
                 'total_ht'               => $bcc->total_ht,
                 'total_tva'              => $bcc->total_tva,
@@ -148,16 +148,18 @@ class WorkflowVenteController extends Controller
 
                 // Sortie de stock si c'est un produit (pas un service)
                 if ($ligne->produit_id) {
-                    \Log::info("WFV: bcToBL movement", ['entrepot' => $request->input('entrepot_id'), 'produit' => $ligne->produit_id]);
+                    $finalEntrepotId = $entrepotId ?: $this->stockService->getDefaultEntrepotId($tenantId);
+                    
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $ligne->produit_id]);
                     $this->stockService->enregistrerMouvement(
                         $ligne->produit_id,
                         $ligne->quantite,
                         'sortie_vente',
                         'BL',
                         $bl->id,
-                        auth()->id(),
+                        auth()->id() ?: $bcc->created_by,
                         $tenantId,
-                        $request->input('entrepot_id')
+                        $finalEntrepotId
                     );
                 }
             }
@@ -276,7 +278,7 @@ class WorkflowVenteController extends Controller
                 'facture_id'     => $facture->id,
                 'bon_commande_client_id' => $facture->bon_commande_client_id,
                 'devis_id'       => $facture->devis_id,
-                'entrepot_id'    => $request->input('entrepot_id'),
+                'entrepot_id'    => $request->input('entrepot_id') ?: $this->stockService->getDefaultEntrepotId($tenantId),
                 'statut'         => 'valide',
                 'total_ht'       => $facture->total_ht,
                 'total_tva'      => $facture->total_tva,
@@ -307,16 +309,18 @@ class WorkflowVenteController extends Controller
 
                 // Sortie de stock si c'est un produit physique
                 if ($ligne->produit_id) {
-                    \Log::info("WFV: bcToBL movement", ['entrepot' => $request->input('entrepot_id'), 'produit' => $ligne->produit_id]);
+                    $finalEntrepotId = $request->input('entrepot_id') ?: $this->stockService->getDefaultEntrepotId($tenantId);
+                    
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $ligne->produit_id]);
                     $this->stockService->enregistrerMouvement(
                         $ligne->produit_id,
                         $ligne->quantite,
                         'sortie_vente',
                         'BL',
                         $bl->id,
-                        auth()->id(),
+                        auth()->id() ?: $facture->created_by,
                         $tenantId,
-                        $request->input('entrepot_id')
+                        $finalEntrepotId
                     );
                 }
             }
