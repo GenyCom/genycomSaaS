@@ -10,7 +10,27 @@
 </template>
 
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
 import Toast from './components/common/Toast.vue'
+import { toast } from './services/toastService'
+
+const handleConnectivityChange = () => {
+  if (navigator.onLine) {
+    toast.success('Votre connexion internet est rétablie.', 'En ligne')
+  } else {
+    toast.info('Vous êtes actuellement hors ligne. Certaines fonctionnalités peuvent être limitées.', 'Hors ligne')
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('online', handleConnectivityChange)
+  window.addEventListener('offline', handleConnectivityChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('online', handleConnectivityChange)
+  window.removeEventListener('offline', handleConnectivityChange)
+})
 </script>
 
 <style>

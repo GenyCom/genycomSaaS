@@ -7,6 +7,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  timeout: 30000, // 30 secondes
 })
 
 // Intercepteur: ajouter le token automatiquement
@@ -37,6 +38,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Erreur de connexion (Internet indisponible ou serveur injoignable)
+    if (!error.response) {
+      toast.info(
+        'La connexion internet est lente ou indisponible. Veuillez vérifier votre réseau.', 
+        'État du Réseau'
+      )
+      return Promise.reject(error)
+    }
+
     // Session expirée
     if (error.response?.status === 401) {
       sessionStorage.removeItem('genycom_token')
