@@ -1,5 +1,13 @@
 <template>
   <div class="product-list-view">
+    <Teleport to="body">
+      <Transition name="zoom-fade">
+        <div v-if="hoveredImage" class="global-image-zoom" :style="{ top: zoomPos.y + 'px', left: zoomPos.x + 'px' }">
+          <img :src="hoveredImage" alt="Zoom Produit" />
+        </div>
+      </Transition>
+    </Teleport>
+
     <Transition name="fade">
       <div v-if="loading" class="loading-overlay">
         <div class="loader-ring">
@@ -144,7 +152,11 @@
               <template v-if="!collapsedGroups[familleName]">
                 <tr v-for="produit in groupProduits" :key="produit.id" class="table-row">
                   <td class="text-center">
-                    <div class="product-thumb">
+                    <div class="product-thumb" :class="{ 'has-image': produit.image_path }"
+                         @mouseenter="e => handleImageHover(e, produit.image_path)"
+                         @mouseleave="handleImageLeave"
+                         @mousemove="e => hoveredImage && updateZoomPos(e)"
+                    >
                       <img v-if="produit.image_path" :src="produit.image_path" alt="Image" class="thumb-img" />
                       <div v-else class="thumb-placeholder" :class="produit.is_service ? 'bg-service' : 'bg-produit'">
                         {{ produit.is_service ? 'SR' : 'PR' }}
@@ -237,6 +249,38 @@ const filters = reactive({
 // Sort state
 const sortBy = ref('designation')
 const sortDesc = ref(false)
+
+// Zoom state
+const hoveredImage = ref(null)
+const zoomPos = reactive({ x: 0, y: 0 })
+
+function handleImageHover(e, imagePath) {
+  if (!imagePath) return
+  hoveredImage.value = imagePath
+  updateZoomPos(e)
+}
+
+function updateZoomPos(e) {
+  const popupWidth = 320
+  const popupHeight = 320
+  let x = e.clientX + 20
+  let y = e.clientY - popupHeight / 2
+
+  if (x + popupWidth > window.innerWidth) {
+    x = e.clientX - popupWidth - 20
+  }
+  if (y < 20) y = 20
+  if (y + popupHeight > window.innerHeight) {
+    y = window.innerHeight - popupHeight - 20
+  }
+
+  zoomPos.x = x
+  zoomPos.y = y
+}
+
+function handleImageLeave() {
+  hoveredImage.value = null
+}
 
 // Group collapse state
 const collapsedGroups = reactive({})
@@ -547,8 +591,11 @@ onMounted(async () => {
   width: 40px; height: 40px; border-radius: 8px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--c-border); background: var(--c-bg);
-  flex-shrink: 0;
+  flex-shrink: 0; transition: transform 0.2s;
 }
+.product-thumb.has-image { cursor: pointer; }
+.product-thumb.has-image:hover { transform: scale(1.05); }
+
 .thumb-img { width: 100%; height: 100%; object-fit: cover; }
 .thumb-placeholder {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -556,6 +603,30 @@ onMounted(async () => {
 }
 .thumb-placeholder.bg-produit { background: linear-gradient(135deg, #64748b, #475569); }
 .thumb-placeholder.bg-service { background: linear-gradient(135deg, #eab308, #ca8a04); }
+
+.global-image-zoom {
+  position: fixed;
+  z-index: 99999;
+  background: #fff;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+.global-image-zoom img {
+  display: block;
+  max-width: 320px;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.zoom-fade-enter-active, .zoom-fade-leave-active {
+  transition: all 0.15s ease-out;
+}
+.zoom-fade-enter-from, .zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
 
 .product-ref-badge {
   font-family: 'JetBrains Mono', monospace; font-size: .78rem; font-weight: 700;
