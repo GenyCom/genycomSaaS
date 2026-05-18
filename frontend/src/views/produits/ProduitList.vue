@@ -55,10 +55,50 @@
       </div>
     </div>
 
+    <!-- Advanced Filters -->
     <div class="filters-card">
-      <div class="search-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="search" type="text" placeholder="Rechercher par référence, désignation..." />
+      <div class="quick-tabs">
+        <button 
+          v-for="tab in ['Tous', 'Actifs', 'Inactifs', 'Stock faible']" 
+          :key="tab"
+          class="tab-btn"
+          :class="{ active: currentTab === tab }"
+          @click="currentTab = tab"
+        >
+          {{ tab }}
+        </button>
+      </div>
+
+      <div class="advanced-filters">
+        <div class="search-wrapper">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input v-model="search" type="text" placeholder="Rechercher par référence, désignation..." />
+        </div>
+        
+        <div class="filter-group">
+          <select v-model="filters.famille_id" class="filter-select">
+            <option value="">Toutes les familles</option>
+            <option v-for="fam in familles" :key="fam.id" :value="fam.id">{{ fam.libelle }}</option>
+          </select>
+          
+          <select v-model="filters.type" class="filter-select">
+            <option value="">Tous les types</option>
+            <option value="produit">Produits</option>
+            <option value="service">Services</option>
+          </select>
+
+          <select v-model="filters.etat" class="filter-select">
+            <option value="">Tous les états</option>
+            <option value="actif">Actif</option>
+            <option value="inactif">Inactif</option>
+          </select>
+
+          <div class="price-range">
+            <input type="number" v-model="filters.prixMin" placeholder="Prix Min" class="filter-input-small" />
+            <span>-</span>
+            <input type="number" v-model="filters.prixMax" placeholder="Prix Max" class="filter-input-small" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -67,58 +107,88 @@
         <table class="saas-table">
           <thead>
             <tr>
-              <th>Référence</th>
-              <th>Désignation / Famille</th>
+              <th @click="handleSort('reference')" class="sortable">
+                Référence
+                <span class="sort-icon" v-if="sortBy === 'reference'">{{ sortDesc ? '↓' : '↑' }}</span>
+              </th>
+              <th @click="handleSort('designation')" class="sortable">
+                Désignation
+                <span class="sort-icon" v-if="sortBy === 'designation'">{{ sortDesc ? '↓' : '↑' }}</span>
+              </th>
               <th>Type</th>
-              <th class="text-right">Prix Vente HT</th>
-              <th class="text-center">Stock Min</th>
+              <th @click="handleSort('prix')" class="text-right sortable">
+                Prix Vente HT
+                <span class="sort-icon" v-if="sortBy === 'prix'">{{ sortDesc ? '↓' : '↑' }}</span>
+              </th>
+              <th @click="handleSort('stock')" class="text-center sortable">
+                Stock
+                <span class="sort-icon" v-if="sortBy === 'stock'">{{ sortDesc ? '↓' : '↑' }}</span>
+              </th>
               <th class="text-center">État</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="produit in filteredProduits" :key="produit.id" class="table-row">
-              <td>
-                <span class="product-ref-badge">{{ produit.reference }}</span>
-              </td>
-              <td class="designation-cell">
-                <div class="product-name">{{ produit.designation }}</div>
-                <div class="product-sub">{{ produit.famille?.libelle || 'Sans famille' }}</div>
-              </td>
-              <td>
-                <span class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
-                  {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
-                </span>
-              </td>
-              <td class="text-right">
-                <div class="price-cell">
-                  {{ formatMoney(produit.prix_ht_vente) }}
-                  <span class="currency">DH</span>
-                </div>
-              </td>
-              <td class="text-center">
-                <span class="stock-badge">{{ produit.stock_min || '0' }}</span>
-              </td>
-              <td class="text-center">
-                <span class="status-indicator" :class="produit.is_actif ? 'active' : 'inactive'">
-                  {{ produit.is_actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
-              <td class="text-right">
-                <div class="actions-group">
-                  <router-link :to="`/produits/${produit.id}`" class="action-btn view" title="Consulter">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </router-link>
-                  <router-link :to="`/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </router-link>
-                  <button @click="deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="filteredProduits.length === 0">
+            <template v-for="(groupProduits, familleName) in groupedProduits" :key="familleName">
+              <tr class="group-header" @click="toggleGroup(familleName)">
+                <td colspan="7">
+                  <div class="group-header-content">
+                    <svg :class="{ 'rotated': collapsedGroups[familleName] }" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    <strong>{{ familleName }}</strong>
+                    <span class="group-count">{{ groupProduits.length }} produit(s)</span>
+                  </div>
+                </td>
+              </tr>
+              
+              <template v-if="!collapsedGroups[familleName]">
+                <tr v-for="produit in groupProduits" :key="produit.id" class="table-row">
+                  <td>
+                    <span class="product-ref-badge">{{ produit.reference }}</span>
+                  </td>
+                  <td class="designation-cell">
+                    <div class="product-name">{{ produit.designation }}</div>
+                  </td>
+                  <td>
+                    <span class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
+                      {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="price-cell">
+                      {{ formatMoney(produit.prix_ht_vente) }}
+                      <span class="currency">DH</span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div v-if="produit.is_service" class="stock-n-a">-</div>
+                    <div v-else class="stock-display" :class="{ 'stock-low': produit.stock_actuel <= (produit.stock_min || produit.seuil_alerte || 0) }">
+                      <span class="stock-actual">{{ formatNumber(produit.stock_actuel) }}</span>
+                      <span class="stock-separator">/</span>
+                      <span class="stock-min" title="Stock Min">{{ formatNumber(produit.stock_min || 0) }}</span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="status-indicator" :class="produit.is_actif ? 'active' : 'inactive'">
+                      {{ produit.is_actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="actions-group">
+                      <router-link :to="`/produits/${produit.id}`" class="action-btn view" title="Consulter">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </router-link>
+                      <router-link :to="`/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </router-link>
+                      <button @click="deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </template>
+            <tr v-if="Object.keys(groupedProduits).length === 0">
               <td colspan="7" class="empty-row">
                 <div class="empty-content">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" color="var(--c-border-mid)"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -139,17 +209,28 @@ import api from '../../services/api'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
 
 const produits = ref([])
+const familles = ref([])
 const search = ref('')
 const loading = ref(true)
 
-const filteredProduits = computed(() => {
-  if (!search.value) return produits.value
-  const s = search.value.toLowerCase()
-  return produits.value.filter(p =>
-    (p.designation || '').toLowerCase().includes(s) ||
-    (p.reference || '').toLowerCase().includes(s)
-  )
+// Quick tabs
+const currentTab = ref('Tous')
+
+// Advanced Filters
+const filters = reactive({
+  famille_id: '',
+  type: '',
+  etat: '',
+  prixMin: null,
+  prixMax: null
 })
+
+// Sort state
+const sortBy = ref('designation')
+const sortDesc = ref(false)
+
+// Group collapse state
+const collapsedGroups = reactive({})
 
 const toast = reactive({ show: false, message: '', type: 'success' })
 const showConfirm = ref(false)
@@ -164,6 +245,10 @@ function showToast(message, type = 'success') {
 
 function formatMoney(val) {
   return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatNumber(val) {
+  return (parseFloat(val) || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 })
 }
 
 function deleteProduit(id) {
@@ -189,11 +274,115 @@ async function confirmDelete() {
   }
 }
 
+function toggleGroup(famName) {
+  collapsedGroups[famName] = !collapsedGroups[famName]
+}
+
+function handleSort(col) {
+  if (sortBy.value === col) {
+    sortDesc.value = !sortDesc.value
+  } else {
+    sortBy.value = col
+    sortDesc.value = false
+  }
+}
+
+const processedProduits = computed(() => {
+  let result = produits.value
+
+  // Tabs
+  if (currentTab.value === 'Actifs') {
+    result = result.filter(p => p.is_actif)
+  } else if (currentTab.value === 'Inactifs') {
+    result = result.filter(p => !p.is_actif)
+  } else if (currentTab.value === 'Stock faible') {
+    result = result.filter(p => !p.is_service && p.stock_actuel <= (p.stock_min || p.seuil_alerte || 0))
+  }
+
+  // Advanced Filters
+  if (filters.famille_id) {
+    result = result.filter(p => p.famille_id == filters.famille_id)
+  }
+  if (filters.type === 'service') {
+    result = result.filter(p => p.is_service)
+  } else if (filters.type === 'produit') {
+    result = result.filter(p => !p.is_service)
+  }
+  if (filters.etat === 'actif') {
+    result = result.filter(p => p.is_actif)
+  } else if (filters.etat === 'inactif') {
+    result = result.filter(p => !p.is_actif)
+  }
+  if (filters.prixMin !== null && filters.prixMin !== '') {
+    result = result.filter(p => parseFloat(p.prix_ht_vente) >= parseFloat(filters.prixMin))
+  }
+  if (filters.prixMax !== null && filters.prixMax !== '') {
+    result = result.filter(p => parseFloat(p.prix_ht_vente) <= parseFloat(filters.prixMax))
+  }
+
+  // Search
+  if (search.value) {
+    const s = search.value.toLowerCase()
+    result = result.filter(p =>
+      (p.designation || '').toLowerCase().includes(s) ||
+      (p.reference || '').toLowerCase().includes(s)
+    )
+  }
+
+  // Sort
+  result.sort((a, b) => {
+    let valA = a[sortBy.value]
+    let valB = b[sortBy.value]
+
+    if (sortBy.value === 'stock') {
+      valA = a.is_service ? -9999999 : (parseFloat(a.stock_actuel) || 0)
+      valB = b.is_service ? -9999999 : (parseFloat(b.stock_actuel) || 0)
+    }
+    if (sortBy.value === 'prix') {
+      valA = parseFloat(a.prix_ht_vente) || 0
+      valB = parseFloat(b.prix_ht_vente) || 0
+    }
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return sortDesc.value ? 1 : -1
+    if (valA > valB) return sortDesc.value ? -1 : 1
+    return 0
+  })
+
+  return result
+})
+
+const groupedProduits = computed(() => {
+  const groups = {}
+  processedProduits.value.forEach(p => {
+    const famName = p.famille?.libelle || 'Sans famille'
+    if (!groups[famName]) {
+      groups[famName] = []
+      if (collapsedGroups[famName] === undefined) {
+        collapsedGroups[famName] = false
+      }
+    }
+    groups[famName].push(p)
+  })
+  
+  const orderedGroups = {}
+  Object.keys(groups).sort().forEach(key => {
+    orderedGroups[key] = groups[key]
+  })
+  return orderedGroups
+})
+
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await api.get('/produits')
-    produits.value = data.data || data || []
+    const [prodRes, famRes] = await Promise.all([
+      api.get('/produits'),
+      api.get('/parametrage/referentiels/familles-produit')
+    ])
+    produits.value = prodRes.data.data || prodRes.data || []
+    familles.value = famRes.data.data || famRes.data || []
   } catch (error) {
     console.error('Erreur de chargement:', error)
   } finally {
@@ -261,19 +450,50 @@ onMounted(async () => {
 .hero-name { font-size: 1.4rem; font-weight: 800; margin: 0; }
 .hero-sub { font-size: .82rem; color: var(--c-muted); margin: 4px 0 0; }
 
-/* ─── Filters ─── */
+/* ─── Filters & Tabs ─── */
 .filters-card {
-  background: #fff; padding: 12px 16px; border-radius: var(--radius-md);
+  background: #fff; border-radius: var(--radius-md);
   border: 1px solid var(--c-border); margin-bottom: 20px; box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.quick-tabs {
+  display: flex; border-bottom: 1px solid var(--c-border);
+  background: #F9FAFB;
+}
+.tab-btn {
+  padding: 12px 20px; background: none; border: none; font-size: 0.9rem;
+  font-weight: 600; color: var(--c-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.tab-btn:hover { color: var(--c-text); }
+.tab-btn.active { color: var(--c-accent); border-bottom-color: var(--c-accent); background: #fff; }
+
+.advanced-filters {
+  padding: 16px; display: flex; flex-direction: column; gap: 16px;
+}
+.filter-group {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
 }
 .search-wrapper {
   display: flex; align-items: center; gap: 12px; background: var(--c-bg);
-  padding: 0 16px; border-radius: var(--radius-sm); max-width: 480px;
+  padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid var(--c-border);
 }
 .search-wrapper svg { color: var(--c-muted); }
 .search-wrapper input {
   flex: 1; padding: 12px 0; border: none; background: transparent;
   font-size: .9rem; color: var(--c-text); outline: none;
+}
+.filter-select {
+  padding: 10px 14px; border: 1px solid var(--c-border); border-radius: var(--radius-sm);
+  font-size: 0.85rem; color: var(--c-text); background: #fff; outline: none;
+  min-width: 140px; cursor: pointer;
+}
+.price-range {
+  display: flex; align-items: center; gap: 8px;
+}
+.filter-input-small {
+  width: 90px; padding: 10px 12px; border: 1px solid var(--c-border); border-radius: var(--radius-sm);
+  font-size: 0.85rem; color: var(--c-text); background: #fff; outline: none;
 }
 
 /* ─── Table ─── */
@@ -284,12 +504,34 @@ onMounted(async () => {
 .table-container-custom { overflow-x: auto; }
 .saas-table { width: 100%; border-collapse: collapse; text-align: left; }
 .saas-table th {
-  background: var(--c-subtle); padding: 14px 20px; font-size: .72rem;
+  background: #F9FAFB; padding: 14px 20px; font-size: .75rem;
   font-weight: 700; text-transform: uppercase; color: var(--c-muted);
   border-bottom: 1px solid var(--c-border); letter-spacing: .03em;
 }
-.saas-table td { padding: 16px 20px; border-bottom: 1px solid var(--c-border); vertical-align: middle; }
+.saas-table th.sortable { cursor: pointer; user-select: none; transition: background 0.2s; }
+.saas-table th.sortable:hover { background: #F1F5F9; color: var(--c-text); }
+.sort-icon { display: inline-block; margin-left: 4px; font-size: 1rem; color: var(--c-accent); }
+
+.saas-table td { padding: 14px 20px; border-bottom: 1px solid var(--c-border); vertical-align: middle; }
 .table-row:hover { background: #F9FAFB; }
+
+/* Group Headers */
+.group-header {
+  background: #F8FAFC; cursor: pointer; user-select: none; transition: background 0.2s;
+}
+.group-header:hover { background: #F1F5F9; }
+.group-header td { padding: 12px 20px; border-bottom: 1px solid var(--c-border); }
+.group-header-content {
+  display: flex; align-items: center; gap: 10px; color: var(--c-text); font-size: 0.95rem;
+}
+.group-header-content svg {
+  color: var(--c-muted); transition: transform 0.2s;
+}
+.group-header-content svg.rotated { transform: rotate(-90deg); }
+.group-count {
+  font-size: 0.8rem; font-weight: 600; color: var(--c-accent);
+  background: var(--c-accent-bg); padding: 2px 8px; border-radius: 12px; margin-left: 8px;
+}
 
 /* ─── Specific Cells ─── */
 .product-ref-badge {
@@ -297,7 +539,6 @@ onMounted(async () => {
   color: var(--c-accent); background: var(--c-accent-bg); padding: 4px 8px; border-radius: 6px;
 }
 .product-name { font-size: .9rem; font-weight: 700; color: var(--c-text); margin-bottom: 2px; }
-.product-sub { font-size: .75rem; color: var(--c-muted); }
 
 .type-pill {
   display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: .7rem;
@@ -309,10 +550,16 @@ onMounted(async () => {
 .price-cell { font-size: .95rem; font-weight: 800; color: var(--c-text); }
 .price-cell .currency { font-size: .65rem; font-weight: 600; opacity: .7; margin-left: 2px; }
 
-.stock-badge {
-  display: inline-block; min-width: 32px; padding: 4px;
+.stock-display {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;
   background: #f1f5f9; border-radius: 6px; font-weight: 700; font-size: .85rem;
+  justify-content: center; min-width: 60px;
 }
+.stock-display.stock-low { background: #fee2e2; color: #991b1b; }
+.stock-actual { font-weight: 800; }
+.stock-separator { font-weight: 400; color: var(--c-muted); font-size: 0.8rem; }
+.stock-min { color: var(--c-muted); font-size: 0.75rem; }
+.stock-n-a { color: var(--c-muted); font-size: 0.85rem; font-weight: 600; }
 
 .status-indicator {
   display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: .72rem; font-weight: 700;
