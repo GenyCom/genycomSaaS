@@ -107,6 +107,7 @@
         <table class="saas-table">
           <thead>
             <tr>
+              <th style="width: 50px;">Img</th>
               <th @click="handleSort('reference')" class="sortable">
                 Référence
                 <span class="sort-icon" v-if="sortBy === 'reference'">{{ sortDesc ? '↓' : '↑' }}</span>
@@ -131,7 +132,7 @@
           <tbody>
             <template v-for="(groupProduits, familleName) in groupedProduits" :key="familleName">
               <tr class="group-header" @click="toggleGroup(familleName)">
-                <td colspan="7">
+                <td colspan="8">
                   <div class="group-header-content">
                     <svg :class="{ 'rotated': collapsedGroups[familleName] }" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                     <strong>{{ familleName }}</strong>
@@ -142,6 +143,14 @@
               
               <template v-if="!collapsedGroups[familleName]">
                 <tr v-for="produit in groupProduits" :key="produit.id" class="table-row">
+                  <td class="text-center">
+                    <div class="product-thumb">
+                      <img v-if="produit.image_path" :src="produit.image_path" alt="Image" class="thumb-img" />
+                      <div v-else class="thumb-placeholder" :class="produit.is_service ? 'bg-service' : 'bg-produit'">
+                        {{ produit.is_service ? 'SR' : 'PR' }}
+                      </div>
+                    </div>
+                  </td>
                   <td>
                     <span class="product-ref-badge">{{ produit.reference }}</span>
                   </td>
@@ -189,7 +198,7 @@
               </template>
             </template>
             <tr v-if="Object.keys(groupedProduits).length === 0">
-              <td colspan="7" class="empty-row">
+              <td colspan="8" class="empty-row">
                 <div class="empty-content">
                   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" color="var(--c-border-mid)"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                   <p>Aucun produit ne correspond à votre recherche.</p>
@@ -534,6 +543,20 @@ onMounted(async () => {
 }
 
 /* ─── Specific Cells ─── */
+.product-thumb {
+  width: 40px; height: 40px; border-radius: 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--c-border); background: var(--c-bg);
+  flex-shrink: 0;
+}
+.thumb-img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 800; color: #fff;
+}
+.thumb-placeholder.bg-produit { background: linear-gradient(135deg, #64748b, #475569); }
+.thumb-placeholder.bg-service { background: linear-gradient(135deg, #eab308, #ca8a04); }
+
 .product-ref-badge {
   font-family: 'JetBrains Mono', monospace; font-size: .78rem; font-weight: 700;
   color: var(--c-accent); background: var(--c-accent-bg); padding: 4px 8px; border-radius: 6px;
