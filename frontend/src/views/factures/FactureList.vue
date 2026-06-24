@@ -12,7 +12,7 @@
         <div class="breadcrumb">
           <span class="breadcrumb-parent">Ventes</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-          <span class="breadcrumb-current">Factures Clients</span>
+          <span class="breadcrumb-current">Factures de Vente</span>
         </div>
       </div>
       <div class="topbar-actions">
@@ -34,7 +34,7 @@
           <span class="dot"></span>
           Gestion Financière
         </div>
-        <h1 class="hero-name">Factures Clients</h1>
+        <h1 class="hero-name">Factures de Vente</h1>
         <p class="hero-sub">Vous gérez <strong>{{ factures.length }}</strong> document(s) de facturation au total.</p>
       </div>
     </div>
@@ -131,7 +131,7 @@
     <ConfirmModal 
       :show="showConfirm"
       title="Supprimer la Facture"
-      message="Voulez-vous vraiment supprimer cette facture client ? Cette action annulera la créance."
+      message="Voulez-vous vraiment supprimer cette facture de vente ? Cette action annulera la créance."
       confirmText="Supprimer la facture"
       @confirm="confirmDelete"
       @cancel="showConfirm = false"

@@ -32,6 +32,10 @@
             <svg v-else-if="n.data.type === 'devis_relance' || n.type === 'devis_relance'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
+            <!-- Icone Chèque -->
+            <svg v-else-if="n.data.type === 'cheque_due_soon' || n.type === 'cheque_due_soon' || n.data.type === 'cheque_overdue' || n.type === 'cheque_overdue'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 14h.01M11 14h.01M15 14h.01M7 18h.01M11 18h.01M15 18h.01M3 6h18M3 8h18"/>
+            </svg>
             <!-- Icone Par défaut (Dépenses, etc) -->
             <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/>
@@ -84,6 +88,7 @@ async function handleNotifClick(notification) {
   if (d.facture_id) router.push(`/factures/${d.facture_id}`)
   else if (d.devis_id) router.push(`/devis/${d.devis_id}`)
   else if (d.produit_id) router.push(`/stock`) // Ou vers la fiche produit si elle existe
+  else if (d.cheque_id) router.push(`/reporting?tab=cheques`)
   
   isOpen.value = false
 }
@@ -195,6 +200,8 @@ onUnmounted(() => {
 .notif-icon.stock_alert { background: #FFF7ED; color: #EA580C; }
 .notif-icon.facture_overdue { background: #FEF2F2; color: #DC2626; }
 .notif-icon.devis_relance { background: #EEF2FF; color: #4F46E5; }
+.notif-icon.cheque_due_soon { background: #FEF3C7; color: #D97706; }
+.notif-icon.cheque_overdue { background: #FEE2E2; color: #DC2626; }
 
 .notif-content { flex: 1; min-width: 0; }
 .notif-title { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin: 0 0 2px 0; line-height: 1.2; }

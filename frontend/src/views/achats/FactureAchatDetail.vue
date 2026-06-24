@@ -64,7 +64,7 @@
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div class="kpi-body">
           <p class="kpi-label">Montant Total TTC</p>
-          <p class="kpi-value">{{ formatMoney(facture.montant_ttc) }} <span>DH</span></p>
+          <p class="kpi-value highlighted-kpi">{{ formatMoney(facture.montant_ttc) }} <span>DH</span></p>
         </div>
       </div>
       <div class="kpi-divider"></div>
@@ -167,8 +167,8 @@
               <span class="total-value mono">{{ formatMoney(facture.montant_tva) }} <small>DH</small></span>
             </div>
             <div class="total-separator-line"></div>
-            <div class="total-flex-row">
-              <span class="total-label" style="color: var(--c-text);">TOTAL TTC</span>
+            <div class="total-flex-row main-total-row">
+              <span class="total-label" style="color: var(--c-text); font-weight: 700;">TOTAL TTC</span>
               <span class="total-value mono">{{ formatMoney(facture.montant_ttc) }} <small>DH</small></span>
             </div>
             <div class="total-flex-row" style="color: #059669; margin-top: 4px;">
@@ -302,6 +302,7 @@ onMounted(loadData)
 .kpi-item { flex: 1; padding: 18px 22px; display: flex; align-items: center; gap: 14px; }
 .kpi-divider { width: 1px; background: var(--c-border); margin: 12px 0; }
 .kpi-value { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.kpi-value.highlighted-kpi { font-size: 1.4rem; font-weight: 900; color: var(--c-accent); }
 .danger-item .kpi-icon { background: #FEF2F2; color: #DC2626; }
 .success-item .kpi-icon { background: #ECFDF5; color: #059669; }
 
@@ -333,10 +334,25 @@ onMounted(loadData)
 }
 .total-inner { padding: 24px; }
 .total-flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.total-label { font-size: 0.75rem; color: var(--c-muted); font-weight: 600; text-transform: uppercase; }
-.total-value { font-weight: 700; font-size: 1rem; color: var(--c-text); }
-.total-value small { opacity: 0.5; font-size: 0.7rem; font-weight: 600; }
+.total-label { font-size: 0.72rem; color: var(--c-muted); font-weight: 600; text-transform: uppercase; }
+.total-value { font-weight: 600; font-size: 0.9rem; color: var(--c-text); }
+.total-value small { opacity: 0.5; font-size: 0.65rem; font-weight: 600; }
 .total-separator-line { height: 1px; background: #F1F5F9; margin: 16px 0; }
+
+.total-flex-row.main-total-row {
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+.total-flex-row.main-total-row .total-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--c-text);
+}
+.total-flex-row.main-total-row .total-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--c-accent);
+}
 
 .reste-a-payer-block {
   margin-top: 20px;
@@ -362,14 +378,14 @@ onMounted(loadData)
 }
 .is-paid .rap-label { color: #059669; }
 .rap-amount {
-  font-size: 2rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #B91C1C;
-  letter-spacing: -1px;
-  line-height: 1;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
 }
 .is-paid .rap-amount { color: #047857; }
-.rap-amount small { font-size: 0.9rem; font-weight: 700; opacity: 0.8; }
+.rap-amount small { font-size: 0.85rem; font-weight: 700; opacity: 0.8; }
 
 .total-footer-bar { background: #F9FAFB; padding: 10px 24px; font-size: 0.65rem; text-align: right; color: var(--c-muted); font-weight: 700; text-transform: uppercase; border-top: 1px solid #F1F5F9; }
 

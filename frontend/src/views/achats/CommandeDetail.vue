@@ -78,7 +78,7 @@
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="kpi-body">
           <p class="kpi-label">Montant à Régler TTC</p>
-          <p class="kpi-value">{{ formatMoney(form.total_ttc) }} <span>DH</span></p>
+          <p class="kpi-value highlighted-kpi">{{ formatMoney(form.total_ttc) }} <span>DH</span></p>
         </div>
       </div>
     </div>
@@ -564,6 +564,7 @@ onMounted(async () => {
 .kpi-item.neutral .kpi-icon { background: #F1F5F9; color: #475569; }
 .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin-bottom: 3px; }
 .kpi-value { font-size: 1.25rem; font-weight: 800; margin: 0; }
+.kpi-value.highlighted-kpi { font-size: 1.4rem; font-weight: 900; color: var(--c-accent); }
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */

@@ -55,10 +55,9 @@
             <label class="saas-label">Catégorie</label>
             <select v-model="form.categorie_id" class="saas-select" :disabled="!editMode">
               <option :value="null">Sélectionner une catégorie</option>
-              <option value="1">Énergie (Électricité, Eau)</option>
-              <option value="2">Fournitures de bureau</option>
-              <option value="3">Loyer</option>
-              <option value="4">Abonnements SaaS / Logiciels</option>
+              <option v-for="c in categories" :key="c.id" :value="c.id">
+                {{ c.parent ? `${c.parent.libelle} > ` : '' }}{{ c.libelle }}
+              </option>
             </select>
           </div>
         </div>
@@ -134,6 +133,7 @@ const route = useRoute()
 const isNew = computed(() => !route.params.id || route.params.id === 'new')
 const editMode = ref(isNew.value)
 const loading = ref(false)
+const categories = ref([])
 
 const form = ref({
   id: '',
@@ -154,6 +154,13 @@ function formatDateDisplay(dateString) {
 }
 
 onMounted(async () => {
+  try {
+    const { data } = await api.get('/parametrage/referentiels/categories-depense')
+    categories.value = data || []
+  } catch (error) {
+    console.error('Erreur chargement catégories dépenses:', error)
+  }
+
   if (!isNew.value) {
     loading.value = true
     try {

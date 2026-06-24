@@ -781,3 +781,19 @@ html[data-theme="dark"] .data-table tbody tr:nth-child(even) {
 .danger-text { color: #DC2626 !important; border-color: #FCA5A5 !important; }
 .danger-text:hover { background: #FEF2F2 !important; }
 
+/* ─── Unification de la police des montants (Inter sans-serif + alignement tabulaire) ─── */
+.mono,
+.font-mono,
+.amount-cell,
+.prod-price,
+.total-value,
+.rap-amount,
+.kpi-value,
+.td-total,
+.saas-table td.text-right,
+.saas-table th.text-right {
+  font-family: var(--font-family) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+

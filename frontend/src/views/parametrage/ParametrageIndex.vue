@@ -43,6 +43,7 @@
       <button class="tab-btn" :class="{ active: activeTab === 'reglements' }" @click="activeTab = 'reglements'">Règlements</button>
       <button class="tab-btn" :class="{ active: activeTab === 'produits' }" @click="activeTab = 'produits'">Familles de Produits</button>
       <button class="tab-btn" :class="{ active: activeTab === 'etats' }" @click="activeTab = 'etats'">États des Documents</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'categories-depense' }" @click="activeTab = 'categories-depense'">Catégories de Dépenses</button>
     </div>
 
     <div v-if="activeTab === 'general'" class="content-grid-single">
@@ -198,7 +199,14 @@
                 <option value="FA-{YYYY}-{SEQ}">Annuelle (FA-2026-0001)</option>
               </select>
             </div>
-            <div class="form-group-custom" style="visibility: hidden;"></div>
+            <div class="form-group-custom">
+              <label>Dépenses</label>
+              <select v-model="form.format_numero_depense">
+                <option value="">Choisir...</option>
+                <option value="DP-{YYYY}{MM}-{SEQ}">Mensuelle (DP-202605-0001)</option>
+                <option value="DP-{YYYY}-{SEQ}">Annuelle (DP-2026-0001)</option>
+              </select>
+            </div>
           </div>
           <p class="help-text mt-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Le format "Annuelle" ne réinitialise pas le compteur chaque mois.</p>
         </div>
@@ -221,6 +229,9 @@
     <div v-if="activeTab === 'etats'" class="content-grid-single">
       <ParamEtats />
     </div>
+    <div v-if="activeTab === 'categories-depense'" class="content-grid-single">
+      <ParamDepenseCategories />
+    </div>
   </div>
 </template>
 
@@ -234,6 +245,7 @@ import ParamEntrepots from './ParamEntrepots.vue'
 import ParamReglements from './ParamReglements.vue'
 import ParamFamilles from './ParamFamilles.vue'
 import ParamEtats from './ParamEtats.vue'
+import ParamDepenseCategories from './ParamDepenseCategories.vue'
 
 const authStore = useAuthStore()
 
@@ -265,7 +277,8 @@ const form = ref({
   format_numero_devis: '',
   format_numero_bl: '',
   format_numero_br: '',
-  format_numero_facture_achat: ''
+  format_numero_facture_achat: '',
+  format_numero_depense: ''
 })
 
 onMounted(async () => {

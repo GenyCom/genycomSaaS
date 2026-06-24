@@ -18,22 +18,22 @@
 
     <ConfirmModal
       :show="showConfirmAnnuler"
-      title="Annuler cette facture"
-      message="Attention : Cette action annulera la facture, supprimera TOUS les règlements associés et restaurera les stocks du BL lié s'il existe. Cette action est irréversible. Continuer ?"
-      confirmText="Oui, Annuler la facture"
+      title="Annuler cette facture de vente"
+      message="Attention : Cette action annulera la facture de vente, supprimera TOUS les règlements associés et restaurera les stocks du BL lié s'il existe. Cette action est irréversible. Continuer ?"
+      confirmText="Oui, Annuler la facture de vente"
       @confirm="executeAnnuler"
       @cancel="showConfirmAnnuler = false"
     ></ConfirmModal>
 
     <div class="topbar">
       <div class="topbar-left">
-        <router-link to="/factures" class="back-btn" title="Retour aux factures">
+        <router-link to="/factures" class="back-btn" title="Retour aux factures de vente">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </router-link>
         <div class="breadcrumb">
           <span class="breadcrumb-parent">Ventes</span>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-          <span class="breadcrumb-current">{{ isNew ? 'Nouvelle Facture' : form.numero }}</span>
+          <span class="breadcrumb-current">{{ isNew ? 'Nouvelle Facture de Vente' : form.numero }}</span>
         </div>
       </div>
       <div class="topbar-actions">
@@ -47,7 +47,7 @@
         </button>
         <button v-if="!isNew && form.etat?.code !== 'ANN'" class="btn-secondary-custom danger-text" @click="showConfirmAnnuler = true" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-          <span>Annuler Facture</span>
+          <span>Annuler Facture de Vente</span>
         </button>
         <button v-if="form.etat?.code !== 'ANN'" class="btn-save billing-theme-btn" @click="save" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -97,7 +97,7 @@
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div class="kpi-body">
           <p class="kpi-label">Net à Payer TTC</p>
-          <p class="kpi-value">{{ formatMoney(form.total_ttc) }} <span>DH</span></p>
+          <p class="kpi-value highlighted-kpi">{{ formatMoney(form.total_ttc) }} <span>DH</span></p>
         </div>
       </div>
     </div>
@@ -316,6 +316,29 @@
                 <option v-for="m in modesReglement" :key="m.id" :value="m.id">{{ m.libelle }}</option>
               </select>
             </div>
+            <div v-if="isChequeMode" style="border-left: 4px solid #4338CA; padding-left: 12px; margin: 12px 0; background: #F9FAFB; padding: 12px; border-radius: 8px;">
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>N° Chèque *</label>
+                <input v-model="reglement.numero_cheque" type="text" class="input-custom" placeholder="Ex: 0012345" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Banque *</label>
+                <input v-model="reglement.banque" type="text" class="input-custom" placeholder="Ex: Attijariwafa Bank" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Date d'Échéance *</label>
+                <input v-model="reglement.date_echeance_cheque" type="date" class="input-custom" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Photo du Chèque (Scan / Image)</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <input type="file" accept="image/*" capture="environment" @change="onChequeImageChange" style="font-size: 0.8rem; border: none; padding: 4px 0;" />
+                  <div v-if="chequeImagePreview" style="margin-top: 8px; border: 1.5px dashed #4338CA; border-radius: 8px; padding: 4px; max-width: 150px; background: white;">
+                    <img :src="chequeImagePreview" style="width: 100%; height: auto; border-radius: 4px;" alt="Aperçu chèque" />
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="form-group-custom">
               <label>Réf / Observations</label>
               <textarea v-model="reglement.observations" rows="2" class="input-custom" placeholder="N° de chèque, référence virement, correction..."></textarea>
@@ -418,8 +441,33 @@ const reglement = ref({
   montant: '',
   date_reglement: new Date().toISOString().substring(0, 10),
   mode_reglement_id: '',
+  numero_cheque: '',
+  banque: '',
+  date_echeance_cheque: '',
+  statut_cheque: 'en_attente',
+  image_cheque: '',
   observations: ''
 })
+
+const isChequeMode = computed(() => {
+  const selectedMode = modesReglement.value.find(m => m.id === reglement.value.mode_reglement_id);
+  return selectedMode && (selectedMode.libelle.toLowerCase().includes('chèque') || selectedMode.libelle.toLowerCase().includes('cheque'));
+});
+
+const chequeImagePreview = ref(null)
+
+function onChequeImageChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  
+  chequeImagePreview.value = URL.createObjectURL(file)
+  
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    reglement.value.image_cheque = event.target.result
+  }
+  reader.readAsDataURL(file)
+}
 
 const clients = ref([])
 const products = ref([])
@@ -656,6 +704,21 @@ async function enregistrerReglement() {
     toast.error('Veuillez saisir un montant valide.'); 
     return;
   }
+
+  if (isChequeMode.value) {
+    if (!reglement.value.numero_cheque) {
+      toast.error('Veuillez saisir le numéro de chèque.');
+      return;
+    }
+    if (!reglement.value.banque) {
+      toast.error('Veuillez saisir le nom de la banque.');
+      return;
+    }
+    if (!reglement.value.date_echeance_cheque) {
+      toast.error("Veuillez choisir la date d'échéance du chèque.");
+      return;
+    }
+  }
   
   saving.value = true;
   try {
@@ -663,7 +726,14 @@ async function enregistrerReglement() {
     toast.success('Règlement/Correction enregistré avec succès !');
     
     reglement.value.montant = '';
+    reglement.value.mode_reglement_id = '';
+    reglement.value.numero_cheque = '';
+    reglement.value.banque = '';
+    reglement.value.date_echeance_cheque = '';
+    reglement.value.statut_cheque = 'en_attente';
+    reglement.value.image_cheque = '';
     reglement.value.observations = '';
+    chequeImagePreview.value = null;
     
     await loadFactureData();
     
@@ -765,14 +835,14 @@ async function executeGenerateBL() {
 .totals-premium-card { background: #fff; border: 1.5px solid #4338CA; border-radius: 16px; color: var(--c-text); overflow: hidden; box-shadow: 0 10px 25px rgba(67, 56, 202, 0.05); }
 .total-inner { padding: 24px; }
 .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.total-label { font-size: 0.75rem; color: #6B7280; font-weight: 500; }
-.total-value { font-size: 1rem; font-weight: 700; color: #1A1D23; }
+.total-label { font-size: 0.72rem; color: #6B7280; font-weight: 500; text-transform: uppercase; }
+.total-value { font-size: 0.9rem; font-weight: 700; color: #1A1D23; }
 .black-text { color: #000 !important; }
 
 .main-total-light { flex-direction: column; align-items: flex-end; gap: 4px; margin-bottom: 0; margin-top: 12px; border-top: 1px solid #EEF2FF; padding-top: 12px; }
 .label-main { font-size: 0.7rem; font-weight: 800; color: #4338CA; letter-spacing: 0.1em; }
 .amount-group { display: flex; align-items: baseline; gap: 6px; }
-.amount { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; color: #000; }
+.amount { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; color: #000; }
 .currency-dark { font-size: 0.8rem; font-weight: 700; color: #94A3B8; }
 
 .linked-doc-link { color: #4338CA; font-weight: 700; text-decoration: underline; margin-left: 4px; }
@@ -833,6 +903,7 @@ async function executeGenerateBL() {
 .kpi-item.neutral .kpi-icon { background: #F1F5F9; color: #475569; }
 .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin-bottom: 3px; }
 .kpi-value { font-size: 1.25rem; font-weight: 800; margin: 0; }
+.kpi-value.highlighted-kpi { font-size: 1.4rem; font-weight: 900; color: var(--c-accent); }
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */

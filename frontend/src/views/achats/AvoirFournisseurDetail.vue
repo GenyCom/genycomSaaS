@@ -436,7 +436,7 @@ async function executeValidation() {
 .totals-box { width: 320px; background: #F8FAFC; padding: 16px 20px; border-radius: 12px; border: 1px solid var(--c-border); display: flex; flex-direction: column; }
 .total-row { display: flex; justify-content: space-between; align-items: center; }
 .total-value { font-weight: 600; color: var(--c-text); }
-.grand-total { font-size: 1.1rem; font-weight: 800; color: var(--c-text); }
+.grand-total { font-size: 1.3rem; font-weight: 800; color: var(--c-text); }
 .grand-total .total-label { color: var(--c-text); font-weight: 700;}
 .text-success { color: var(--c-success) !important; }
 

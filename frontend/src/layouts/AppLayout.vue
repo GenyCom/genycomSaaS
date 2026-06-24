@@ -61,7 +61,7 @@
           </router-link>
           <router-link to="/factures" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-            <span>Factures</span>
+            <span>Factures de Vente</span>
           </router-link>
           <router-link to="/contrats" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/></svg>
@@ -91,6 +91,10 @@
           <router-link to="/dettes" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span>Dettes Fournisseur</span>
+          </router-link>
+          <router-link to="/depenses" class="nav-item" active-class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <span>Dépenses</span>
           </router-link>
           <router-link to="/avoirs-fournisseurs" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21-4-4 4-4"/><path d="M15 9h-2a2 2 0 1 0 0 4h3c.6 0 1.1-.2 1.4-.6L21 7"/><path d="m17 3 4 4-4 4"/></svg>
@@ -208,7 +212,7 @@ const pageTitle = computed(() => {
     Dashboard: 'Tableau de bord',
     Clients: 'Gestion des Clients', Fournisseurs: 'Gestion des Fournisseurs',
     Produits: 'Catalogue Produits', Projets: 'Projets',
-    Devis: 'Devis', Factures: 'Factures', Commandes: 'Commandes Fournisseur',
+    Devis: 'Devis', Factures: 'Factures de Vente', FactureDetail: 'Facture de Vente', Commandes: 'Commandes Fournisseur',
     BCCList: 'Bons de Commande Client', BCCDetail: 'Bon de Commande Client',
     BLList: 'Bons de Livraison', BLDetail: 'Bon de Livraison',
     BRList: 'Bons de Réception', BRDetail: 'Bon de Réception',

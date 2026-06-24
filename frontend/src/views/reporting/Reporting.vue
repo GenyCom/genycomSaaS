@@ -286,7 +286,7 @@
 
         <div class="reporting-grid-2">
           <div class="table-card">
-            <div class="card-header"><h3>Factures Clients Impayées</h3></div>
+            <div class="card-header"><h3>Factures de Vente Impayées</h3></div>
             <div class="table-responsive">
               <table class="report-table mini">
                 <thead>
@@ -375,38 +375,186 @@
           </div>
         </div>
 
-        <div class="table-card mt-4">
-          <div class="card-header">
-            <h3>Détail Journalier (Caisse & Bénéfice)</h3>
-            <div class="header-actions">
-              <button @click="printPDF" class="btn-export secondary mr-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                Imprimer PDF
-              </button>
-              <button @click="exportCSV(cashData.daily_summary, 'caisse_benefice_journalier')" class="btn-export">Exporter CSV</button>
+        <div class="reporting-grid-2">
+          <div class="table-card">
+            <div class="card-header">
+              <h3>Détail Journalier (Caisse & Bénéfice)</h3>
+              <div class="header-actions">
+                <button @click="printPDF" class="btn-export secondary mr-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Imprimer PDF
+                </button>
+                <button @click="exportCSV(cashData.daily_summary, 'caisse_benefice_journalier')" class="btn-export">Exporter CSV</button>
+              </div>
             </div>
+            <div class="table-responsive">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th class="text-right">Chiffre d'Affaires HT</th>
+                    <th class="text-right">Coût Achats HT</th>
+                    <th class="text-right">Marge Brute HT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="day in cashData.daily_summary" :key="day.date">
+                    <td class="font-bold">{{ formatDate(day.date) }}</td>
+                    <td class="text-right font-bold">{{ formatMoney(day.ca) }}</td>
+                    <td class="text-right text-muted">{{ formatMoney(day.cogs) }}</td>
+                    <td class="text-right font-bold" :class="(day.ca - day.cogs) >= 0 ? 'text-success' : 'text-danger'">
+                      {{ formatMoney(day.ca - day.cogs) }}
+                    </td>
+                  </tr>
+                  <tr v-if="cashData.daily_summary.length === 0">
+                    <td colspan="4" class="empty-state">Aucune activité sur cette période</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="card-header">
+              <h3>Répartition des Dépenses par Catégorie</h3>
+            </div>
+            <div class="card-body">
+              <div v-if="!cashData.expenses_by_category || cashData.expenses_by_category.length === 0" class="empty-state" style="padding: 20px !important;">
+                Aucune charge enregistrée sur cette période.
+              </div>
+              <div v-else class="expenses-category-list">
+                <div v-for="(item, idx) in cashData.expenses_by_category" :key="idx" class="category-item">
+                  <div class="category-info">
+                    <span class="cat-name">{{ item.categorie }}</span>
+                    <span class="cat-total">{{ formatMoney(item.total) }}</span>
+                  </div>
+                  <div class="progress-bg">
+                    <div class="progress-fill" :style="{ width: getCategoryPercentage(item.total) + '%' }"></div>
+                  </div>
+                  <div class="cat-pct">{{ getCategoryPercentage(item.total) }}% du total des charges</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suivi des Chèques -->
+      <div v-if="activeTab === 'cheques'" class="tab-pane">
+        <div class="summary-cards mb-24">
+          <div class="mini-card accent">
+            <span class="label">Chèques en Attente</span>
+            <span class="value">{{ formatMoney(pendingChequesTotal) }}</span>
+          </div>
+          <div class="mini-card success">
+            <span class="label">Chèques Encaissés</span>
+            <span class="value" style="color: #059669;">{{ formatMoney(cashedChequesTotal) }}</span>
+          </div>
+          <div class="mini-card neg">
+            <span class="label">Chèques Impayés</span>
+            <span class="value" style="color: #dc2626;">{{ formatMoney(unpaidChequesTotal) }}</span>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="card-header">
+            <div class="header-with-filter">
+              <h3>Suivi des Chèques Client & Fournisseur</h3>
+              <select v-model="chequeStatusFilter" class="filter-select">
+                <option value="tous">Tous les chèques</option>
+                <option value="en_attente">En attente</option>
+                <option value="encaisse">Encaissés</option>
+                <option value="impaye">Impayés</option>
+              </select>
+            </div>
+            <button @click="exportCSV(filteredCheques, 'suivi_cheques')" class="btn-export">Exporter CSV</button>
           </div>
           <div class="table-responsive">
             <table class="report-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th class="text-right">Chiffre d'Affaires HT</th>
-                  <th class="text-right">Coût Achats HT</th>
-                  <th class="text-right">Marge Brute HT</th>
+                  <th>N° Chèque</th>
+                  <th>Banque</th>
+                  <th>Échéance</th>
+                  <th>Tiers</th>
+                  <th>Référence Doc</th>
+                  <th class="text-right">Montant</th>
+                  <th class="text-center">Flux</th>
+                  <th class="text-center">Statut</th>
+                  <th class="text-center" style="width: 250px;">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="day in cashData.daily_summary" :key="day.date">
-                  <td class="font-bold">{{ formatDate(day.date) }}</td>
-                  <td class="text-right font-bold">{{ formatMoney(day.ca) }}</td>
-                  <td class="text-right text-muted">{{ formatMoney(day.cogs) }}</td>
-                  <td class="text-right font-bold" :class="(day.ca - day.cogs) >= 0 ? 'text-success' : 'text-danger'">
-                    {{ formatMoney(day.ca - day.cogs) }}
+                <tr v-for="c in filteredCheques" :key="c.id">
+                  <td class="font-bold">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span class="badge-code" style="color: #475569; margin: 0;">{{ c.numero_cheque }}</span>
+                      <button 
+                        v-if="c.image_cheque" 
+                        @click="selectedChequeImageUrl = c.image_cheque" 
+                        class="btn-refresh" 
+                        style="padding: 0; width: 24px; height: 24px; min-height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; margin: 0; border-color: #dbeafe; background: #eff6ff; color: #3b82f6;"
+                        title="Visualiser le chèque"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                  <td>{{ c.banque }}</td>
+                  <td class="font-bold" :style="{ color: getChequeDueStyle(c.date_echeance_cheque, c.statut_cheque).color }">
+                    {{ formatDate(c.date_echeance_cheque) }}
+                    <span 
+                      v-if="getChequeDueStyle(c.date_echeance_cheque, c.statut_cheque).text" 
+                      style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px;"
+                      :style="getChequeDueStyle(c.date_echeance_cheque, c.statut_cheque).badgeStyle"
+                    >
+                      {{ getChequeDueStyle(c.date_echeance_cheque, c.statut_cheque).text }}
+                    </span>
+                  </td>
+                  <td class="font-bold">{{ c.tiers }}</td>
+                  <td>{{ c.ref_doc }}</td>
+                  <td class="text-right font-bold">{{ formatMoney(c.montant) }}</td>
+                  <td class="text-center">
+                    <span :class="['type-badge', c.flux === 'Entrée' ? 'blue' : 'purple']">
+                      {{ c.flux === 'Entrée' ? 'REÇU' : 'ÉMIS' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span v-if="c.statut_cheque === 'en_attente'" class="status-pill pending">En attente</span>
+                    <span v-else-if="c.statut_cheque === 'encaisse'" class="status-pill paid">Encaissé</span>
+                    <span v-else-if="c.statut_cheque === 'impaye'" class="status-pill" style="background: #fecaca; color: #b91c1c;">Impayé</span>
+                  </td>
+                  <td class="text-center">
+                    <div style="display: flex; gap: 6px; justify-content: center;">
+                      <button 
+                        v-if="c.statut_cheque === 'en_attente'" 
+                        @click="changeChequeStatus(c.id, 'encaisse')" 
+                        class="btn-export" 
+                        style="color: #059669; background: #ecfdf5; border-color: #a7f3d0; padding: 4px 8px; font-size: 0.7rem;"
+                      >
+                        Encaisser
+                      </button>
+                      <button 
+                        v-if="c.statut_cheque === 'en_attente'" 
+                        @click="changeChequeStatus(c.id, 'impaye')" 
+                        class="btn-export" 
+                        style="color: #b91c1c; background: #fef2f2; border-color: #fca5a5; padding: 4px 8px; font-size: 0.7rem;"
+                      >
+                        Rejeter
+                      </button>
+                      <button 
+                        v-if="c.statut_cheque !== 'en_attente'" 
+                        @click="changeChequeStatus(c.id, 'en_attente')" 
+                        class="btn-export secondary" 
+                        style="padding: 4px 8px; font-size: 0.7rem;"
+                      >
+                        Remettre en attente
+                      </button>
+                    </div>
                   </td>
                 </tr>
-                <tr v-if="cashData.daily_summary.length === 0">
-                  <td colspan="4" class="empty-state">Aucune activité sur cette période</td>
+                <tr v-if="filteredCheques.length === 0">
+                  <td colspan="9" class="empty-state">Aucun chèque correspondant</td>
                 </tr>
               </tbody>
             </table>
@@ -419,11 +567,20 @@
     <div v-if="loading" class="loader-overlay">
       <div class="spinner"></div>
     </div>
+
+    <!-- Modal de visualisation du chèque -->
+    <div v-if="selectedChequeImageUrl" class="image-modal-overlay" @click="selectedChequeImageUrl = null">
+      <div class="image-modal-content" @click.stop>
+        <button class="image-modal-close" @click="selectedChequeImageUrl = null">&times;</button>
+        <img :src="selectedChequeImageUrl" alt="Chèque" style="max-width: 90vw; max-height: 80vh; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); border: 2px solid white;" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
 
@@ -450,17 +607,23 @@ const IconCash = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M17 21v-2a1 1 0 0 1 1-1h1M7 21v-2a1 1 0 0 0-1-1H5M20 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2"/><circle cx="12" cy="14" r="3"/></svg>`
 })
 
+const IconCheques = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 14h.01M11 14h.01M15 14h.01M7 18h.01M11 18h.01M15 18h.01M3 6h18M3 8h18"/></svg>`
+})
+
 const tabs = [
   { id: 'sales', label: 'Ventes', icon: IconSales },
   { id: 'purchases', label: 'Achats & Dépenses', icon: IconPurchase },
   { id: 'cashflow', label: 'Caisse & Bénéfice', icon: IconCash },
   { id: 'payments', label: 'Règlements', icon: IconPayments },
+  { id: 'cheques', label: 'Suivi Chèques', icon: IconCheques },
   { id: 'unpaid', label: 'Impayés', icon: IconUnpaid },
   { id: 'finance', label: 'Finance & Projets', icon: IconFinance },
   { id: 'stock', label: 'Stock', icon: IconStock }
 ]
 
-const activeTab = ref('sales')
+const route = useRoute()
+const activeTab = ref(route.query.tab || 'sales')
 const loading = ref(false)
 const selectedPeriod = ref('this_month')
 const dateRange = reactive({
@@ -478,6 +641,25 @@ const cashData = ref({
   cash_flow: { encaissements: 0, decaissements: 0, solde_caisse: 0 },
   profitability: { chiffre_affaires_ht: 0, cout_ventes_ht: 0, marge_brute: 0, charges_fixes: 0, benefice_net: 0, marge_pct: 0 },
   daily_summary: []
+})
+
+const chequeData = ref([])
+const chequeStatusFilter = ref('tous')
+const selectedChequeImageUrl = ref(null)
+
+const pendingChequesTotal = computed(() => {
+  return chequeData.value.filter(c => c.statut_cheque === 'en_attente').reduce((sum, c) => sum + parseFloat(c.montant || 0), 0)
+})
+const cashedChequesTotal = computed(() => {
+  return chequeData.value.filter(c => c.statut_cheque === 'encaisse').reduce((sum, c) => sum + parseFloat(c.montant || 0), 0)
+})
+const unpaidChequesTotal = computed(() => {
+  return chequeData.value.filter(c => c.statut_cheque === 'impaye').reduce((sum, c) => sum + parseFloat(c.montant || 0), 0)
+})
+
+const filteredCheques = computed(() => {
+  if (chequeStatusFilter.value === 'tous') return chequeData.value
+  return chequeData.value.filter(c => c.statut_cheque === chequeStatusFilter.value)
 })
 
 const clients = ref([])
@@ -507,14 +689,15 @@ async function fetchData() {
     fournisseur_id: filters.supplierId
   }
   try {
-    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes, cashRes] = await Promise.all([
+    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes, cashRes, chequesRes] = await Promise.all([
       api.get('/reporting/sales', { params }),
       api.get('/reporting/purchases', { params }),
       api.get('/reporting/finance', { params }),
       api.get('/reporting/stock'),
       api.get('/reporting/payments', { params }),
       api.get('/reporting/unpaid'),
-      api.get('/reporting/cash-flow', { params })
+      api.get('/reporting/cash-flow', { params }),
+      api.get('/reporting/cheques')
     ])
 
     salesData.value = salesRes.data
@@ -532,8 +715,22 @@ async function fetchData() {
     paymentData.value = paymentsRes.data
     unpaidData.value = unpaidRes.data
     cashData.value = cashRes.data
+    chequeData.value = chequesRes.data
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
+  } finally {
+    loading.value = false
+  }
+}
+
+async function changeChequeStatus(chequeId, newStatus) {
+  loading.value = true
+  try {
+    await api.put(`/reporting/cheques/${chequeId}/statut`, { statut_cheque: newStatus })
+    toast.success("Statut du chèque mis à jour avec succès.")
+    await fetchData()
+  } catch (error) {
+    toast.error("Erreur lors de la mise à jour du statut.")
   } finally {
     loading.value = false
   }
@@ -601,6 +798,27 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('fr-FR')
 }
 
+function getChequeDueStyle(dateStr, status) {
+  if (!dateStr || status !== 'en_attente') return { color: '#1a1d23', text: '' }
+  
+  const dueDate = new Date(dateStr)
+  dueDate.setHours(0,0,0,0)
+  
+  const today = new Date()
+  today.setHours(0,0,0,0)
+  
+  const diffTime = dueDate - today
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 0) {
+    return { color: '#dc2626', text: 'Retard', badgeStyle: { background: '#fee2e2', color: '#991b1b' } }
+  } else if (diffDays <= 2) {
+    return { color: '#d97706', text: `J-${diffDays} (Proche)`, badgeStyle: { background: '#fef3c7', color: '#92400e' } }
+  }
+  
+  return { color: '#1a1d23', text: '' }
+}
+
 function exportCSV(data, filename) {
   if (!data || !data.length) return
   const headers = Object.keys(data[0]).join(',')
@@ -617,6 +835,13 @@ function exportCSV(data, filename) {
 function printPDF() {
   const url = `/print-report/cash-flow?start=${dateRange.start}&end=${dateRange.end}`
   window.open(url, '_blank')
+}
+
+function getCategoryPercentage(amount) {
+  if (!cashData.value.expenses_by_category || cashData.value.expenses_by_category.length === 0) return 0
+  const total = cashData.value.expenses_by_category.reduce((acc, curr) => acc + parseFloat(curr.total), 0)
+  if (total === 0) return 0
+  return Math.round((parseFloat(amount) / total) * 100)
 }
 
 onMounted(() => {
@@ -759,5 +984,41 @@ onMounted(() => {
   font-size: 0.7rem;
   font-weight: 600;
   color: #3b82f6;
+}
+
+/* ─── Catégories de Dépenses dans le Reporting ─── */
+.expenses-category-list { display: flex; flex-direction: column; gap: 16px; padding: 12px 16px; }
+.category-item { display: flex; flex-direction: column; gap: 6px; }
+.category-info { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #1e293b; }
+.progress-bg { background: #f1f5f9; height: 8px; border-radius: 4px; overflow: hidden; width: 100%; }
+.progress-fill { background: #4f46e5; height: 100%; border-radius: 4px; transition: width 0.5s ease-in-out; }
+.cat-pct { font-size: 0.72rem; color: #64748b; font-weight: 500; }
+
+/* Modal image chèque */
+.image-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(4px);
+}
+.image-modal-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+}
+.image-modal-close {
+  position: absolute;
+  top: -45px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  cursor: pointer;
+  outline: none;
 }
 </style>

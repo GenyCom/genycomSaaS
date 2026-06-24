@@ -55,16 +55,14 @@
         </div>
       </div>
 
-      <div class="kpi-card success">
-        <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="kpi-card" style="background: #FEF2F2; border-color: #FEE2E2;">
+        <div class="kpi-icon" style="background: #FEE2E2; color: #E11D48;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        </div>
         <div class="kpi-content">
-          <p class="kpi-label">Marge Nette</p>
-          <div class="value-row">
-            <p class="kpi-value">{{ formatMoney((kpis.ca_mois || 0) * 0.35) }}</p>
-            <span :class="['trend-badge', (kpis.ca_trend || 0) >= 0 ? 'pos' : 'neg']">
-              {{ (kpis.ca_trend || 0) > 0 ? '+' : '' }}{{ kpis.ca_trend || 0 }}%
-            </span>
-          </div>
+          <p class="kpi-label" style="color: #9F1239;">Dépenses du mois</p>
+          <p class="kpi-value" style="color: #BE123C;">{{ formatMoney(kpis.depenses_mois) }}</p>
+          <p class="kpi-sub-text" style="color: #9F1239;">Charges de fonctionnement</p>
         </div>
       </div>
 

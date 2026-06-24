@@ -40,7 +40,7 @@
         <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div class="kpi-body">
           <p class="kpi-label">Montant Total TTC</p>
-          <p class="kpi-value">{{ formatMoney(dette.montant_total) }} <span>DH</span></p>
+          <p class="kpi-value highlighted-kpi">{{ formatMoney(dette.montant_total) }} <span>DH</span></p>
         </div>
       </div>
       <div class="kpi-divider"></div>
@@ -127,6 +127,29 @@
                 <option v-for="m in modes" :key="m.id" :value="m.id">{{ m.libelle }}</option>
               </select>
             </div>
+            <div v-if="isChequeMode" style="border-left: 3px solid #DC2626; padding-left: 10px; margin: 10px 0; background: #FFF5F5; padding: 10px; border-radius: 8px;">
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>N° Chèque *</label>
+                <input v-model="reglement.numero_cheque" type="text" placeholder="Ex: 004321" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Banque *</label>
+                <input v-model="reglement.banque" type="text" placeholder="Ex: BCP" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Date d'Échéance *</label>
+                <input v-model="reglement.date_echeance_cheque" type="date" />
+              </div>
+              <div class="form-group-custom" style="margin-bottom: 8px;">
+                <label>Photo du Chèque (Scan / Image)</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <input type="file" accept="image/*" capture="environment" @change="onChequeImageChange" style="font-size: 0.8rem; border: none; padding: 4px 0; background: transparent;" />
+                  <div v-if="chequeImagePreview" style="margin-top: 8px; border: 1.5px dashed #DC2626; border-radius: 8px; padding: 4px; max-width: 150px; background: white;">
+                    <img :src="chequeImagePreview" style="width: 100%; height: auto; border-radius: 4px;" alt="Aperçu chèque" />
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="form-group-custom">
               <label>Observations</label>
               <textarea v-model="reglement.observations" rows="2" style="border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px; font-size: .85rem;"></textarea>
@@ -164,8 +187,33 @@ const reglement = ref({
   montant: '',
   date_reglement: new Date().toISOString().substring(0, 10),
   mode_reglement_id: '',
+  numero_cheque: '',
+  banque: '',
+  date_echeance_cheque: '',
+  statut_cheque: 'en_attente',
+  image_cheque: '',
   observations: ''
 })
+
+const isChequeMode = computed(() => {
+  const selectedMode = modes.value.find(m => m.id === reglement.value.mode_reglement_id);
+  return selectedMode && (selectedMode.libelle.toLowerCase().includes('chèque') || selectedMode.libelle.toLowerCase().includes('cheque'));
+});
+
+const chequeImagePreview = ref(null)
+
+function onChequeImageChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  
+  chequeImagePreview.value = URL.createObjectURL(file)
+  
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    reglement.value.image_cheque = event.target.result
+  }
+  reader.readAsDataURL(file)
+}
 
 const statutLabel = computed(() => {
   if (parseFloat(dette.value.montant_restant) <= 0) return 'SOLDÉE'
@@ -191,6 +239,19 @@ async function enregistrerReglement() {
   if (!reglement.value.montant || parseFloat(reglement.value.montant) <= 0) {
     showToast('Montant invalide', 'error'); return
   }
+
+  if (isChequeMode.value) {
+    if (!reglement.value.numero_cheque) {
+      showToast("Veuillez saisir le numéro de chèque.", "error"); return;
+    }
+    if (!reglement.value.banque) {
+      showToast("Veuillez saisir la banque.", "error"); return;
+    }
+    if (!reglement.value.date_echeance_cheque) {
+      showToast("Veuillez saisir la date d'échéance du chèque.", "error"); return;
+    }
+  }
+
   saving.value = true
   try {
     await api.post(`/dettes/${route.params.id}/reglement`, reglement.value)
@@ -199,7 +260,14 @@ async function enregistrerReglement() {
     const { data } = await api.get(`/dettes/${route.params.id}`)
     dette.value = data.data || data
     reglement.value.montant = ''
+    reglement.value.mode_reglement_id = ''
+    reglement.value.numero_cheque = ''
+    reglement.value.banque = ''
+    reglement.value.date_echeance_cheque = ''
+    reglement.value.statut_cheque = 'en_attente'
+    reglement.value.image_cheque = ''
     reglement.value.observations = ''
+    chequeImagePreview.value = null
   } catch (e) {
     showToast('Erreur: ' + (e.response?.data?.message || e.message), 'error')
   } finally { saving.value = false }
@@ -256,6 +324,7 @@ onMounted(async () => {
 .kpi-item.danger-item .kpi-icon { background: #FEF2F2; color: #DC2626; }
 .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin-bottom: 3px; }
 .kpi-value { font-size: 1.25rem; font-weight: 800; margin: 0; }
+.kpi-value.highlighted-kpi { font-size: 1.4rem; font-weight: 900; color: var(--c-accent); }
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 .content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }

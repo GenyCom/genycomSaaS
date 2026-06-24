@@ -80,6 +80,26 @@
         </div>
       </section>
 
+      <section class="summary-section mt-4" v-if="data.expenses_by_category && data.expenses_by_category.length > 0">
+        <h3>Répartition des Dépenses par Catégorie</h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th class="text-right">Montant Total</th>
+              <th class="text-right">Pourcentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, idx) in data.expenses_by_category" :key="idx">
+              <td class="font-bold">{{ item.categorie }}</td>
+              <td class="text-right font-bold danger">{{ formatMoney(item.total) }}</td>
+              <td class="text-right font-bold">{{ getCategoryPercentage(item.total) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section class="details-section mt-4">
         <h3>Détail Journalier</h3>
         <table class="print-table">
@@ -130,6 +150,13 @@ function formatMoney(val) {
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('fr-FR')
+}
+
+function getCategoryPercentage(amount) {
+  if (!data.value.expenses_by_category || data.value.expenses_by_category.length === 0) return 0
+  const total = data.value.expenses_by_category.reduce((acc, curr) => acc + parseFloat(curr.total), 0)
+  if (total === 0) return 0
+  return Math.round((parseFloat(amount) / total) * 100)
 }
 
 function doPrint() { window.print() }
