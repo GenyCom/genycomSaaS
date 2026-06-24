@@ -177,6 +177,21 @@ class TenantProvisioningService
         $dbExists = $this->databaseExists($dbName, $tenantCredentials);
 
         if (!$dbExists) {
+            if (app()->environment('local')) {
+                $this->log('info', "🔧 [LOCAL] Tentative de création automatique de la base de données : {$dbName}");
+                try {
+                    DB::connection('central')->statement("CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+                    $dbExists = true;
+                    $this->log('info', "✅ [LOCAL] Base de données '{$dbName}' créée avec succès.");
+                } catch (\Throwable $e) {
+                    $this->log('error', "❌ [LOCAL] Impossible de créer automatiquement la base de données '{$dbName}'.", [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
+
+        if (!$dbExists) {
             $message = "La base de données '{$dbName}' est introuvable ou inaccessible. "
                 . "Veuillez : 1) La créer depuis le hPanel Hostinger. "
                 . "2) Créer un utilisateur MySQL dédié et l'assigner à cette base. "
@@ -418,9 +433,8 @@ class TenantProvisioningService
             $filename = $file->getFilename();
             $current  = $index + 1;
 
-            $this->log('info', "⚙️  [{$current}/{$totalFiles}] Exécution : {$filename}");
-
             try {
+                $this->log('info', "⚙️  [{$current}/{$totalFiles}] Exécution : {$filename}");
                 $sql = File::get($file->getPathname());
 
                 if (empty(trim($sql))) {
@@ -429,6 +443,12 @@ class TenantProvisioningService
                     ]);
                     continue;
                 }
+
+                // Nettoyage dynamique des instructions DELIMITER pour compatibilité avec PDO (Laravel)
+                // 1. Supprime les lignes de définition de DELIMITER (ex: "DELIMITER //")
+                $sql = preg_replace('/^\s*DELIMITER\s+\S+\s*$/mi', '', $sql);
+                // 2. Remplace les marqueurs de fin de délimiteur (ex: "END //" ou "after; //") par ";"
+                $sql = preg_replace('/\s*\/\/\s*$/m', ';', $sql);
 
                 DB::connection('tenant')->unprepared($sql);
 

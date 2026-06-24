@@ -51,10 +51,14 @@ class DepenseController extends Controller
             'taux_change_document' => 'nullable|numeric',
         ]);
 
-        // Assure-toi que current_tenant est bien géré par ton application
         $tenantId = $request->get('current_tenant')->id ?? 1; 
         $data['tenant_id'] = $tenantId;
         $data['created_by'] = auth()->id();
+
+        // Auto-génération du code de dépense si absent
+        if (empty($data['code'])) {
+            $data['code'] = app(\App\Services\NumerotationService::class)->generer($tenantId, 'DEPENSE', new \DateTime($data['date_depense']));
+        }
 
         // Gestion automatique de la Devise et du Taux de change
         if (empty($data['devise_id'])) {

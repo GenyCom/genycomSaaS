@@ -41,4 +41,5 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('factures:generer-recurrentes')->dailyAt('02:00');
         $schedule->command('factures:check-overdue')->dailyAt('01:00');
         $schedule->command('devis:check-relances')->dailyAt('01:30');
+        $schedule->command('cheques:check-due')->dailyAt('00:30');
     })->create();

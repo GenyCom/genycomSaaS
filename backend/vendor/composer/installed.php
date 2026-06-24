@@ -3,7 +3,7 @@
         'name' => 'genycom/genycom-web',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '1c6d526e3e2d77beeb8f6281c82299afc1da6d56',
+        'reference' => 'c7eb581c527932948a37c68048b381a6ac9a80bb',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -160,7 +160,7 @@
         'genycom/genycom-web' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '1c6d526e3e2d77beeb8f6281c82299afc1da6d56',
+            'reference' => 'c7eb581c527932948a37c68048b381a6ac9a80bb',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

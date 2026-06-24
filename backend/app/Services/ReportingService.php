@@ -43,13 +43,23 @@ class ReportingService
             ->get();
 
         $depenses = DB::connection('tenant')->table('depenses as d')
+            ->leftJoin('categorie_depense as c', 'c.id', '=', 'd.categorie_id')
             ->where('d.tenant_id', $this->tid())
             ->whereNull('d.deleted_at')
             ->whereBetween('d.date_depense', [$start, $end])
             // Les dépenses directes n'ont pas forcément de fournisseur_id dans ce modèle simple,
             // mais on peut les filtrer si on avait un lien. Pour l'instant, si un fournisseur est choisi, on ne montre que les achats.
             ->when($supplierId, fn($q) => $q->whereRaw('1=0')) 
-            ->select('d.id', DB::raw("'' as numero"), 'd.date_depense as date_facture', 'd.libelle as societe', 'd.montant as total_ht', DB::raw("0 as total_tva"), 'd.montant as total_ttc', DB::raw("'depense' as type"))
+            ->select(
+                'd.id', 
+                'd.code as numero', 
+                'd.date_depense as date_facture', 
+                DB::raw("CONCAT('[', COALESCE(c.libelle, 'Général'), '] ', d.libelle) as societe"), 
+                'd.montant as total_ht', 
+                DB::raw("0 as total_tva"), 
+                'd.montant as total_ttc', 
+                DB::raw("'depense' as type")
+            )
             ->get();
 
         return $achats->concat($depenses)->sortByDesc('date_facture')->values()->toArray();
@@ -114,6 +124,18 @@ class ReportingService
         $margeBrute = $caHt - $cogs;
         $beneficeNet = $margeBrute - (float) $depensesDirectes;
 
+        // Répartition des dépenses par catégorie
+        $depensesParCategorie = DB::connection('tenant')->table('depenses as d')
+            ->leftJoin('categorie_depense as c', 'c.id', '=', 'd.categorie_id')
+            ->where('d.tenant_id', $tid)
+            ->whereNull('d.deleted_at')
+            ->whereBetween('d.date_depense', [$start, $end])
+            ->selectRaw('COALESCE(c.libelle, "Général") as categorie, SUM(d.montant) as total')
+            ->groupBy('d.categorie_id', 'c.libelle')
+            ->orderByDesc('total')
+            ->get()
+            ->toArray();
+
         return [
             'period' => ['start' => $start, 'end' => $end],
             'cash_flow' => [
@@ -130,6 +152,7 @@ class ReportingService
                 'benefice_net'        => (float) $beneficeNet,
                 'marge_pct'           => $caHt > 0 ? round(($beneficeNet / $caHt) * 100, 2) : 0
             ],
+            'expenses_by_category' => $depensesParCategorie,
             // Détails journaliers pour le graphique / tableau
             'daily_summary' => $this->dailyProfitSummary($start, $end, $tid)
         ];
@@ -369,5 +392,87 @@ class ReportingService
             'total_clients' => (float) $clients->sum('reste_a_payer'),
             'total_fournisseurs' => (float) $fournisseurs->sum('reste_a_payer'),
         ];
+    }
+
+    /**
+     * Rapport de suivi des chèques (encaissement, impayé, etc.)
+     */
+    public function chequeReport(?string $status = null): array
+    {
+        $tid = $this->tid();
+        $query = DB::connection('tenant')->table('reglements as r')
+            ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
+            ->where('r.tenant_id', $tid)
+            ->where(function($q) {
+                $q->whereNotNull('r.numero_cheque')
+                  ->where('r.numero_cheque', '!=', '')
+                  ->orWhere('mr.libelle', 'like', '%Chèque%')
+                  ->orWhere('mr.libelle', 'like', '%Cheque%');
+            });
+
+        if ($status && $status !== 'tous') {
+            $query->where('r.statut_cheque', $status);
+        }
+
+        $cheques = $query->select(
+            'r.id',
+            'r.date_reglement',
+            'r.montant',
+            'r.payable_type',
+            'r.payable_id',
+            'r.numero_cheque',
+            'r.banque',
+            'r.date_echeance_cheque',
+            'r.statut_cheque',
+            'r.image_cheque',
+            'mr.libelle as mode_libelle'
+        )
+        ->orderByRaw('r.date_echeance_cheque IS NULL, r.date_echeance_cheque ASC')
+        ->get();
+
+        $data = $cheques->map(function($reg) {
+            $tiers = "Inconnu";
+            $refDoc = "—";
+            $flux = 'Entrée';
+
+            if ($reg->payable_type === 'App\\Models\\Facture') {
+                $facture = DB::connection('tenant')->table('factures as f')
+                    ->join('clients as c', 'c.id', '=', 'f.client_id')
+                    ->where('f.id', $reg->payable_id)
+                    ->select('c.societe', 'f.numero')
+                    ->first();
+                if ($facture) {
+                    $tiers = $facture->societe;
+                    $refDoc = "Facture " . $facture->numero;
+                }
+            } elseif ($reg->payable_type === 'App\\Models\\DetteFournisseur' || str_contains($reg->payable_type, 'DetteFournisseur')) {
+                $flux = 'Sortie';
+                $dette = DB::connection('tenant')->table('dettes_fournisseur as d')
+                    ->join('fournisseurs as fr', 'fr.id', '=', 'd.fournisseur_id')
+                    ->where('d.id', $reg->payable_id)
+                    ->select('fr.societe', 'd.numero')
+                    ->first();
+                if ($dette) {
+                    $tiers = $dette->societe;
+                    $refDoc = "Dette " . $dette->numero;
+                }
+            }
+
+            return [
+                'id' => $reg->id,
+                'date_reglement' => $reg->date_reglement,
+                'montant' => (float) $reg->montant,
+                'numero_cheque' => $reg->numero_cheque ?: '—',
+                'banque' => $reg->banque ?: '—',
+                'date_echeance_cheque' => $reg->date_echeance_cheque,
+                'statut_cheque' => $reg->statut_cheque ?: 'en_attente',
+                'image_cheque' => $reg->image_cheque,
+                'flux' => $flux,
+                'tiers' => $tiers,
+                'ref_doc' => $refDoc,
+            ];
+        });
+
+        return $data->toArray();
     }
 }

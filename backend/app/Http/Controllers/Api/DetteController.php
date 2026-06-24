@@ -99,10 +99,15 @@ class DetteController extends Controller
     public function reglement(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
-            'montant'           => 'required|numeric|min:0.01',
-            'date_reglement'    => 'required|date',
-            'mode_reglement_id' => 'nullable|integer',
-            'observations'      => 'nullable|string',
+            'montant'              => 'required|numeric|min:0.01',
+            'date_reglement'       => 'required|date',
+            'mode_reglement_id'    => 'nullable|integer',
+            'numero_cheque'        => 'nullable|string|max:100',
+            'banque'               => 'nullable|string|max:100',
+            'date_echeance_cheque' => 'nullable|date',
+            'statut_cheque'        => 'nullable|string|in:en_attente,encaisse,impaye',
+            'image_cheque'         => 'nullable|string',
+            'observations'         => 'nullable|string',
         ]);
 
         $userId   = auth()->id();
@@ -123,13 +128,42 @@ class DetteController extends Controller
             // Reglement table HAS tenant_id (centralized)
             $tenantId = $request->get('current_tenant')->id;
 
+            $imagePath = null;
+            if (!empty($data['image_cheque']) && str_starts_with($data['image_cheque'], 'data:image')) {
+                try {
+                    $imageParts = explode(";base64,", $data['image_cheque']);
+                    if (count($imageParts) === 2) {
+                        $imageTypeAux = explode("image/", $imageParts[0]);
+                        $imageType = $imageTypeAux[1] ?? 'png';
+                        if ($imageType === 'jpeg') $imageType = 'jpg';
+                        $imageBase64 = base64_decode($imageParts[1], true);
+                        if ($imageBase64 !== false) {
+                            $fileName = 'cheque_' . uniqid() . '.' . $imageType;
+                            $uploadPath = public_path('uploads/cheques');
+                            if (!file_exists($uploadPath)) {
+                                mkdir($uploadPath, 0755, true);
+                            }
+                            file_put_contents($uploadPath . '/' . $fileName, $imageBase64);
+                            $imagePath = asset('uploads/cheques/' . $fileName);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log or handle error
+                }
+            }
+
             $this->db()->insert(
-                "INSERT INTO reglements (tenant_id, payable_type, payable_id, date_reglement, montant, mode_reglement_id, observations, created_by, created_at)
-                 VALUES (?, 'App\\\\Models\\\\DetteFournisseur', ?, ?, ?, ?, ?, ?, NOW())",
+                "INSERT INTO reglements (tenant_id, payable_type, payable_id, date_reglement, montant, mode_reglement_id, numero_cheque, banque, date_echeance_cheque, statut_cheque, image_cheque, observations, created_by, created_at)
+                 VALUES (?, 'App\\\\Models\\\\DetteFournisseur', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
                 [
                     $tenantId, $id,
                     $data['date_reglement'], $montant,
                     $data['mode_reglement_id'] ?? null,
+                    $data['numero_cheque'] ?? null,
+                    $data['banque'] ?? null,
+                    $data['date_echeance_cheque'] ?? null,
+                    $data['statut_cheque'] ?? 'en_attente',
+                    $imagePath,
                     $data['observations'] ?? null,
                     $userId
                 ]

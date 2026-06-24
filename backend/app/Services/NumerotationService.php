@@ -79,9 +79,10 @@ class NumerotationService
                 'BCF'      => 'format_numero_bcf',
                 'FACTURE_ACHAT' => 'format_numero_facture_achat',
                 'AVOIR'    => 'format_numero_avoir',
+                'DEPENSE'  => 'format_numero_depense',
                 default    => null,
             };
-            if ($field && !is_null($entreprise->$field) && $entreprise->$field !== '') {
+            if ($field && isset($entreprise->$field) && !is_null($entreprise->$field) && $entreprise->$field !== '') {
                 return $entreprise->$field;
             }
         }
@@ -102,6 +103,7 @@ class NumerotationService
             'AVOIR'    => 'AV-{YYYY}{MM}-{SEQ}',
             'DETTE'    => 'DT-{YYYY}{MM}-{SEQ}',
             'FACTURE_ACHAT' => 'FA-{YYYY}{MM}-{SEQ}',
+            'DEPENSE'  => 'DP-{YYYY}{MM}-{SEQ}',
             default    => 'DOC-{YYYY}{MM}-{SEQ}',
         };
     }
@@ -119,6 +121,7 @@ class NumerotationService
             'AVOIR'    => 'AV',
             'DETTE'    => 'DT',
             'FACTURE_ACHAT' => 'FA',
+            'DEPENSE'  => 'DP',
             default    => 'DOC',
         };
     }

@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS `entreprise` (
     `format_numero_cmd`     VARCHAR(50) DEFAULT 'CMD-{YYYY}{MM}-{SEQ}',
     `format_numero_avoir`   VARCHAR(50) DEFAULT 'AV-{YYYY}{MM}-{SEQ}',
     `format_numero_facture_achat`   VARCHAR(50) DEFAULT 'FA-{YYYY}{MM}-{SEQ}',
+    `format_numero_depense`   VARCHAR(50) DEFAULT 'DP-{YYYY}{MM}-{SEQ}' ,
+	
     
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,

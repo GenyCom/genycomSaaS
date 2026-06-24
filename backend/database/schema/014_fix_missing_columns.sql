@@ -9,9 +9,9 @@ ALTER TABLE `bcf` ADD COLUMN IF NOT EXISTS `entrepot_id` BIGINT UNSIGNED NULL AF
 -- 2. Table bons_commande_client (BCC) : ajouter entrepot_id
 ALTER TABLE `bons_commande_client` ADD COLUMN IF NOT EXISTS `entrepot_id` BIGINT UNSIGNED NULL AFTER `devis_id`;
 
-ALTER TABLE `clients` ADD COLUMN solde_initial DECIMAL(15,2) DEFAULT 0.00 AFTER delai_paiement;
+ALTER TABLE `clients` ADD COLUMN IF NOT EXISTS solde_initial DECIMAL(15,2) DEFAULT 0.00 AFTER delai_paiement;
 
-ALTER TABLE stocks ADD UNIQUE KEY uk_produit_entrepot_tenant (produit_id, entrepot_id, tenant_id);
+ALTER TABLE stocks ADD UNIQUE KEY IF NOT EXISTS uk_produit_entrepot_tenant (produit_id, entrepot_id, tenant_id);
 
 DELIMITER //
 

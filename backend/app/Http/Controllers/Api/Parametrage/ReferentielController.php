@@ -22,6 +22,7 @@ class ReferentielController extends Controller
             'types-client' => \App\Models\TypeClient::class,
             'types-fournisseur' => \App\Models\TypeFournisseur::class,
             'etats' => \App\Models\EtatDocument::class,
+            'categories-depense' => \App\Models\CategorieDepense::class,
         ];
         
         return $map[$type] ?? null;
@@ -82,6 +83,11 @@ class ReferentielController extends Controller
                 'couleur'       => 'nullable|string|max:20',
                 'detail'        => 'nullable|string',
             ],
+            'categories-depense' => [
+                'libelle'   => "{$requiredOrSometimes}|string|max:150",
+                'detail'    => 'nullable|string|max:255',
+                'parent_id' => 'nullable|integer',
+            ],
             default => [
                 'libelle' => "{$requiredOrSometimes}|string|max:100",
                 'detail'  => 'nullable|string|max:255',
@@ -98,7 +104,7 @@ class ReferentielController extends Controller
         
         $query = $class::query();
         
-        if ($type === 'familles-produit') {
+        if ($type === 'familles-produit' || $type === 'categories-depense') {
             $query->with('parent');
         }
 

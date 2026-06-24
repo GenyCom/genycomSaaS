@@ -20,6 +20,9 @@ class Reglement extends BaseModel
         'mode_reglement_id',
         'numero_cheque',
         'banque',
+        'date_echeance_cheque',
+        'statut_cheque',
+        'image_cheque',
         'reference_virement',
         'observations',
         'created_by'
@@ -27,6 +30,7 @@ class Reglement extends BaseModel
 
     protected $casts = [
         'date_reglement' => 'date',
+        'date_echeance_cheque' => 'date',
         'montant' => 'decimal:2'
     ];
 

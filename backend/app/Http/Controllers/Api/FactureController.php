@@ -220,10 +220,15 @@ class FactureController extends Controller
     public function reglement(Request $request, int $id): JsonResponse
     {
         $data = $request->validate([
-            'montant'           => 'required|numeric',
-            'date_reglement'    => 'required|date',
-            'mode_reglement_id' => 'nullable|integer',
-            'observations'      => 'nullable|string',
+            'montant'              => 'required|numeric',
+            'date_reglement'       => 'required|date',
+            'mode_reglement_id'    => 'nullable|integer',
+            'numero_cheque'        => 'nullable|string|max:100',
+            'banque'               => 'nullable|string|max:100',
+            'date_echeance_cheque' => 'nullable|date',
+            'statut_cheque'        => 'nullable|string|in:en_attente,encaisse,impaye',
+            'image_cheque'         => 'nullable|string',
+            'observations'         => 'nullable|string',
         ]);
 
         $userId   = auth()->id();
@@ -238,13 +243,42 @@ class FactureController extends Controller
             // pour permettre les corrections manuelles suite à un changement de montant de facture.
             $montantAPayer = (float) $data['montant'];
 
+            $imagePath = null;
+            if (!empty($data['image_cheque']) && str_starts_with($data['image_cheque'], 'data:image')) {
+                try {
+                    $imageParts = explode(";base64,", $data['image_cheque']);
+                    if (count($imageParts) === 2) {
+                        $imageTypeAux = explode("image/", $imageParts[0]);
+                        $imageType = $imageTypeAux[1] ?? 'png';
+                        if ($imageType === 'jpeg') $imageType = 'jpg';
+                        $imageBase64 = base64_decode($imageParts[1], true);
+                        if ($imageBase64 !== false) {
+                            $fileName = 'cheque_' . uniqid() . '.' . $imageType;
+                            $uploadPath = public_path('uploads/cheques');
+                            if (!file_exists($uploadPath)) {
+                                mkdir($uploadPath, 0755, true);
+                            }
+                            file_put_contents($uploadPath . '/' . $fileName, $imageBase64);
+                            $imagePath = asset('uploads/cheques/' . $fileName);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log or handle error if needed
+                }
+            }
+
             $facture->reglements()->create([
-                'tenant_id'         => $tenantId,
-                'date_reglement'    => $data['date_reglement'],
-                'montant'           => $montantAPayer,
-                'mode_reglement_id' => $data['mode_reglement_id'] ?? null,
-                'observations'      => $data['observations'] ?? null,
-                'created_by'        => $userId
+                'tenant_id'            => $tenantId,
+                'date_reglement'       => $data['date_reglement'],
+                'montant'              => $montantAPayer,
+                'mode_reglement_id'    => $data['mode_reglement_id'] ?? null,
+                'numero_cheque'        => $data['numero_cheque'] ?? null,
+                'banque'               => $data['banque'] ?? null,
+                'date_echeance_cheque' => $data['date_echeance_cheque'] ?? null,
+                'statut_cheque'        => $data['statut_cheque'] ?? 'en_attente',
+                'image_cheque'         => $imagePath,
+                'observations'         => $data['observations'] ?? null,
+                'created_by'           => $userId
             ]);
 
             $facture->enregistrerReglement($montantAPayer);
