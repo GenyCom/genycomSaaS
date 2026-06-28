@@ -139,14 +139,21 @@
           <div class="card-body edit-form">
             <div class="form-group-custom">
               <label>{{ form.is_service ? 'Libellé de la prestation *' : 'Désignation de l\'article *' }}</label>
-              <input v-model="form.designation" @input="generateReference" type="text" class="input-lg" :class="{ 'input-error': errors.designation }" :placeholder="form.is_service ? '' : 'Ex: Ordinateur Dell Latitude 5420'" />
+              <input v-model="form.designation" type="text" class="input-lg" :class="{ 'input-error': errors.designation }" placeholder="" />
               <span v-if="errors.designation" class="error-msg">{{ errors.designation }}</span>
             </div>
 
             <div class="form-row-custom">
               <div class="form-group-custom">
                 <label>Référence Interne *</label>
-                <input v-model="form.reference" type="text" class="mono" :class="{ 'input-error': errors.reference }" />
+                <div class="input-with-action">
+                  <input v-model="form.reference" type="text" class="mono" :class="{ 'input-error': errors.reference }" />
+                  <button type="button" @click="generateUniqueReference" class="btn-action-inline" title="Générer une référence unique">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div class="form-group-custom">
                 <label>Code Barre (EAN/UPC)</label>
@@ -415,21 +422,19 @@ function recalcTTC() {
   form.value.prix_ttc_vente = +(venteHT * (1 + tva / 100)).toFixed(2)
 }
 
-let refTimeout = null
-function generateReference() {
-  if (!isNew.value) return
-  const designation = form.value.designation.trim()
-  if (designation.length < 1) return
-  clearTimeout(refTimeout)
-  refTimeout = setTimeout(async () => {
-    try {
-      const { data } = await api.get('/produits-next-ref', { params: { designation } })
-      if (data.reference) form.value.reference = data.reference
-    } catch {
-       const prefix = designation.substring(0, 3).toUpperCase()
-       form.value.reference = `${prefix}_${Math.floor(Math.random()*1000)}`
+async function generateUniqueReference() {
+  const designation = form.value.designation ? form.value.designation.trim() : ''
+  try {
+    const { data } = await api.get('/produits-next-ref', { params: { designation: designation || 'ART' } })
+    if (data.reference) {
+      form.value.reference = data.reference
+      showToast('Référence interne générée !')
+    } else {
+      showToast('Erreur lors de la génération', 'error')
     }
-  }, 400)
+  } catch (e) {
+    showToast('Erreur lors de la génération', 'error')
+  }
 }
 
 async function generateBarcode() {

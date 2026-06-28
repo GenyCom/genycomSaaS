@@ -57,7 +57,17 @@ class ProduitController extends Controller
             $nextNum = $lastNum + 1;
         }
 
-        return $prefix . '_' . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+        do {
+            $reference = $prefix . '_' . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+            $exists = Produit::withoutGlobalScopes()
+                ->where('reference', $reference)
+                ->exists();
+            if ($exists) {
+                $nextNum++;
+            }
+        } while ($exists);
+
+        return $reference;
     }
 
     /**
