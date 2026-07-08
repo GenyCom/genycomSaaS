@@ -145,18 +145,101 @@
                    <span class="data-value">{{ form.code_barre || '—' }}</span>
                  </div>
                </div>
-               <div class="data-row">
-                 <div class="data-item">
-                   <span class="data-label">Famille / Catégorie</span>
-                   <span class="data-value">{{ familleLibelle }}</span>
-                 </div>
-                 <div class="data-item">
-                   <span class="data-label">Marque</span>
-                   <span class="data-value">{{ form.marque || '—' }}</span>
-                 </div>
+                  <div class="data-row">
+                    <div class="data-item">
+                      <span class="data-label">Référence OEM</span>
+                      <span class="data-value bold text-accent">{{ form.reference_oem || '—' }}</span>
+                    </div>
+                    <div class="data-item">
+                      <span class="data-label">Marque</span>
+                      <span class="data-value">{{ form.marque || '—' }}</span>
+                    </div>
+                  </div>
+                  <div class="data-item">
+                    <span class="data-label">Famille / Catégorie</span>
+                    <span class="data-value">{{ familleLibelle }}</span>
+                  </div>
                </div>
             </div>
+          </section>
+
+          <!-- Rupture / Stock alert banner -->
+          <div v-if="!form.is_service && form.stock_actuel <= 0" class="out-of-stock-banner">
+            <div class="banner-icon">⚠️</div>
+            <div class="banner-content">
+              <h4>Cet article est en rupture de stock !</h4>
+              <p v-if="form.compatibles && form.compatibles.length > 0">Vous pouvez proposer l'une des alternatives compatibles ci-dessous en remplacement.</p>
+              <p v-else>Aucune pièce alternative n'est répertoriée pour cet article.</p>
+            </div>
           </div>
+
+          <!-- Compatible alternatives card -->
+          <section v-if="!form.is_service" class="info-card">
+            <div class="card-header">
+              <div class="card-header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L20.2 3.8M21 16v5h-5M4 4l5 5"/></svg>
+              </div>
+              <h3>Alternatives & Compatibilités</h3>
+            </div>
+            <div class="card-body">
+              <div v-if="form.compatibles && form.compatibles.length > 0" class="compatibles-table-wrapper">
+                <table class="compatibles-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 15%">Référence</th>
+                      <th style="width: 35%">Désignation</th>
+                      <th style="width: 15%">Marque</th>
+                      <th style="width: 15%">Réf. OEM</th>
+                      <th class="text-right" style="width: 12%">Prix Vente HT</th>
+                      <th class="text-center" style="width: 13%">Disponibilité</th>
+                      <th class="text-right" style="width: 10%">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="alt in form.compatibles" :key="alt.id" class="compat-table-row">
+                      <td>
+                        <span class="product-ref-badge">{{ alt.reference }}</span>
+                      </td>
+                      <td class="designation-cell">
+                        <span class="alt-designation-title">{{ alt.designation }}</span>
+                      </td>
+                      <td>
+                        <span class="alt-marque-text">{{ alt.marque || '—' }}</span>
+                      </td>
+                      <td>
+                        <span class="oem-badge-alt" v-if="alt.reference_oem">{{ alt.reference_oem }}</span>
+                        <span class="alt-none-text" v-else>—</span>
+                      </td>
+                      <td class="text-right font-bold price-text">
+                        {{ formatMoney(alt.prix_ht_vente) }} <span class="price-curr">DH</span>
+                      </td>
+                      <td class="text-center">
+                        <span 
+                          class="stock-badge" 
+                          :class="alt.stock_actuel > 0 ? 'in-stock' : 'out-of-stock'"
+                        >
+                          <span class="dot-indicator">●</span>
+                          {{ alt.stock_actuel > 0 ? parseFloat(alt.stock_actuel) + ' en stock' : 'Rupture' }}
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <button 
+                          @click="navigateToProduct(alt.id)" 
+                          class="btn-consult-alt"
+                          title="Consulter la fiche"
+                          type="button"
+                        >
+                          Consulter <span>→</span>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="empty-compat-info">
+                Aucune référence compatible (alternative) n'a été configurée pour cet article.
+              </div>
+            </div>
         </section>
 
         <section v-if="!form.is_service" class="info-card">
@@ -224,17 +307,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
 
 const props = defineProps({ id: [String, Number] })
 const route = useRoute()
+const router = useRouter()
 const loading = ref(true)
 
 const form = ref({
   id: null,
   reference: '',
+  reference_oem: '',
   designation: '',
   marque: '',
   famille_id: '',
@@ -254,7 +339,8 @@ const form = ref({
   garantie_mois: 0,
   detail: '',
   image_path: null,
-  is_actif: true
+  is_actif: true,
+  compatibles: []
 })
 
 const familles = ref([])
@@ -265,7 +351,11 @@ const margeProfit = computed(() => {
 
 const familleLibelle = computed(() => {
   const f = familles.value.find(x => x.id == form.value.famille_id)
-  return f ? f.libelle : 'Sans famille'
+  if (!f) return 'Sans famille'
+  if (f.parent) {
+    return `${f.parent.libelle} > ${f.libelle}`
+  }
+  return f.libelle
 })
 
 const imageUrl = computed(() => {
@@ -282,9 +372,14 @@ function formatMoney(val) {
   return parseFloat(val || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-onMounted(async () => {
+const navigateToProduct = (id) => {
+  router.push(`/produits/${id}`)
+}
+
+const loadProduct = async () => {
   loading.value = true
   const productId = props.id || route.params.id
+  if (!productId) return
   
   try {
      const [pRes, fRes] = await Promise.all([
@@ -304,6 +399,14 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  loadProduct()
+})
+
+watch(() => props.id || route.params.id, () => {
+  loadProduct()
 })
 </script>
 
@@ -330,6 +433,174 @@ onMounted(async () => {
   min-height: 100vh;
   padding: 24px 28px 48px;
   color: var(--c-text);
+}
+
+/* ─── Alternatives & Out-of-stock Styles ─── */
+.out-of-stock-banner {
+  background-color: #FEF2F2;
+  border: 1.5px solid #FCA5A5;
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.banner-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.banner-content h4 {
+  margin: 0 0 4px 0;
+  color: #991B1B;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.banner-content p {
+  margin: 0;
+  color: #7F1D1D;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Compatibles Table Styling */
+.compatibles-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+}
+.compatibles-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+.compatibles-table th {
+  padding: 12px 16px;
+  background-color: #F8FAFC;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid var(--c-border);
+}
+.compatibles-table td {
+  padding: 14px 16px;
+  border-bottom: 1.5px solid var(--c-border);
+  vertical-align: middle;
+}
+.compat-table-row {
+  transition: background-color 0.2s ease;
+}
+.compat-table-row:hover {
+  background-color: #F8FAFC;
+}
+.compat-table-row:last-child td {
+  border-bottom: none;
+}
+
+/* Badges & Elements */
+.product-ref-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.alt-designation-title {
+  font-weight: 700;
+  color: var(--c-text);
+  font-size: 0.88rem;
+}
+.alt-marque-text {
+  font-weight: 600;
+  color: #334155;
+}
+.oem-badge-alt {
+  background-color: #F1F5F9;
+  color: #475569;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  display: inline-block;
+}
+.alt-none-text {
+  color: var(--c-muted);
+}
+.price-text {
+  color: var(--c-text);
+  font-size: 0.9rem;
+}
+.price-curr {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+/* Stock Status Pill */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.stock-badge.in-stock {
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+.stock-badge.out-of-stock {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+}
+.dot-indicator {
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+/* Consult Action Button */
+.btn-consult-alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #FFFFFF;
+  border: 1.5px solid var(--c-accent);
+  color: var(--c-accent);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-consult-alt:hover {
+  background-color: var(--c-accent);
+  color: #FFFFFF;
+  box-shadow: 0 4px 8px rgba(8, 145, 178, 0.15);
+  transform: translateY(-1px);
+}
+.btn-consult-alt:active {
+  transform: translateY(0);
+}
+.empty-compat-info {
+  font-size: 0.85rem;
+  color: var(--c-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 24px 0;
 }
 
 /* ─── Topbar ─── */

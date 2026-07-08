@@ -168,15 +168,31 @@
 
             <div class="form-row-custom">
               <div class="form-group-custom">
-                <label>Famille / Catégorie</label>
-                <select v-model="form.famille_id">
-                  <option value="">-- Sans Famille --</option>
-                  <option v-for="f in familles" :key="f.id" :value="f.id">{{ f.libelle }}</option>
-                </select>
+                <label>Référence OEM (Constructeur)</label>
+                <input v-model="form.reference_oem" type="text" placeholder="Ex: 04465-0D040..." />
               </div>
               <div class="form-group-custom">
                 <label>Marque / Fabricant</label>
                 <input v-model="form.marque" type="text" placeholder="Ex: Dell, HP, Apple..." />
+              </div>
+            </div>
+
+            <div class="form-row-custom">
+              <div class="form-group-custom">
+                <label>Famille / Catégorie</label>
+                <select v-model="form.famille_id">
+                  <option value="">-- Sans Famille --</option>
+                  <template v-for="parent in hierarchicalFamilles" :key="parent.id">
+                    <!-- Parent Category -->
+                    <option :value="parent.id" style="font-weight: bold; background-color: #f1f5f9;">
+                      {{ parent.libelle }}
+                    </option>
+                    <!-- Children Categories -->
+                    <option v-for="child in parent.children" :key="child.id" :value="child.id">
+                      &nbsp;&nbsp;&nbsp;&nbsp;↳ {{ child.libelle }}
+                    </option>
+                  </template>
+                </select>
               </div>
             </div>
           </div>
@@ -284,8 +300,8 @@
 
         <section class="info-card">
           <div class="card-header">
-            <div class="card-header-icon notes">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <div class="card-header-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             </div>
             <h3>Détails Techniques & Support</h3>
           </div>
@@ -297,6 +313,59 @@
             <div class="form-group-custom">
               <label>Description & Notes</label>
               <textarea v-model="form.detail" rows="4" placeholder="Contenu du pack, caractéristiques techniques..."></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="info-card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L20.2 3.8M21 16v5h-5M4 4l5 5"/></svg>
+            </div>
+            <h3>Références Compatibles (Alternatives)</h3>
+          </div>
+          <div class="card-body edit-form">
+            <p class="help-text" style="margin-top: 0;">Liez cet article à d'autres pièces de votre catalogue pour proposer des solutions de remplacement immédiates en cas de rupture de stock.</p>
+            
+            <div class="form-group-custom" style="position: relative;">
+              <label>Rechercher un article compatible</label>
+              <div class="input-with-action">
+                <input 
+                  v-model="compatSearch" 
+                  @input="searchProductsForCompat" 
+                  type="text" 
+                  placeholder="Saisissez une référence, désignation ou OEM..." 
+                />
+              </div>
+              
+              <!-- Search Results Dropdown List -->
+              <div v-if="compatSearchResults.length > 0" class="search-results-overlay">
+                <div 
+                  v-for="p in compatSearchResults" 
+                  :key="p.id" 
+                  class="search-result-item"
+                  @click="addCompatible(p)"
+                >
+                  <span class="res-ref">{{ p.reference }}</span>
+                  <span class="res-name">{{ p.designation }}</span>
+                  <span class="res-oem" v-if="p.reference_oem">(OEM: {{ p.reference_oem }})</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- List of selected compatible products -->
+            <div class="selected-compatibles-list">
+              <div v-for="item in selectedCompatibles" :key="item.id" class="compat-badge-item">
+                <div class="compat-info">
+                  <span class="compat-ref">{{ item.reference }}</span>
+                  <span class="compat-name">{{ item.designation }}</span>
+                  <span class="compat-oem" v-if="item.reference_oem">(OEM: {{ item.reference_oem }})</span>
+                </div>
+                <button type="button" class="btn-remove-compat" @click="removeCompatible(item.id)">×</button>
+              </div>
+              <div v-if="selectedCompatibles.length === 0" class="empty-compat-text">
+                Aucune référence compatible associée.
+              </div>
             </div>
           </div>
         </section>
@@ -327,6 +396,7 @@ const form = ref({
   fournisseur_id: '',
   is_service: false,
   code_barre: '',
+  reference_oem: '',
   prix_ht_achat: 0,
   marge_pourcentage: 20,
   prix_ht_vente: 0,
@@ -355,6 +425,52 @@ const errors = reactive({})
 const toast = reactive({ show: false, message: '', type: 'success' })
 const fileInput = ref(null)
 const imageFile = ref(null)
+
+// Compatible products search and selection states
+const compatSearch = ref('')
+const compatSearchResults = ref([])
+const selectedCompatibles = ref([])
+const allProducts = ref([])
+
+const searchProductsForCompat = () => {
+  const query = compatSearch.value.trim().toLowerCase()
+  if (!query) {
+    compatSearchResults.value = []
+    return
+  }
+  
+  compatSearchResults.value = allProducts.value.filter(p => {
+    if (form.value.id && p.id == form.value.id) return false
+    if (selectedCompatibles.value.some(x => x.id == p.id)) return false
+    
+    return (
+      (p.reference || '').toLowerCase().includes(query) ||
+      (p.designation || '').toLowerCase().includes(query) ||
+      (p.reference_oem || '').toLowerCase().includes(query)
+    )
+  }).slice(0, 8)
+}
+
+const addCompatible = (p) => {
+  selectedCompatibles.value.push(p)
+  compatSearch.value = ''
+  compatSearchResults.value = []
+}
+
+const removeCompatible = (id) => {
+  selectedCompatibles.value = selectedCompatibles.value.filter(x => x.id != id)
+}
+
+const hierarchicalFamilles = computed(() => {
+  const parents = familles.value.filter(f => !f.parent_id)
+  return parents.map(parent => {
+    const children = familles.value.filter(f => f.parent_id === parent.id)
+    return {
+      ...parent,
+      children: children.sort((a, b) => a.libelle.localeCompare(b.libelle))
+    }
+  }).sort((a, b) => a.libelle.localeCompare(b.libelle))
+})
 
 const margeProfit = computed(() => {
   return (form.value.prix_ht_vente || 0) - (form.value.prix_ht_achat || 0)
@@ -489,12 +605,21 @@ async function save() {
       marge_pourcentage: parseFloat(form.value.marge_pourcentage) || 0,
       taux_tva: parseFloat(form.value.taux_tva) || 0,
       stock_initial: parseFloat(form.value.stock_initial) || 0,
-      famille_id: parseInt(form.value.famille_id) || null
+      famille_id: parseInt(form.value.famille_id) || null,
+      compatible_ids: selectedCompatibles.value.map(x => x.id)
     }
 
     const formData = new FormData()
     Object.entries(payload).forEach(([k, v]) => {
       if (k === 'image_path' && imageFile.value) return // Don't send blob URL
+      if (k === 'compatible_ids') {
+        if (Array.isArray(v)) {
+          v.forEach(id => {
+            formData.append('compatible_ids[]', id)
+          })
+        }
+        return
+      }
       if (v !== null && v !== undefined) {
         formData.append(k, typeof v === 'boolean' ? (v ? 1 : 0) : v)
       }
@@ -528,6 +653,9 @@ onMounted(async () => {
      const { data: tvaData } = await api.get('/parametrage/referentiels/taux-tva')
      tauxTvaList.value = tvaData.data || tvaData || []
 
+     const { data: prodData } = await api.get('/produits')
+     allProducts.value = prodData.data || prodData || []
+
      if (isNew.value && tauxTvaList.value.length > 0) {
        const defTva = tauxTvaList.value.find(t => t.is_default) || tauxTvaList.value[0]
        if (defTva) {
@@ -547,11 +675,13 @@ onMounted(async () => {
       form.value = { 
         ...form.value, 
         ...p,
+        reference_oem: p.reference_oem || '',
         taux_tva: p.taux_tva !== null && p.taux_tva !== undefined ? String(parseFloat(p.taux_tva)) : defaultRateStr,
         prix_ht_achat: p.prix_ht_achat || p.prix_achat_ht || 0,
         prix_ht_vente: p.prix_ht_vente || p.prix_vente_ht || 0,
         detail: p.detail || p.description || ''
       }
+      selectedCompatibles.value = p.compatibles || []
     } catch (error) { showToast('Produit introuvable', 'error') }
   }
 })
@@ -742,6 +872,119 @@ input.money-input { font-weight: 800; font-size: 1.1rem; border-color: var(--c-a
 }
 .toast-notification.success { background: var(--c-success); }
 .toast-notification.error { background: var(--c-danger); }
+
+/* ─── Compatible References Selection ─── */
+.search-results-overlay {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid var(--c-border-mid);
+  border-radius: var(--radius-sm);
+  z-index: 50;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  margin-top: 4px;
+}
+.search-result-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--c-border);
+  transition: background-color 0.2s;
+  text-align: left;
+}
+.search-result-item:hover {
+  background-color: var(--c-accent-bg);
+}
+.search-result-item .res-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+.search-result-item .res-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.search-result-item .res-oem {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+}
+.selected-compatibles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.compat-badge-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F8FAFC;
+  border: 1px solid var(--c-border-mid);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  transition: all 0.2s;
+  text-align: left;
+}
+.compat-badge-item:hover {
+  border-color: var(--c-accent);
+  background-color: #F0FDF4;
+}
+.compat-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.compat-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  background: var(--c-accent-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.compat-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.compat-oem {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+  font-style: italic;
+}
+.btn-remove-compat {
+  background: none;
+  border: none;
+  color: var(--c-danger);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+.btn-remove-compat:hover {
+  color: #B91C1C;
+}
+.empty-compat-text {
+  font-size: 0.85rem;
+  color: var(--c-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 12px 0;
+}
 
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>

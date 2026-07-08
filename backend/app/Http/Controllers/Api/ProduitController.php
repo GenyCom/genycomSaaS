@@ -19,11 +19,12 @@ class ProduitController extends Controller
         $sortBy = in_array($request->sort_by, $allowedSorts) ? $request->sort_by : 'designation';
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
-        $query = Produit::with(['famille', 'fournisseur:id,societe'])
+        $query = Produit::with(['famille.parent', 'fournisseur:id,societe', 'compatibles'])
             ->when($request->search, fn($q, $v) => $q->where(function($sq) use ($v) {
                 $sq->where('reference', 'like', "%{$v}%")
                    ->orWhere('designation', 'like', "%{$v}%")
-                   ->orWhere('code_barre', 'like', "%{$v}%");
+                   ->orWhere('code_barre', 'like', "%{$v}%")
+                   ->orWhere('reference_oem', 'like', "%{$v}%");
             }))
             ->when($request->famille_id, fn($q, $v) => $q->where('famille_id', $v))
             ->orderBy($sortBy, $sortDir);
@@ -123,7 +124,19 @@ class ProduitController extends Controller
         }
 
         $produit = Produit::create($data);
-        return response()->json($produit->load(['famille', 'fournisseur:id,societe']), 201);
+
+        $compatibleIds = $request->input('compatible_ids', []);
+        if (!empty($compatibleIds)) {
+            $produit->compatibles()->sync($compatibleIds);
+            foreach ($compatibleIds as $newId) {
+                $other = Produit::find($newId);
+                if ($other) {
+                    $other->compatibles()->attach($produit->id);
+                }
+            }
+        }
+
+        return response()->json($produit->load(['famille.parent', 'fournisseur:id,societe', 'compatibles']), 201);
     }
 
     /**
@@ -131,7 +144,7 @@ class ProduitController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $produit = Produit::with(['famille', 'fournisseur:id,societe'])->findOrFail($id);
+        $produit = Produit::with(['famille.parent', 'fournisseur:id,societe', 'compatibles'])->findOrFail($id);
         return response()->json($produit);
     }
 
@@ -150,7 +163,26 @@ class ProduitController extends Controller
         }
 
         $produit->update($data);
-        return response()->json($produit->fresh(['famille', 'fournisseur:id,societe']));
+
+        $compatibleIds = $request->input('compatible_ids', []);
+        // Supprimer les liens bidirectionnels existants
+        foreach ($produit->compatibles as $oldComp) {
+            $oldComp->compatibles()->detach($produit->id);
+        }
+        $produit->compatibles()->detach();
+
+        // Recréer les liens bidirectionnels
+        if (!empty($compatibleIds)) {
+            $produit->compatibles()->sync($compatibleIds);
+            foreach ($compatibleIds as $newId) {
+                $other = Produit::find($newId);
+                if ($other) {
+                    $other->compatibles()->attach($produit->id);
+                }
+            }
+        }
+
+        return response()->json($produit->fresh(['famille.parent', 'fournisseur:id,societe', 'compatibles']));
     }
 
     /**

@@ -86,7 +86,14 @@
         <div class="filter-group">
           <select v-model="filters.famille_id" class="filter-select">
             <option value="">Toutes les familles</option>
-            <option v-for="fam in familles" :key="fam.id" :value="fam.id">{{ fam.libelle }}</option>
+            <template v-for="parent in hierarchicalFamilles" :key="parent.id">
+              <option :value="parent.id" style="font-weight: bold; background-color: #f1f5f9;">
+                {{ parent.libelle }}
+              </option>
+              <option v-for="child in parent.children" :key="child.id" :value="child.id">
+                &nbsp;&nbsp;&nbsp;&nbsp;↳ {{ child.libelle }}
+              </option>
+            </template>
           </select>
           
           <select v-model="filters.type" class="filter-select">
@@ -138,75 +145,93 @@
             </tr>
           </thead>
           <tbody>
-            <template v-for="(groupProduits, familleName) in groupedProduits" :key="familleName">
-              <tr class="group-header" @click="toggleGroup(familleName)">
+            <template v-for="(subGroups, parentFamName) in groupedProduits" :key="parentFamName">
+              <!-- Parent Group Header -->
+              <tr class="group-header" @click="toggleGroup(parentFamName)">
                 <td colspan="8">
                   <div class="group-header-content">
-                    <svg :class="{ 'rotated': collapsedGroups[familleName] }" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    <strong>{{ familleName }}</strong>
-                    <span class="group-count">{{ groupProduits.length }} produit(s)</span>
+                    <svg :class="{ 'rotated': collapsedGroups[parentFamName] }" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    <span class="parent-fam-icon">📁</span>
+                    <strong>{{ parentFamName }}</strong>
+                    <span class="group-count">{{ getProductCount(subGroups) }} produit(s)</span>
                   </div>
                 </td>
               </tr>
               
-              <template v-if="!collapsedGroups[familleName]">
-                <tr v-for="produit in groupProduits" :key="produit.id" class="table-row">
-                  <td class="text-center">
-                    <div class="product-thumb" :class="{ 'has-image': produit.image_path }"
-                         @mouseenter="e => handleImageHover(e, produit.image_path)"
-                         @mouseleave="handleImageLeave"
-                         @mousemove="e => hoveredImage && updateZoomPos(e)"
-                    >
-                      <img v-if="produit.image_path" :src="produit.image_path" alt="Image" class="thumb-img" />
-                      <div v-else class="thumb-placeholder" :class="produit.is_service ? 'bg-service' : 'bg-produit'">
-                        {{ produit.is_service ? 'SR' : 'PR' }}
+              <template v-if="!collapsedGroups[parentFamName]">
+                <!-- Loop over Sub-groups -->
+                <template v-for="(items, subFamName) in subGroups" :key="subFamName">
+                  <!-- Sub-family Header (only shown if it is not '_direct') -->
+                  <tr v-if="subFamName !== '_direct'" class="sub-group-header">
+                    <td colspan="8" class="pl-sub-header">
+                      <div class="sub-group-header-content">
+                        <span class="sub-fam-arrow">└─</span>
+                        <span class="sub-fam-icon">📁</span>
+                        <span class="sub-fam-title">{{ subFamName }}</span>
+                        <span class="sub-group-count">{{ items.length }} produit(s)</span>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="product-ref-badge">{{ produit.reference }}</span>
-                  </td>
-                  <td class="designation-cell">
-                    <div class="product-name">{{ produit.designation }}</div>
-                  </td>
-                  <td>
-                    <span class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
-                      {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
-                    </span>
-                  </td>
-                  <td class="text-right">
-                    <div class="price-cell">
-                      {{ formatMoney(produit.prix_ht_vente) }}
-                      <span class="currency">DH</span>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <div v-if="produit.is_service" class="stock-n-a">-</div>
-                    <div v-else class="stock-display" :class="{ 'stock-low': produit.stock_actuel <= (produit.stock_min || produit.seuil_alerte || 0) }">
-                      <span class="stock-actual">{{ formatNumber(produit.stock_actuel) }}</span>
-                      <span class="stock-separator">/</span>
-                      <span class="stock-min" title="Stock Min">{{ formatNumber(produit.stock_min || 0) }}</span>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <span class="status-indicator" :class="produit.is_actif ? 'active' : 'inactive'">
-                      {{ produit.is_actif ? 'Actif' : 'Inactif' }}
-                    </span>
-                  </td>
-                  <td class="text-right">
-                    <div class="actions-group">
-                      <router-link :to="`/produits/${produit.id}`" class="action-btn view" title="Consulter">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      </router-link>
-                      <router-link :to="`/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </router-link>
-                      <button @click="deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  
+                  <!-- Product Rows -->
+                  <tr v-for="produit in items" :key="produit.id" class="table-row" :class="{ 'child-product-row': subFamName !== '_direct' }">
+                    <td class="text-center">
+                      <div class="product-thumb" :class="{ 'has-image': produit.image_path }"
+                           @mouseenter="e => handleImageHover(e, getImageUrl(produit.image_path))"
+                           @mouseleave="handleImageLeave"
+                           @mousemove="e => hoveredImage && updateZoomPos(e)"
+                      >
+                        <img v-if="produit.image_path" :src="getImageUrl(produit.image_path)" alt="Image" class="thumb-img" />
+                        <div v-else class="thumb-placeholder" :class="produit.is_service ? 'bg-service' : 'bg-produit'">
+                          {{ produit.is_service ? 'SR' : 'PR' }}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="product-ref-badge">{{ produit.reference }}</span>
+                    </td>
+                    <td class="designation-cell">
+                      <div class="product-name">{{ produit.designation }}</div>
+                    </td>
+                    <td>
+                      <span class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
+                        {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="price-cell">
+                        {{ formatMoney(produit.prix_ht_vente) }}
+                        <span class="currency">DH</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <div v-if="produit.is_service" class="stock-n-a">-</div>
+                      <div v-else class="stock-display" :class="{ 'stock-low': produit.stock_actuel <= (produit.stock_min || produit.seuil_alerte || 0) }">
+                        <span class="stock-actual">{{ formatNumber(produit.stock_actuel) }}</span>
+                        <span class="stock-separator">/</span>
+                        <span class="stock-min" title="Stock Min">{{ formatNumber(produit.stock_min || 0) }}</span>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span class="status-indicator" :class="produit.is_actif ? 'active' : 'inactive'">
+                        {{ produit.is_actif ? 'Actif' : 'Inactif' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="actions-group">
+                        <router-link :to="`/produits/${produit.id}`" class="action-btn view" title="Consulter">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </router-link>
+                        <router-link :to="`/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </router-link>
+                        <button @click="deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
               </template>
             </template>
             <tr v-if="Object.keys(groupedProduits).length === 0">
@@ -378,7 +403,8 @@ const processedProduits = computed(() => {
     const s = search.value.toLowerCase()
     result = result.filter(p =>
       (p.designation || '').toLowerCase().includes(s) ||
-      (p.reference || '').toLowerCase().includes(s)
+      (p.reference || '').toLowerCase().includes(s) ||
+      (p.reference_oem || '').toLowerCase().includes(s)
     )
   }
 
@@ -409,23 +435,84 @@ const processedProduits = computed(() => {
 
 const groupedProduits = computed(() => {
   const groups = {}
+  
   processedProduits.value.forEach(p => {
-    const famName = p.famille?.libelle || 'Sans famille'
-    if (!groups[famName]) {
-      groups[famName] = []
-      if (collapsedGroups[famName] === undefined) {
-        collapsedGroups[famName] = false
+    let parentName = 'Sans famille'
+    let subName = '_direct'
+    
+    if (p.famille) {
+      if (p.famille.parent) {
+        parentName = p.famille.parent.libelle
+        subName = p.famille.libelle
+      } else {
+        parentName = p.famille.libelle
+        subName = '_direct'
       }
     }
-    groups[famName].push(p)
+    
+    if (!groups[parentName]) {
+      groups[parentName] = {}
+      if (collapsedGroups[parentName] === undefined) {
+        collapsedGroups[parentName] = false
+      }
+    }
+    
+    if (!groups[parentName][subName]) {
+      groups[parentName][subName] = []
+    }
+    
+    groups[parentName][subName].push(p)
   })
   
   const orderedGroups = {}
-  Object.keys(groups).sort().forEach(key => {
-    orderedGroups[key] = groups[key]
+  Object.keys(groups).sort().forEach(parentKey => {
+    const subs = groups[parentKey]
+    const orderedSubs = {}
+    
+    const sortedSubKeys = Object.keys(subs).sort((a, b) => {
+      if (a === '_direct') return -1
+      if (b === '_direct') return 1
+      return a.localeCompare(b)
+    })
+    
+    sortedSubKeys.forEach(subKey => {
+      orderedSubs[subKey] = subs[subKey]
+    })
+    
+    orderedGroups[parentKey] = orderedSubs
   })
+  
   return orderedGroups
 })
+
+const hierarchicalFamilles = computed(() => {
+  const parents = familles.value.filter(f => !f.parent_id)
+  return parents.map(parent => {
+    const children = familles.value.filter(f => f.parent_id === parent.id)
+    return {
+      ...parent,
+      children: children.sort((a, b) => a.libelle.localeCompare(b.libelle))
+    }
+  }).sort((a, b) => a.libelle.localeCompare(b.libelle))
+})
+
+const getProductCount = (subGroups) => {
+  let count = 0
+  Object.values(subGroups).forEach(items => {
+    count += items.length
+  })
+  return count
+}
+
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return null
+  if (imagePath.startsWith('blob:') || imagePath.startsWith('http')) {
+    return imagePath
+  }
+  let path = imagePath
+  if (!path.startsWith('/')) path = '/' + path
+  return path
+}
 
 onMounted(async () => {
   loading.value = true
@@ -629,8 +716,15 @@ onMounted(async () => {
 }
 
 .product-ref-badge {
-  font-family: 'JetBrains Mono', monospace; font-size: .78rem; font-weight: 700;
-  color: var(--c-accent); background: var(--c-accent-bg); padding: 4px 8px; border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
 }
 .product-name { font-size: .9rem; font-weight: 700; color: var(--c-text); margin-bottom: 2px; }
 
@@ -695,6 +789,54 @@ onMounted(async () => {
   .saas-table th:nth-child(5), .saas-table td:nth-child(5) { display: none; }
 }
 
+/* ─── Hierarchical Grouping Specific Styles ─── */
+.parent-fam-icon {
+  margin-right: 6px;
+  font-size: 1.1rem;
+}
+.sub-group-header {
+  background-color: #F8FAFC;
+  border-bottom: 1px solid var(--c-border);
+}
+.pl-sub-header {
+  padding: 8px 24px !important;
+}
+.sub-group-header-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.sub-fam-arrow {
+  color: #CBD5E1;
+  font-family: monospace;
+  margin-right: 4px;
+}
+.sub-fam-icon {
+  font-size: 0.95rem;
+}
+.sub-fam-title {
+  color: #475569;
+}
+.sub-group-count {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--c-accent);
+  background: var(--c-accent-bg);
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
+.child-product-row {
+  background-color: #FFFFFF;
+}
+.child-product-row td:first-child,
+.child-product-row td:nth-child(2) {
+  padding-left: 28px;
+}
+
 /* ─── Modal & Toast ──────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
@@ -720,17 +862,17 @@ onMounted(async () => {
 }
 .btn-cancel:hover { background: var(--c-subtle); }
 .btn-confirm-delete:hover { background: #b91c1c; }
-
+ 
 .toast-notification {
   position: fixed; top: 24px; right: 24px; padding: 14px 24px; border-radius: 12px;
   color: #fff; font-weight: 700; z-index: 1100; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 .toast-notification.success { background: var(--c-success); }
 .toast-notification.error { background: var(--c-danger); }
-
+ 
 .slide-fade-enter-active { transition: all 0.3s ease-out; }
 .slide-fade-leave-active { transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1); }
 .slide-fade-enter-from, .slide-fade-leave-to { transform: translateX(20px); opacity: 0; }
-
+ 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>

@@ -12,7 +12,7 @@ class Produit extends BaseModel
     protected $table = 'produits';
 
     protected $fillable = [
-        'tenant_id', 'famille_id', 'fournisseur_id', 'reference', 'reference_fournisseur',
+        'tenant_id', 'famille_id', 'fournisseur_id', 'reference', 'reference_fournisseur', 'reference_oem',
         'code_barre', 'marque', 'designation', 'detail', 'unite', 'image_path',
         'is_service', 'is_actif',
         'prix_ht_achat', 'taux_tva', 'prix_ttc_achat', 'prix_revient', 'desc_revient',
@@ -44,6 +44,7 @@ class Produit extends BaseModel
     public function tarifs()      { return $this->hasMany(TarifProduit::class); }
     public function historique()  { return $this->hasMany(HistoriqueProduit::class); }
     public function fichiers()    { return $this->morphMany(Fichier::class, 'fileable'); }
+    public function compatibles() { return $this->belongsToMany(self::class, 'produit_compatibles', 'produit_id', 'compatible_id'); }
 
     // ─── Scopes ───
     public function scopeSearch($query, ?string $search)

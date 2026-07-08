@@ -35,7 +35,7 @@
               <label>Catégorie Parente (Optionnelle)</label>
               <select v-model="familleForm.data.parent_id" class="select-custom">
                 <option :value="null">--- Aucune (Catégorie Maître) ---</option>
-                <option v-for="f in familles.filter(f => f.id !== familleForm.data.id)" :key="f.id" :value="f.id">
+                <option v-for="f in familles.filter(f => f.id !== familleForm.data.id && !f.parent_id)" :key="f.id" :value="f.id">
                   {{ f.libelle }} ({{ f.code }})
                 </option>
               </select>
@@ -50,31 +50,79 @@
         <table class="saas-table">
           <thead>
             <tr>
-              <th style="width: 15%">Code</th>
-              <th style="width: 40%">Libellé</th>
-              <th style="width: 30%">Catégorie Parente</th>
+              <th style="width: 20%">Code</th>
+              <th style="width: 45%">Libellé</th>
+              <th style="width: 20%">Type</th>
               <th class="text-right" style="width: 15%">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in familles" :key="item.id">
-              <td class="font-mono text-accent font-bold">{{ item.code }}</td>
-              <td class="font-medium">{{ item.libelle }}</td>
-              <td>
-                <span class="badge-parent" v-if="item.parent">{{ item.parent.libelle }}</span>
-                <span class="text-muted italic text-xs" v-else>Catégorie Maître</span>
-              </td>
-              <td>
-                <div class="actions-group">
-                  <button class="action-btn edit" @click="editFamille(item)" title="Modifier">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button class="action-btn delete" @click="deleteItem(item.id)" title="Supprimer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
+            <template v-for="parent in hierarchicalFamilles" :key="parent.id">
+              <!-- Row for Parent -->
+              <tr class="parent-row" :class="{ 'has-children': parent.children.length > 0 }">
+                <td class="font-mono text-accent font-bold">
+                  <div class="flex-align-center">
+                    <button 
+                      v-if="parent.children.length > 0"
+                      class="btn-toggle-expand"
+                      @click="toggleParent(parent.id)"
+                      type="button"
+                    >
+                      <svg :class="{ 'rotated': collapsedParents[parent.id] }" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <span v-else class="toggle-placeholder"></span>
+                    {{ parent.code }}
+                  </div>
+                </td>
+                <td class="font-medium parent-libelle">
+                  <span class="parent-icon">📁</span>
+                  {{ parent.libelle }}
+                  <span class="count-badge" v-if="parent.children.length > 0">
+                    {{ parent.children.length }} sous-famille(s)
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-master">Famille Maître</span>
+                </td>
+                <td>
+                  <div class="actions-group">
+                    <button class="action-btn edit" @click="editFamille(parent)" title="Modifier">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="action-btn delete" @click="deleteItem(parent.id)" title="Supprimer">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Rows for Children -->
+              <template v-if="!collapsedParents[parent.id]">
+                <tr v-for="child in parent.children" :key="child.id" class="child-row">
+                  <td class="font-mono text-muted pl-code">
+                    {{ child.code }}
+                  </td>
+                  <td class="font-medium pl-libelle">
+                    <span class="tree-line">└─</span>
+                    <span class="child-icon">📁</span>
+                    {{ child.libelle }}
+                  </td>
+                  <td>
+                    <span class="badge-sub-fam">Sous-famille</span>
+                  </td>
+                  <td>
+                    <div class="actions-group">
+                      <button class="action-btn edit" @click="editFamille(child)" title="Modifier">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="action-btn delete" @click="deleteItem(child.id)" title="Supprimer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </template>
             <tr v-if="familles.length === 0">
               <td colspan="4" class="empty-row">Aucune famille de produits configurée.</td>
             </tr>
@@ -95,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
@@ -106,6 +154,23 @@ const familleForm = ref({ show: false, isEdit: false, data: {} })
 
 const showConfirm = ref(false)
 const itemToDelete = ref(null)
+
+const collapsedParents = reactive({})
+
+const toggleParent = (id) => {
+  collapsedParents[id] = !collapsedParents[id]
+}
+
+const hierarchicalFamilles = computed(() => {
+  const parents = familles.value.filter(f => !f.parent_id)
+  return parents.map(parent => {
+    const children = familles.value.filter(f => f.parent_id === parent.id)
+    return {
+      ...parent,
+      children: children.sort((a, b) => a.libelle.localeCompare(b.libelle))
+    }
+  }).sort((a, b) => a.libelle.localeCompare(b.libelle))
+})
 
 
 
@@ -242,6 +307,102 @@ onMounted(() => {
   border: 1px solid #E2E8F0; 
   white-space: nowrap; 
   display: inline-block; 
+}
+
+/* ─── Tree Table Specific Styles ─── */
+.parent-row {
+  background-color: #FAFBFD;
+}
+.parent-row:hover {
+  background-color: #F3F4F6;
+}
+.child-row {
+  background-color: #FFFFFF;
+}
+.child-row:hover {
+  background-color: #F9FAFB;
+}
+.parent-libelle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.parent-icon {
+  font-size: 1.1rem;
+}
+.child-icon {
+  font-size: 0.95rem;
+  margin-right: 4px;
+}
+.toggle-placeholder {
+  display: inline-block;
+  width: 20px;
+}
+.btn-toggle-expand {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-muted);
+  border-radius: 4px;
+  transition: all 0.2s;
+  width: 20px;
+  height: 20px;
+}
+.btn-toggle-expand:hover {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+}
+.btn-toggle-expand svg {
+  transition: transform 0.2s ease;
+}
+.btn-toggle-expand svg.rotated {
+  transform: rotate(-90deg);
+}
+.count-badge {
+  background: #E0E7FF;
+  color: #4338CA;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  margin-left: 8px;
+}
+.pl-code {
+  padding-left: 2.2rem !important;
+}
+.pl-libelle {
+  padding-left: 1.8rem !important;
+  display: flex;
+  align-items: center;
+}
+.tree-line {
+  color: #CBD5E1;
+  font-family: monospace;
+  font-weight: bold;
+  margin-right: 8px;
+  user-select: none;
+}
+.badge-master {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.68rem;
+  border: 1px solid #CFFAFE;
+}
+.badge-sub-fam {
+  background: #F0FDF4;
+  color: #16A34A;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.68rem;
+  border: 1px solid #DCFCE7;
 }
 
 /* ─── Actions Table ─── */
