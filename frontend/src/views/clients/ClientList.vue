@@ -83,7 +83,10 @@
                 <span class="client-code-badge">{{ client.code_client || '—' }}</span>
               </td>
               <td class="societe-cell">
-                <div class="societe-name">{{ client.societe }}</div>
+                <div class="societe-name-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                  <span class="societe-name" style="font-weight: 700;">{{ client.societe }}</span>
+                  <span v-if="client.is_default" class="default-client-pill" style="font-size: 0.62rem; background: var(--c-accent-bg); color: var(--c-accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1.5px solid var(--c-accent-mid); text-transform: uppercase; white-space: nowrap; line-height: 1.2;">Comptoir</span>
+                </div>
                 <div class="societe-sub">{{ client.ice || 'Sans ICE' }}</div>
               </td>
               <td>

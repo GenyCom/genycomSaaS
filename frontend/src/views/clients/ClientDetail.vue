@@ -66,6 +66,10 @@
         </svg>
         {{ client.exempt_tva ? 'Exonéré TVA — Art. 92' : 'TVA Standard 20%' }}
       </div>
+      <div v-if="client.is_default" class="hero-tva-badge standard" style="background: var(--c-accent-bg); color: var(--c-accent); border-color: var(--c-accent-mid);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Client Comptoir par Défaut
+      </div>
     </div>
 
     <!-- KPI Strip -->
@@ -168,6 +172,22 @@
                   <svg v-else xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Conditions Commerciales Card -->
+        <section class="info-card">
+          <div class="card-header">
+            <div class="card-header-icon commercial" style="background: var(--c-accent-bg); color: var(--c-accent);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 12H3m9-9v18"/></svg>
+            </div>
+            <h3>Conditions Commerciales</h3>
+          </div>
+          <div class="card-body">
+            <div class="field-row">
+              <span class="field-label">Taux de remise par défaut</span>
+              <span class="field-value mono accent font-bold">{{ parseFloat(client.taux_remise || 0).toFixed(2) }}%</span>
             </div>
           </div>
         </section>

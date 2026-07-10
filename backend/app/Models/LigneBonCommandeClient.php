@@ -19,6 +19,15 @@ class LigneBonCommandeClient extends BaseModel
         'montant_ht', 'montant_tva', 'montant_ttc', 'ordre'
     ];
 
+    protected $casts = [
+        'quantite' => 'decimal:2',
+        'prix_unitaire' => 'decimal:4',
+        'taux_tva' => 'decimal:3',
+        'montant_ht' => 'decimal:2',
+        'montant_tva' => 'decimal:2',
+        'montant_ttc' => 'decimal:2',
+    ];
+
     public function bonCommande() { return $this->belongsTo(BonCommandeClient::class, 'bon_commande_client_id'); }
     public function produit()     { return $this->belongsTo(Produit::class); }
 }

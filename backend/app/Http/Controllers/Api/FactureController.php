@@ -108,6 +108,8 @@ class FactureController extends Controller
             'lignes.*.quantite'      => 'required|numeric|min:0.01',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
+            'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($data, $facture, $request) {

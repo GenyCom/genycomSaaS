@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS `ligne_devis` (
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
     `unite`             VARCHAR(50) NULL,
     `prix_unitaire`     DECIMAL(24,4) DEFAULT 0.0000,
+    `prix_achat`        DECIMAL(24,4) DEFAULT 0.0000,
     `taux_tva`          DECIMAL(5,3) DEFAULT 0.000,
     `remise_pourcent`   DECIMAL(5,2) DEFAULT 0.00,
     `remise_montant`    DECIMAL(24,2) DEFAULT 0.00,
@@ -142,6 +143,7 @@ CREATE TABLE IF NOT EXISTS `ligne_facture` (
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
     `unite`             VARCHAR(50) NULL,
     `prix_unitaire`     DECIMAL(24,4) DEFAULT 0.0000,
+    `prix_achat`        DECIMAL(24,4) DEFAULT 0.0000,
     `taux_tva`          DECIMAL(5,3) DEFAULT 0.000,
     `remise_pourcent`   DECIMAL(5,2) DEFAULT 0.00,
     `remise_montant`    DECIMAL(24,2) DEFAULT 0.00,
@@ -258,7 +260,8 @@ ADD COLUMN total_ttc DECIMAL(15,2) DEFAULT 0.00 AFTER total_tva,
 ADD COLUMN total_remise DECIMAL(15,2) DEFAULT 0.00 AFTER total_ttc;
 ALTER TABLE ligne_bon_livraison 
 ADD COLUMN prix_unitaire DECIMAL(15,4) DEFAULT 0.0000 AFTER quantite_livree,
-ADD COLUMN taux_tva DECIMAL(5,2) DEFAULT 0.00 AFTER prix_unitaire,
+ADD COLUMN prix_achat DECIMAL(24,4) DEFAULT 0.0000 AFTER prix_unitaire,
+ADD COLUMN taux_tva DECIMAL(5,2) DEFAULT 0.00 AFTER prix_achat,
 ADD COLUMN montant_ht DECIMAL(15,2) DEFAULT 0.00 AFTER taux_tva,
 ADD COLUMN montant_tva DECIMAL(15,2) DEFAULT 0.00 AFTER montant_ht,
 ADD COLUMN montant_ttc DECIMAL(15,2) DEFAULT 0.00 AFTER montant_tva;

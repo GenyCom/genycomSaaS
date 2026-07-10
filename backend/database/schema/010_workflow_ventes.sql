@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `ligne_bon_commande_client` (
     `quantite`              DECIMAL(24,2) DEFAULT 1.00,
     `unite`                 VARCHAR(50) NULL,
     `prix_unitaire`         DECIMAL(24,4) DEFAULT 0.0000,
+    `prix_achat`            DECIMAL(24,4) DEFAULT 0.0000,
     `taux_tva`              DECIMAL(5,3) DEFAULT 0.000,
     `remise_pourcent`       DECIMAL(5,2) DEFAULT 0.00,
     `remise_montant`        DECIMAL(24,2) DEFAULT 0.00,

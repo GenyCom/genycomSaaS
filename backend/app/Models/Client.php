@@ -28,6 +28,13 @@ class Client extends BaseModel
                 
                 $client->montant_rest_du = ($client->solde_initial ?? 0) + $facturesSum;
             }
+
+            if ($client->is_default) {
+                // Un seul client par défaut par tenant
+                static::where('tenant_id', $client->tenant_id)
+                    ->where('id', '!=', $client->id)
+                    ->update(['is_default' => false]);
+            }
         });
     }
 
@@ -39,6 +46,7 @@ class Client extends BaseModel
         'rib', 'banque', 'image_path', 'observations',
         'exempt_tva', 'type_client_id', 'plafond_credit', 'delai_paiement',
         'montant_rest_du', 'commercial_id', 'created_by', 'if_fiscal', 'patente', 'is_active', 'solde_initial',
+        'taux_remise', 'is_default',
     ];
 
     protected $casts = [
@@ -48,6 +56,8 @@ class Client extends BaseModel
         'montant_rest_du' => 'decimal:2',
         'is_active' => 'boolean',
         'solde_initial' => 'decimal:2',
+        'taux_remise' => 'decimal:2',
+        'is_default' => 'boolean',
     ];
 
     protected $appends = ['display_name'];

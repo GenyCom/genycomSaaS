@@ -42,6 +42,8 @@ class StoreClientRequest extends FormRequest
             'delai_paiement'        => 'nullable|integer|min:0',
             'solde_initial'         => 'nullable|numeric',
             'is_active'             => 'boolean',
+            'taux_remise'           => 'nullable|numeric|min:0|max:100',
+            'is_default'            => 'boolean',
         ];
     }
 }

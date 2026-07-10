@@ -24,6 +24,16 @@ class LigneBonLivraison extends BaseModel
         'montant_ttc',
     ];
 
+    protected $casts = [
+        'quantite_prevue' => 'decimal:2',
+        'quantite_livree' => 'decimal:2',
+        'prix_unitaire' => 'decimal:4',
+        'taux_tva' => 'decimal:2',
+        'montant_ht' => 'decimal:2',
+        'montant_tva' => 'decimal:2',
+        'montant_ttc' => 'decimal:2',
+    ];
+
     public function bonLivraison() { return $this->belongsTo(BonLivraison::class, 'bon_livraison_id'); }
     public function produit()      { return $this->belongsTo(Produit::class); }
 }

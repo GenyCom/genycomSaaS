@@ -199,6 +199,10 @@
               <input type="checkbox" v-model="form.exempt_tva" id="exempt" />
               <label for="exempt">Exonéré de TVA (Art. 92)</label>
             </div>
+            <div class="checkbox-group" style="margin-top: 12px;">
+              <input type="checkbox" v-model="form.is_default" id="is_default" />
+              <label for="is_default" style="font-weight: bold; color: var(--c-accent);">Client comptoir par défaut (Ventes comptoir)</label>
+            </div>
           </div>
         </section>
 
@@ -223,6 +227,11 @@
               <input v-model="form.solde_initial" type="number" class="money-input debt" placeholder="0.00" />
               <p class="field-help">Montant dû par le client au moment de la migration.</p>
             </div>
+            <div class="form-group-custom">
+              <label>Taux de Remise par défaut (%)</label>
+              <input v-model="form.taux_remise" type="number" step="0.01" min="0" max="100" />
+            </div>
+
             <div class="form-group-custom">
               <label>Banque</label>
               <input v-model="form.banque" type="text" />
@@ -288,7 +297,9 @@ const form = ref({
   exempt_tva: false,
   observations: '',
   solde_initial: 0,
-  is_active: true
+  taux_remise: 0,
+  is_active: true,
+  is_default: false
 })
 
 // VARIABLE POUR MEMORISER LA RAISON SOCIALE

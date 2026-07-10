@@ -16,6 +16,8 @@
       @cancel="showConfirmModal = false"
     />
 
+
+
     <div class="topbar">
       <div class="topbar-left">
         <router-link to="/devis" class="back-btn" title="Retour aux devis">
@@ -96,7 +98,7 @@
             <div class="form-row-custom">
               <div class="form-group-custom">
                 <label>Client Destinataire *</label>
-                <select v-model="form.client_id" :class="{ 'input-error': errors.client_id }">
+                <select v-model="form.client_id" @change="onClientChange" :class="{ 'input-error': errors.client_id }">
                   <option value="" disabled>Choisir un client...</option>
                   <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe || c.display_name }}</option>
                 </select>
@@ -174,11 +176,12 @@
               <table class="saas-table">
                 <thead>
                   <tr>
-                    <th style="width: 38%">Article / Service</th>
-                    <th style="width: 13%" class="text-center">Qté</th>
-                    <th style="width: 15%" class="text-right">P.U HT</th>
-                    <th style="width: 12%" class="text-center">TVA</th>
-                    <th style="width: 17%" class="text-right">Total HT</th>
+                    <th style="width: 45%">Article / Service</th>
+                    <th style="width: 8%; padding: 13px 6px;" class="text-center">Qté</th>
+                    <th style="width: 11%; padding: 13px 6px;" class="text-center">P.U HT</th>
+                    <th style="width: 8%; padding: 13px 6px;" class="text-center">Remise %</th>
+                    <th style="width: 8%; padding: 13px 6px;" class="text-center">TVA</th>
+                    <th style="width: 15%; padding: 13px 18px;" class="text-right">Total HT</th>
                     <th style="width: 5%"></th>
                   </tr>
                 </thead>
@@ -192,19 +195,22 @@
                       <textarea v-model="ligne.designation" class="input-inline-sub" placeholder="Description personnalisée..."></textarea>
                     </td>
                     <td class="td-center">
-                      <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
-                    </td>
-                    <td class="td-center">
-                      <input
-                        v-model.lazy="ligne.prix_unitaire_display"
-                        @focus="onFocusPrice($event, ligne)"
-                        @blur="onBlurPrice(ligne)"
-                        type="text"
-                        class="input-inline-table text-right mono"
-                      />
-                    </td>
-                    <td class="td-center">
-                      <select v-model="ligne.taux_tva" @change="recalculate" class="input-inline-table text-center tva-select">
+                       <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
+                     </td>
+                     <td class="td-center">
+                       <input
+                         v-model.lazy="ligne.prix_unitaire_display"
+                         @focus="onFocusPrice($event, ligne)"
+                         @blur="onBlurPrice(ligne)"
+                         type="text"
+                         class="input-inline-table text-center mono"
+                       />
+                     </td>
+                     <td class="td-center">
+                       <input v-model="ligne.remise_pourcent" type="number" step="0.1" min="0" max="100" @input="recalculate" class="input-inline-table text-center mono" placeholder="0" />
+                     </td>
+                     <td class="td-center">
+                       <select v-model="ligne.taux_tva" @change="recalculate" class="input-inline-table text-center tva-select">
                         <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">
                           {{ parseFloat(t.taux) }}%
                         </option>
@@ -221,7 +227,7 @@
                     </td>
                   </tr>
                   <tr v-if="form.lignes.length === 0">
-                    <td colspan="6" class="text-center" style="padding: 40px; color: var(--c-muted); font-style: italic; font-size: 0.85rem;">
+                    <td colspan="7" class="text-center" style="padding: 40px; color: var(--c-muted); font-style: italic; font-size: 0.85rem;">
                       Utilisez la barre de recherche ci-dessus pour scanner ou ajouter un article.
                     </td>
                   </tr>
@@ -313,6 +319,7 @@ function selectFirstProduct() {
 
 function ajouterProduitAuDocument(produit) {
   const pu = produit.prix_ht_vente || produit.prix_vente_ht || 0
+  const clientObj = clients.value.find(c => c.id === form.value.client_id)
   form.value.lignes.push({
     produit_id: produit.id,
     designation: produit.designation,
@@ -320,8 +327,9 @@ function ajouterProduitAuDocument(produit) {
     unite: produit.unite || 'Unité',
     prix_unitaire: pu,
     prix_unitaire_display: formatNumberInput(pu),
+    prix_achat: produit.prix_ht_achat || produit.prix_revient || 0,
     taux_tva: (produit.taux_tva !== null && produit.taux_tva !== undefined) ? parseFloat(produit.taux_tva) : (tauxTvaList.value.find(t => t.is_default) ? parseFloat(tauxTvaList.value.find(t => t.is_default).taux) : 20),
-    remise_pourcent: 0,
+    remise_pourcent: clientObj ? parseFloat(clientObj.taux_remise) || 0 : 0,
     montant_ht: 0,
     montant_tva: 0,
     montant_ttc: 0
@@ -363,11 +371,13 @@ function formatMoney(val) {
 function addLine() {
   const defTva = tauxTvaList.value.find(t => t.is_default)
   const tvaRate = defTva ? parseFloat(defTva.taux) : 20
+  const clientObj = clients.value.find(c => c.id === form.value.client_id)
+  const defaultRemise = clientObj ? parseFloat(clientObj.taux_remise) || 0 : 0
   
   form.value.lignes.push({ 
     produit_id: '', designation: '', quantite: 1, unite: 'Unité', 
     prix_unitaire: 0, prix_unitaire_display: '0,00', 
-    taux_tva: tvaRate, remise_pourcent: 0, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
+    taux_tva: tvaRate, remise_pourcent: defaultRemise, montant_ht: 0, montant_tva: 0, montant_ttc: 0 
   })
 }
 
@@ -381,10 +391,13 @@ function onProduitSelect(ligne) {
   if (p) {
     const defTva = tauxTvaList.value.find(t => t.is_default)
     const defaultRate = defTva ? parseFloat(defTva.taux) : 20
+    const clientObj = clients.value.find(c => c.id === form.value.client_id)
+    const defaultRemise = clientObj ? parseFloat(clientObj.taux_remise) || 0 : 0
     
     ligne.designation = p.designation
     ligne.prix_unitaire = parseFloat(p.prix_ht_vente || p.prix_vente_ht) || 0
     ligne.prix_unitaire_display = formatNumberInput(ligne.prix_unitaire)
+    ligne.remise_pourcent = defaultRemise
     ligne.taux_tva = (p.taux_tva !== null && p.taux_tva !== undefined) ? parseFloat(p.taux_tva) : defaultRate
     ligne.unite = p.unite || 'Unité'
   }
@@ -392,20 +405,30 @@ function onProduitSelect(ligne) {
 }
 
 function recalculate() {
-  let tht = 0, ttva = 0
+  let tht = 0, ttva = 0, tremise = 0
   form.value.lignes.forEach(l => {
     const qty = parseFloat(l.quantite) || 0
     const pu = parseFloat(l.prix_unitaire) || 0
+    const rem = parseFloat(l.remise_pourcent) || 0
     const tvaPct = parseFloat(l.taux_tva) || 0
-    const netHT = qty * pu
+
+    const totalLineBrut = qty * pu
+    const remiseAmt = totalLineBrut * (rem / 100)
+    const netHT = totalLineBrut - remiseAmt
     const tvaAmt = netHT * (tvaPct / 100)
+
+    l.remise_montant = +remiseAmt.toFixed(2)
     l.montant_ht = +netHT.toFixed(2)
     l.montant_tva = +tvaAmt.toFixed(2)
     l.montant_ttc = +(netHT + tvaAmt).toFixed(2)
-    tht += netHT; ttva += tvaAmt
+
+    tht += netHT
+    ttva += tvaAmt
+    tremise += remiseAmt
   })
   form.value.total_ht = +tht.toFixed(2)
   form.value.total_tva = +ttva.toFixed(2)
+  form.value.total_remise = +tremise.toFixed(2)
   form.value.total_ttc = +(tht + ttva).toFixed(2)
 }
 
@@ -459,6 +482,22 @@ function validateForm() {
   return isValid
 }
 
+
+function onClientChange() {
+  if (!form.value.client_id) return
+  const client = clients.value.find(c => c.id === form.value.client_id)
+  if (client) {
+    const remise = parseFloat(client.taux_remise) || 0
+    if (remise > 0) {
+      form.value.lignes.forEach(l => {
+        l.remise_pourcent = remise
+      })
+      recalculate()
+      toast.info(`La remise client de ${remise}% a été appliquée automatiquement aux lignes.`)
+    }
+  }
+}
+
 async function save() {
   if (!validateForm()) return
   saving.value = true
@@ -508,6 +547,14 @@ onMounted(async () => {
     ])
     clients.value = cRes.data.data || cRes.data || []
     
+    if (isNew.value && clients.value.length > 0) {
+      const defCli = clients.value.find(c => c.is_default)
+      if (defCli) {
+        form.value.client_id = defCli.id
+        onClientChange()
+      }
+    }
+    
     const { data: etatsData } = await api.get('/parametrage/referentiels/etats?type_document=devis')
     etats.value = etatsData.data || etatsData || []
     products.value = pRes.data.data || pRes.data || []
@@ -524,6 +571,8 @@ onMounted(async () => {
           l.taux_tva = parseFloat(l.taux_tva) || 0;
           l.quantite = parseFloat(l.quantite) || 1;
           l.prix_unitaire = parseFloat(l.prix_unitaire) || 0;
+          l.prix_achat = parseFloat(l.prix_achat) || 0;
+          l.remise_pourcent = parseFloat(l.remise_pourcent) || 0;
           l.prix_unitaire_display = formatNumberInput(l.prix_unitaire); // Formattage au chargement
         });
       }
@@ -676,4 +725,34 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .status-select-pill:hover {
   filter: brightness(0.95);
 }
+
+/* --- Styles pour les Marges --- */
+.marge-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+.marge-badge.danger {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+.marge-badge.warning {
+  background-color: #ffedd5;
+  color: #f97316;
+}
+.marge-badge.success {
+  background-color: #dcfce7;
+  color: #22c55e;
+}
+
+.kpi-item.danger .kpi-icon { background: #fee2e2; color: #ef4444; }
+.kpi-item.danger .kpi-value.highlighted-kpi { color: #ef4444; }
+.kpi-item.warning .kpi-icon { background: #ffedd5; color: #f97316; }
+.kpi-item.warning .kpi-value.highlighted-kpi { color: #f97316; }
+.kpi-item.success .kpi-icon { background: #dcfce7; color: #22c55e; }
+.kpi-item.success .kpi-value.highlighted-kpi { color: #22c55e; }
 </style>

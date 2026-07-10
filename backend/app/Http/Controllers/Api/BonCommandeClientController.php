@@ -34,6 +34,8 @@ class BonCommandeClientController extends Controller
             'lignes.*.unite'         => 'nullable|string',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
+            'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
             'devise_id'               => 'nullable|integer',
             'taux_change_document'    => 'nullable|numeric',
         ]);
@@ -109,6 +111,8 @@ class BonCommandeClientController extends Controller
             'lignes.*.unite'         => 'nullable|string',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
+            'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
+            'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
             'devise_id'               => 'nullable|integer',
             'taux_change_document'    => 'nullable|numeric',
         ]);
