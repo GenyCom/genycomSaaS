@@ -2,9 +2,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasEncodedId;
 
 class BaseModel extends Model
 {
+    use HasEncodedId;
+
     // Fixe la connexion par défaut pour tous les modèles métier vers "tenant"
     protected $connection = 'tenant';
 

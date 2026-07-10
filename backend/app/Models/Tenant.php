@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\HasEncodedId;
 
 class Tenant extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasEncodedId;
 
     // IMPORTANT : Les informations sur les clients sont stockées en central
     protected $connection = 'central';

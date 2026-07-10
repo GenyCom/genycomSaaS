@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prependToGroup('api', \App\Http\Middleware\DecodeIdsMiddleware::class);
 		$middleware->appendToGroup('api', \App\Http\Middleware\TenantMiddleware::class);
         $middleware->priority([
             \Illuminate\Foundation\Http\Middleware\HandlePreflightRequests::class,
