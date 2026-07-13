@@ -33,8 +33,58 @@ class SuperAdminTenantController extends Controller
      */
     public function show(Tenant $tenant)
     {
-        $tenant->load('users');
-        return response()->json($tenant);
+        // Récupérer les utilisateurs liés au tenant avec leurs rôles respectifs depuis la base centrale
+        $users = \Illuminate\Support\Facades\DB::connection('central')->table('tenant_user')
+            ->join('users', 'tenant_user.user_id', '=', 'users.id')
+            ->join('roles', 'tenant_user.role_id', '=', 'roles.id')
+            ->where('tenant_user.tenant_id', $tenant->id)
+            ->select('users.id', 'users.nom', 'users.prenom', 'users.email', 'roles.name as role_name', 'tenant_user.is_owner')
+            ->get();
+
+        // Calculer dynamiquement la taille de la base de données du tenant
+        $dbSize = 0.0;
+        try {
+            $result = \Illuminate\Support\Facades\DB::connection('central')->select("
+                SELECT SUM(data_length + index_length) / 1024 / 1024 AS size_mb
+                FROM information_schema.TABLES
+                WHERE table_schema = ?
+            ", [$tenant->database_name]);
+            $dbSize = round((float)($result[0]->size_mb ?? 0), 2);
+        } catch (\Exception $e) {
+            $dbSize = 0.0;
+        }
+
+        return response()->json([
+            'tenant' => [
+                'id' => $tenant->id,
+                'nom' => $tenant->nom,
+                'database_name' => $tenant->database_name,
+                'domain' => $tenant->domain,
+                'statut' => $tenant->statut,
+                'created_at' => $tenant->created_at,
+            ],
+            'users' => $users,
+            'db_size_mb' => $dbSize,
+        ]);
+    }
+
+    /**
+     * PUT /api/superadmin/tenants/{id} — Modifier un tenant (statut, nom...).
+     */
+    public function update(Request $request, Tenant $tenant)
+    {
+        $data = $request->validate([
+            'nom'    => 'sometimes|required|string|max:255',
+            'domain' => 'sometimes|nullable|string|max:255|unique:tenants,domain,' . $tenant->id,
+            'statut' => 'sometimes|required|in:actif,suspendu,demo',
+        ]);
+
+        $tenant->update($data);
+
+        return response()->json([
+            'message' => 'Tenant mis à jour avec succès.',
+            'tenant'  => $tenant
+        ]);
     }
 
     /**

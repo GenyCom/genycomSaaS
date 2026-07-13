@@ -51,6 +51,13 @@ class TenantMiddleware
             return response()->json(['message' => 'Aucun accès à une entreprise SaaS'], 403);
         }
 
+        // Bloquer l'accès si le tenant est suspendu
+        if ($tenant->statut === 'suspendu' && !$user->is_superadmin) {
+            return response()->json([
+                'message' => 'Votre entreprise est suspendue ou désactivée. Veuillez contacter l\'administrateur.'
+            ], 403);
+        }
+
         // Utiliser la méthode centralisée pour configurer la connexion
         $tenant->configure();
 

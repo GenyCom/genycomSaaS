@@ -20,7 +20,11 @@ class CheckOverdueInvoices extends Command
         $tenantId = $this->option('tenant');
 
         if ($tenantId) {
-            $tenants = Tenant::where('id', $tenantId)->get();
+            $tenants = Tenant::where('id', $tenantId)->where('statut', '!=', 'suspendu')->get();
+            if ($tenants->isEmpty()) {
+                $this->error("Le locataire ID : {$tenantId} n'existe pas ou est suspendu.");
+                return 1;
+            }
         } else {
             $tenants = Tenant::where('statut', 'actif')->get();
         }

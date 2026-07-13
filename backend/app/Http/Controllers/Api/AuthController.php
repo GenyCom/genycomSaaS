@@ -78,6 +78,16 @@ class AuthController extends Controller
             ]);
         }
 
+        // Si ce n'est pas un superadmin, on vérifie si son entreprise est suspendue ou désactivée
+        if (!$user->is_superadmin) {
+            $hasActiveTenant = $user->tenants()->whereIn('statut', ['actif', 'demo'])->exists();
+            if (!$hasActiveTenant) {
+                throw ValidationException::withMessages([
+                    'email' => ['Votre entreprise est suspendue ou désactivée. Veuillez contacter l\'administrateur.'],
+                ]);
+            }
+        }
+
         // Réinitialiser le compteur de tentatives en cas de succès
         RateLimiter::clear($throttleKey);
 

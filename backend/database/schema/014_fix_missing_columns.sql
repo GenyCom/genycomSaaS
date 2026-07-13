@@ -30,7 +30,7 @@ DELIMITER ;
 
 DELIMITER //
 
-DROP TRIGGER IF EXISTS trg_produit_stock_initial_after; //
+DROP TRIGGER IF EXISTS trg_produit_stock_initial_after//
 
 CREATE TRIGGER trg_produit_stock_initial_after 
 AFTER INSERT ON produits 
