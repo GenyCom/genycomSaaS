@@ -95,6 +95,7 @@ const routes = [
       { path: 'parametrage',   name: 'Parametrage',  component: () => import('../views/parametrage/ParametrageIndex.vue') },
       { path: 'profile',       name: 'ProfileSettings', component: () => import('../views/shared/ProfileSettings.vue') },
       { path: 'reporting',     name: 'Reporting',    component: () => import('../views/reporting/Reporting.vue') },
+      { path: 'caisse',        name: 'Caisse',       component: () => import('../views/reporting/Caisse.vue') },
     ],
   },
   {

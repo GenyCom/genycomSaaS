@@ -336,7 +336,26 @@ class ReportingService
                 'flux' => 'Sortie'
             ]);
 
-        return $data->concat($paiementsAchats)->sortByDesc('date')->values()->toArray();
+        // Ajouter aussi les dépenses directes
+        $depenses = DB::connection('tenant')->table('depenses as d')
+            ->leftJoin('categorie_depense as c', 'c.id', '=', 'd.categorie_id')
+            ->where('d.tenant_id', $this->tid())
+            ->whereNull('d.deleted_at')
+            ->whereBetween('d.date_depense', [$start, $end])
+            ->select('d.date_depense as date', 'd.montant', 'd.libelle', 'd.code', 'c.libelle as cat_libelle', 'd.note_reglement as observations')
+            ->get()
+            ->map(fn($dep) => [
+                'date' => $dep->date,
+                'tiers' => "[Dépense: " . ($dep->cat_libelle ?: 'Général') . "] " . $dep->libelle,
+                'ref_doc' => "Réf " . $dep->code,
+                'montant' => (float) $dep->montant,
+                'mode' => 'Espèces/Banque',
+                'reference' => '—',
+                'observations' => $dep->observations,
+                'flux' => 'Sortie'
+            ]);
+
+        return $data->concat($paiementsAchats)->concat($depenses)->sortByDesc('date')->values()->toArray();
     }
 
     /**
