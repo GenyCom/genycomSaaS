@@ -352,7 +352,7 @@ async function save() {
     payload.prix_ht_vente = parseFloat(payload.prix_ht_vente) || 0
     payload.marge_pourcentage = parseFloat(payload.marge_pourcentage) || 0
     payload.taux_tva = parseFloat(payload.taux_tva) || 0
-    payload.famille_id = parseInt(payload.famille_id) || null
+    payload.famille_id = payload.famille_id || null
 
     if (isNew.value) {
       await api.post('/produits', payload)

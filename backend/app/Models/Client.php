@@ -69,7 +69,10 @@ class Client extends BaseModel
     public function adressesLivraison()   { return $this->hasMany(AdresseLivraison::class); }
     public function adressesFacturation() { return $this->hasMany(AdresseFacturation::class); }
     public function devis()               { return $this->hasMany(Devis::class); }
+    public function bonsCommande()        { return $this->hasMany(BonCommandeClient::class); }
+    public function bonsLivraison()       { return $this->hasMany(BonLivraison::class); }
     public function factures()            { return $this->hasMany(Facture::class); }
+    public function avoirs()              { return $this->hasMany(AvoirClient::class); }
     public function projets()             { return $this->hasMany(Projet::class); }
     public function fichiers()            { return $this->morphMany(Fichier::class, 'fileable'); }
 

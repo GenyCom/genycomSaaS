@@ -119,8 +119,7 @@
     </div>
 
     <div class="content-grid">
-      <div class="col-main">
-        <section v-if="isNew" class="info-card mb-4">
+      <section v-if="isNew" class="info-card">
           <div class="card-header">
             <div class="card-header-icon bl-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
             <h3>Client & Expédition</h3>
@@ -198,20 +197,20 @@
             <table class="saas-table">
               <thead>
                 <tr>
-                  <th style="width: 40%">Désignation de l'article</th>
-                  <th v-if="!isNew" style="width: 15%" class="text-center">Qté Comm.</th>
-                  <th style="width: 15%" class="text-center">Qté Livrée</th>
-                  <th style="width: 15%" class="text-right">P.U HT</th>
-                  <th style="width: 12%" class="text-center">TVA</th>
-                  <th style="width: 15%" class="text-right">Total HT</th>
+                  <th style="width: 38%">Désignation de l'article</th>
+                  <th v-if="!isNew" style="width: 13%" class="text-center">Qté Comm.</th>
+                  <th style="width: 14%; padding: 13px 4px;" class="text-center">Qté Livrée</th>
+                  <th style="width: 16%; padding: 13px 4px;" class="text-center">P.U HT</th>
+                  <th style="width: 10%; padding: 13px 4px;" class="text-center">TVA</th>
+                  <th style="width: 14%; padding: 13px 10px;" class="text-center">Total HT</th>
                   <th v-if="isNew" style="width: 5%"></th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(l, idx) in (isNew ? form.lignes : bl.lignes)" :key="idx">
+                <tr v-for="(l, idx) in (isNew ? form.lignes : bl.lignes)" :key="idx" class="ligne-row">
                   <td>
                     <template v-if="isNew">
-                      <select v-model="l.produit_id" @change="onProduitSelect(l)" class="select-inline-table">
+                       <select v-model="l.produit_id" @change="onProduitSelect(l)" class="select-inline-table">
                         <option value="">-- Texte libre --</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                       </select>
@@ -226,19 +225,19 @@
                   <td v-if="!isNew" class="text-center text-muted font-medium">{{ l.quantite_prevue }}</td>
                   <td class="text-center">
                     <input v-if="isNew" v-model="l.quantite_livree" type="number" step="0.01" class="input-inline-table text-center" />
-                    <span v-else class="status-pill status-success-light font-black">{{ l.quantite_livree }}</span>
+                    <span v-else class="status-pill status-success-light font-black" style="display: inline-block;">{{ l.quantite_livree }}</span>
                   </td>
-                  <td>
-                    <input v-if="isNew" v-model="l.prix_unitaire" type="number" step="0.01" class="input-inline-table text-right mono" />
-                    <span v-else class="text-right mono" style="display:block;">{{ formatMoney(l.prix_unitaire) }}</span>
+                  <td class="text-center">
+                    <input v-if="isNew" v-model="l.prix_unitaire" type="number" step="0.01" class="input-inline-table text-center mono" />
+                    <span v-else class="text-center mono" style="display:block;">{{ formatMoney(l.prix_unitaire) }}</span>
                   </td>
-                  <td>
+                  <td class="text-center">
                     <select v-if="isNew" v-model="l.taux_tva" class="input-inline-table text-center">
                       <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">{{ parseFloat(t.taux) }}%</option>
                     </select>
                     <span v-else class="text-center" style="display:block;">{{ parseFloat(l.taux_tva) }}%</span>
                   </td>
-                  <td class="text-right mono font-bold">{{ formatMoney((l.quantite_livree || 0) * (l.prix_unitaire || 0)) }}</td>
+                  <td class="text-center mono font-bold">{{ formatMoney((l.quantite_livree || 0) * (l.prix_unitaire || 0)) }}</td>
                   <td v-if="isNew" class="text-center">
                     <button @click="removeLine(idx)" class="btn-row-delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
                   </td>
@@ -253,73 +252,76 @@
           </div>
         </section>
 
-        <section class="info-card mt-6">
-          <div class="card-body signature-area">
-             <p class="signature-label">Cachet & Signature Client</p>
-             <div class="signature-placeholder"></div>
-          </div>
-        </section>
-      </div>
+        <div class="bottom-grid">
+          <div class="bottom-left">
+            <section class="info-card mt-6">
+              <div class="card-body signature-area">
+                 <p class="signature-label">Cachet & Signature Client</p>
+                 <div class="signature-placeholder"></div>
+              </div>
+            </section>
 
-      <div class="col-side">
-        <section class="info-card">
-          <div class="card-header">
-            <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-            <h3>Informations</h3>
+            <section class="info-card">
+              <div class="card-header">
+                <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                <h3>Observations</h3>
+              </div>
+              <div class="card-body">
+                <textarea v-if="isNew" v-model="form.observations" rows="5" class="textarea-custom" placeholder="Notes sur la livraison..."></textarea>
+                <p v-else class="notes-text">{{ bl.observations || 'Aucune observation.' }}</p>
+              </div>
+            </section>
           </div>
-          <div class="card-body p-0">
-            <div class="info-item">
-              <span class="info-label">Date Livraison</span>
-              <span class="info-value">{{ isNew ? formatDate(form.date_livraison) : formatDate(bl.date_livraison) }}</span>
-            </div>
-            <div class="info-item" v-if="!isNew && bl.entrepot">
-              <span class="info-label">Entrepôt de sortie</span>
-              <span class="info-value accent">{{ bl.entrepot.nom }}</span>
-            </div>
-            <div v-if="!isNew && bl.bon_commande" class="info-item">
-              <span class="info-label">Commande N°</span>
-              <span class="info-value mono accent">{{ bl.bon_commande.numero }}</span>
-            </div>
-            <div v-if="!isNew && bl.devis" class="info-item">
-              <span class="info-label">Référence Devis</span>
-              <span class="info-value mono">{{ bl.devis.numero }}</span>
-            </div>
-          </div>
-        </section>
 
-        <section class="info-card side-card totals-premium-card-bl">
-          <div class="card-header-bl">
-             <h3>Résumé financier</h3>
-          </div>
-          <div class="total-inner-bl">
-            <div class="total-row-bl">
-              <span class="total-label-bl">Total Net HT</span>
-              <span class="total-value-bl">{{ formatMoney(totalHT) }} DH</span>
-            </div>
-            <div class="total-row-bl">
-              <span class="total-label-bl">TVA Totale</span>
-              <span class="total-value-bl">{{ formatMoney(totalTVA) }} DH</span>
-            </div>
-			<div class="total-row-bl main-total-bl">
-              <span class="label-main-bl">NET TTC</span>
-              <span class="amount-bl">{{ formatMoney(totalTTC) }} DH</span>
-            </div>
-          </div>
-        </section>
+          <div class="bottom-right">
+            <section class="info-card">
+              <div class="card-header">
+                <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                <h3>Informations</h3>
+              </div>
+              <div class="card-body p-0">
+                <div class="info-item">
+                  <span class="info-label">Date Livraison</span>
+                  <span class="info-value">{{ isNew ? formatDate(form.date_livraison) : formatDate(bl.date_livraison) }}</span>
+                </div>
+                <div class="info-item" v-if="!isNew && bl.entrepot">
+                  <span class="info-label">Entrepôt de sortie</span>
+                  <span class="info-value accent">{{ bl.entrepot.nom }}</span>
+                </div>
+                <div v-if="!isNew && bl.bon_commande" class="info-item">
+                  <span class="info-label">Commande N°</span>
+                  <span class="info-value mono accent">{{ bl.bon_commande.numero }}</span>
+                </div>
+                <div v-if="!isNew && bl.devis" class="info-item">
+                  <span class="info-label">Référence Devis</span>
+                  <span class="info-value mono">{{ bl.devis.numero }}</span>
+                </div>
+              </div>
+            </section>
 
-        <section class="info-card mt-4">
-          <div class="card-header">
-            <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-            <h3>Observations</h3>
+            <section class="info-card side-card totals-premium-card-bl">
+              <div class="card-header-bl">
+                 <h3>Résumé financier</h3>
+              </div>
+              <div class="total-inner-bl">
+                <div class="total-row-bl">
+                  <span class="total-label-bl">Total Net HT</span>
+                  <span class="total-value-bl">{{ formatMoney(totalHT) }} DH</span>
+                </div>
+                <div class="total-row-bl">
+                  <span class="total-label-bl">TVA Totale</span>
+                  <span class="total-value-bl">{{ formatMoney(totalTVA) }} DH</span>
+                </div>
+				<div class="total-row-bl main-total-bl">
+                  <span class="label-main-bl">NET TTC</span>
+                  <span class="amount-bl">{{ formatMoney(totalTTC) }} DH</span>
+                </div>
+              </div>
+            </section>
           </div>
-          <div class="card-body">
-            <textarea v-if="isNew" v-model="form.observations" rows="5" class="textarea-custom" placeholder="Notes sur la livraison..."></textarea>
-            <p v-else class="notes-text">{{ bl.observations || 'Aucune observation.' }}</p>
-          </div>
-        </section>
+        </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -629,12 +631,12 @@ onMounted(async () => {
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */
-.content-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+.content-grid { display: flex; flex-direction: column; gap: 20px; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
 .card-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #F9FAFB; border-bottom: 1px solid var(--c-border); }
 .card-header h3 { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin: 0; }
 .card-header-icon { width: 28px; height: 28px; border-radius: 7px; background: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; }
-.table-header-actions { justify-content: space-between; }
+.table-header-actions { justify-content: space-between; padding-right: 12px; }
 
 /* ─── Forms ─── */
 .edit-form { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
@@ -645,14 +647,24 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .accent-select { border-color: var(--c-accent); background: var(--c-accent-bg); font-weight: 700; color: var(--c-accent); }
 
 /* ─── Table ─── */
-.saas-table { width: 100%; border-collapse: collapse; }
-.saas-table th { background: #F9FAFB; padding: 12px 16px; font-size: .65rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 1px solid var(--c-border); }
-.saas-table td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 950px; }
+.saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
+.saas-table th.text-center { text-align: center; }
+.saas-table th.text-right { text-align: right; }
+.saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table td.text-center { text-align: center; }
+.saas-table td.text-right { text-align: right; }
+
+.ligne-row { background: #FCFDFE; transition: background .15s; }
+.ligne-row:nth-child(even) { background: #F5F8FF; }
+.ligne-row:hover { background: #EEF4FF !important; }
+.ligne-row:last-child td { border-bottom: none; }
+
 .article-name { font-size: .88rem; font-weight: 700; color: var(--c-text); }
 .article-sub { font-size: .72rem; color: var(--c-muted); margin-top: 2px; }
 .select-inline-table { width: 100%; border: 1px solid #E2E8F0; border-radius: 6px; font-weight: 700; color: var(--c-accent); padding: 8px 10px; background: #fff; margin-bottom: 6px; }
 .input-inline-sub { width: 100%; border: 1px solid #E2E8F0; border-radius: 6px; font-size: .85rem; color: var(--c-text); padding: 10px; min-height: 50px; font-family: inherit; resize: vertical; display: block; }
-.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px; background: #fff; }
+.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 6px; background: #fff; }
 
 /* ─── BARRE DE RECHERCHE (AUTOCOMPLETE / DOUCHETTE) ─── */
 .product-search-bar-container { padding: 16px 20px; border-bottom: 1px dashed var(--c-border); background: #FCFDFE; }
@@ -741,4 +753,21 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .input-error { border-color: #EF4444 !important; background-color: #FEF2F2 !important; }
 .error-text { color: #EF4444; font-size: 0.65rem; font-weight: 600; margin-top: 2px; }
 
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+.bottom-left, .bottom-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (max-width: 1024px) {
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

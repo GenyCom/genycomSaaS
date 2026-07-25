@@ -605,7 +605,7 @@ async function save() {
       marge_pourcentage: parseFloat(form.value.marge_pourcentage) || 0,
       taux_tva: parseFloat(form.value.taux_tva) || 0,
       stock_initial: parseFloat(form.value.stock_initial) || 0,
-      famille_id: parseInt(form.value.famille_id) || null,
+      famille_id: form.value.famille_id || null,
       compatible_ids: selectedCompatibles.value.map(x => x.id)
     }
 

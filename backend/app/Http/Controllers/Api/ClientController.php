@@ -53,7 +53,16 @@ class ClientController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $client = Client::with(['typeClient', 'commercial:id,nom,prenom', 'contacts'])->findOrFail($id);
+        $client = Client::with([
+            'typeClient',
+            'commercial:id,nom,prenom',
+            'contacts',
+            'devis.etat',
+            'bonsCommande.etat',
+            'bonsLivraison.etat',
+            'factures.etat',
+            'avoirs.etat'
+        ])->findOrFail($id);
         return response()->json($client);
     }
 

@@ -105,176 +105,163 @@
     </div>
 
     <div class="content-grid">
-      <div class="col-main">
-        <section class="info-card mb-4">
-          <div class="card-header">
-            <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-            <h3>Destinataire & Analytique</h3>
-          </div>
-          <div class="card-body edit-form">
-            <div class="form-row-custom">
-              <div class="form-group-custom">
-                <label>Client *</label>
-                <select v-model="form.client_id" @change="onClientChange" class="input-custom" :class="{ 'input-error': errors.client_id }">
-                  <option value="" disabled>Sélectionner un client...</option>
-                  <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe || c.display_name }}</option>
-                </select>
-                <span v-if="errors.client_id" class="error-text">{{ errors.client_id }}</span>
-              </div>
-              <div class="form-group-custom">
-                <label>Projet associé (Optionnel)</label>
-                <select v-model="form.projet_id" class="input-custom">
-                  <option value="">Aucun projet</option>
-                  <option v-for="p in projects" :key="p.id" :value="p.id">[{{ p.code_projet }}] {{ p.nom_projet }}</option>
-                </select>
-              </div>
+      <section class="info-card">
+        <div class="card-header">
+          <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <h3>Destinataire & Analytique</h3>
+        </div>
+        <div class="card-body edit-form">
+          <div class="form-row-custom">
+            <div class="form-group-custom">
+              <label>Client *</label>
+              <select v-model="form.client_id" @change="onClientChange" class="input-custom" :class="{ 'input-error': errors.client_id }">
+                <option value="" disabled>Sélectionner un client...</option>
+                <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe || c.display_name }}</option>
+              </select>
+              <span v-if="errors.client_id" class="error-text">{{ errors.client_id }}</span>
             </div>
-          </div>
-        </section>
-
-
-        <section class="info-card">
-          <div class="card-header table-header-actions">
-            <div class="flex-align-center">
-              <div class="card-header-icon billing-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63a2.12 2.12 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg></div>
-              <h3>Détail des lignes de facturation</h3>
-            </div>
-            <button class="btn-add-line" @click="addLine">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Ajouter une ligne
-            </button>
-          </div>
-          <div class="card-body p-0">
-            <div class="product-search-bar-container">
-              <div class="search-input-wrapper">
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input 
-                  type="text" 
-                  v-model="searchQuery" 
-                  @input="onSearchInput"
-                  @keydown.enter.prevent="selectFirstProduct"
-                  placeholder="Scanner un code-barres ou rechercher (référence, désignation)..." 
-                  class="search-input"
-                />
-                
-                <ul v-if="searchResults.length > 0" class="search-dropdown">
-                  <li 
-                    v-for="prod in searchResults" 
-                    :key="prod.id" 
-                    @click="ajouterProduitAuDocument(prod)"
-                    class="search-item"
-                  >
-                    <div class="prod-info">
-                      <span class="prod-ref" v-if="prod.reference || prod.code_barre">[{{ prod.reference || prod.code_barre }}]</span>
-                      <span class="prod-name">{{ prod.designation }}</span>
-                    </div>
-                    <div class="prod-price">{{ formatMoney(prod.prix_ht_vente || prod.prix_vente_ht || 0) }} DH HT</div>
-                  </li>
-                </ul>
-
-                <div v-if="searchQuery.length >= 2 && searchResults.length === 0" class="search-dropdown empty-result">
-                  Aucun article trouvé pour "{{ searchQuery }}"
-                </div>
-              </div>
-            </div>
-
-            <div class="table-container-custom">
-              <table class="saas-table">
-                <thead>
-                  <tr>
-                    <th style="width: 45%">Article / Prestation</th>
-                    <th style="width: 8%; padding: 13px 6px;" class="text-center">Qté</th>
-                    <th style="width: 11%; padding: 13px 6px;" class="text-center">P.U HT</th>
-                    <th style="width: 8%; padding: 13px 6px;" class="text-center">Remise %</th>
-                    <th style="width: 8%; padding: 13px 6px;" class="text-center">TVA</th>
-                    <th style="width: 15%; padding: 13px 18px;" class="text-right">Total HT</th>
-                    <th style="width: 5%"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(ligne, idx) in form.lignes" :key="idx" class="ligne-row">
-                    <td class="td-article">
-                      <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="select-inline-table">
-                        <option value="">-- Texte libre / Service --</option>
-                        <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
-                      </select>
-                      <textarea v-model="ligne.designation" class="input-inline-sub" :class="{ 'input-error': errors[`ligne_${idx}_designation`] }" placeholder="Description personnalisée..."></textarea>
-                      <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">La désignation est requise</span>
-                    </td>
-                    <td class="td-center">
-                       <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
-                     </td>
-                     <td class="td-center">
-                       <input
-                         v-model.lazy="ligne.prix_unitaire_display"
-                         @focus="onFocusPrice($event, ligne)"
-                         @blur="onBlurPrice(ligne)"
-                         type="text"
-                         class="input-inline-table text-center mono"
-                       />
-                     </td>
-                     <td class="td-center">
-                       <input v-model="ligne.remise_pourcent" type="number" step="0.1" min="0" max="100" @input="recalculate" class="input-inline-table text-center mono" placeholder="0" />
-                     </td>
-                    <td class="td-center">
-                       <select v-model="ligne.taux_tva" @change="recalculate" class="input-inline-table text-center tva-select">
-                        <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">
-                          {{ parseFloat(t.taux) }}%
-                        </option>
-                      </select>
-                    </td>
-                    <td class="td-total text-right font-bold mono">
-                      <span class="montant-ht">{{ formatMoney(ligne.montant_ht) }}</span>
-                      <span class="montant-unit">DH</span>
-                    </td>
-                    <td class="td-action">
-                      <button @click="removeLine(idx)" class="btn-row-delete" title="Supprimer la ligne">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr v-if="form.lignes.length === 0">
-                    <td colspan="7" class="text-center p-6 text-muted italic text-sm" style="padding: 40px;">
-                      Utilisez la barre de recherche ci-dessus pour scanner ou ajouter un article.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div class="col-side">
-        
-        <section class="info-card mb-4">
-          <div class="card-header">
-            <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-            <h3>Général</h3>
-          </div>
-          <div class="card-body p-0">
-            <div class="info-item">
-              <span class="info-label">N° Facture</span>
-              <span class="info-value mono accent">{{ form.numero }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Date d'émission</span>
-              <input v-model="form.date_facture" type="date" class="date-input-transparent" :class="{ 'input-error': errors.date_facture }" />
-            </div>
-            <div class="info-item">
-              <span class="info-label">Échéance de paiement</span>
-              <input v-model="form.date_echeance" type="date" class="date-input-transparent" />
-            </div>
-            <div class="info-item" v-if="!form.has_bl">
-              <span class="info-label">Entrepôt (Sortie Stock)</span>
-              <select v-model="form.entrepot_id" class="input-custom mt-1">
-                <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.nom }}</option>
+            <div class="form-group-custom">
+              <label>Projet associé (Optionnel)</label>
+              <select v-model="form.projet_id" class="input-custom">
+                <option value="">Aucun projet</option>
+                <option v-for="p in projects" :key="p.id" :value="p.id">[{{ p.code_projet }}] {{ p.nom_projet }}</option>
               </select>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="info-card">
+        <div class="card-header table-header-actions">
+          <div class="flex-align-center">
+            <div class="card-header-icon billing-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63a2.12 2.12 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg></div>
+            <h3>Détail des lignes de facturation</h3>
+          </div>
+          <button class="btn-add-line" @click="addLine">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter une ligne
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="product-search-bar-container">
+            <div class="search-input-wrapper">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                @input="onSearchInput"
+                @keydown.enter.prevent="selectFirstProduct"
+                placeholder="Scanner un code-barres ou rechercher (référence, désignation)..." 
+                class="search-input"
+              />
+              
+              <ul v-if="searchResults.length > 0" class="search-dropdown">
+                <li 
+                  v-for="prod in searchResults" 
+                  :key="prod.id" 
+                  @click="ajouterProduitAuDocument(prod)"
+                  class="search-item"
+                >
+                  <div class="prod-info">
+                    <span class="prod-ref" v-if="prod.reference || prod.code_barre">[{{ prod.reference || prod.code_barre }}]</span>
+                    <span class="prod-name">{{ prod.designation }}</span>
+                  </div>
+                  <div class="prod-price">{{ formatMoney(prod.prix_ht_vente || prod.prix_vente_ht || 0) }} DH HT</div>
+                </li>
+              </ul>
+
+              <div v-if="searchQuery.length >= 2 && searchResults.length === 0" class="search-dropdown empty-result">
+                Aucun article trouvé pour "{{ searchQuery }}"
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container-custom">
+            <table class="saas-table">
+              <thead>
+                <tr>
+                  <th style="width: 42%">Article / Prestation</th>
+                  <th style="width: 8%; padding: 13px 4px;" class="text-center">Qté</th>
+                  <th style="width: 14%; padding: 13px 4px;" class="text-center">P.U HT</th>
+                  <th style="width: 9%; padding: 13px 4px;" class="text-center">Remise %</th>
+                  <th style="width: 9%; padding: 13px 4px;" class="text-center">TVA</th>
+                  <th style="width: 13%; padding: 13px 10px;" class="text-right">Total HT</th>
+                  <th style="width: 5%"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(ligne, idx) in form.lignes" :key="idx" class="ligne-row">
+                  <td class="td-article">
+                    <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="select-inline-table">
+                      <option value="">-- Texte libre / Service --</option>
+                      <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
+                    </select>
+                    <textarea v-model="ligne.designation" class="input-inline-sub" :class="{ 'input-error': errors[`ligne_${idx}_designation`] }" placeholder="Description personnalisée..."></textarea>
+                    <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">La désignation est requise</span>
+                  </td>
+                  <td class="td-center">
+                     <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
+                   </td>
+                   <td class="td-center">
+                     <input
+                       v-model.lazy="ligne.prix_unitaire_display"
+                       @focus="onFocusPrice($event, ligne)"
+                       @blur="onBlurPrice(ligne)"
+                       type="text"
+                       class="input-inline-table text-center mono"
+                     />
+                   </td>
+                   <td class="td-center">
+                     <input v-model="ligne.remise_pourcent" type="number" step="0.1" min="0" max="100" @input="recalculate" class="input-inline-table text-center mono" placeholder="0" />
+                   </td>
+                  <td class="td-center">
+                     <select v-model="ligne.taux_tva" @change="recalculate" class="input-inline-table text-center tva-select">
+                      <option v-for="t in tauxTvaList" :key="t.id" :value="parseFloat(t.taux)">
+                        {{ parseFloat(t.taux) }}%
+                      </option>
+                    </select>
+                  </td>
+                  <td class="td-total text-right font-bold mono">
+                    <span class="montant-ht">{{ formatMoney(ligne.montant_ht) }}</span>
+                    <span class="montant-unit">DH</span>
+                  </td>
+                  <td class="td-action">
+                    <button @click="removeLine(idx)" class="btn-row-delete" title="Supprimer la ligne">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="form.lignes.length === 0">
+                  <td colspan="7" class="text-center p-6 text-muted italic text-sm" style="padding: 40px;">
+                    Utilisez la barre de recherche ci-dessus pour scanner ou ajouter un article.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    <div class="bottom-grid">
+      <div class="bottom-left">
+        <section class="info-card">
+          <div class="card-header">
+            <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+            <h3>Observations</h3>
+          </div>
+          <div class="card-body">
+            <textarea v-model="form.observations" rows="4" class="textarea-custom" placeholder="Notes visibles sur la facture..."></textarea>
+          </div>
         </section>
-        
-        <section v-if="!isNew && form.reglements?.length > 0" class="info-card mb-4">
+
+        <section v-if="!isNew && (form.total_ttc - form.montant_regle) <= 0" class="info-card">
+          <div class="card-body" style="padding: 20px 30px; text-align: center; background: #ECFDF5;">
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">✅</div>
+            <p style="font-weight: 800; color: #059669; font-size: 0.9rem; text-transform: uppercase; margin: 0;">Facture Soldée</p>
+          </div>
+        </section>
+
+        <section v-if="!isNew && form.reglements?.length > 0" class="info-card">
           <div class="card-header">
             <div class="card-header-icon" style="background: #EFF6FF; color: #3B82F6;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -282,7 +269,7 @@
             <h3>Historique des Règlements</h3>
           </div>
           <div class="card-body p-0">
-            <table class="saas-table payment-history-table" style="border: none;">
+            <table class="saas-table payment-history-table" style="border: none; min-width: auto;">
               <tbody>
                 <tr v-for="r in form.reglements" :key="r.id">
                   <td style="padding: 12px 16px;">
@@ -298,9 +285,9 @@
           </div>
         </section>
 
-        <section v-if="!isNew" class="info-card mb-4">
+        <section v-if="!isNew" class="info-card">
           <div class="card-header">
-            <div class="card-header-icon" :style="{ background: (form.total_ttc - form.montant_regle) <= 0 ? '#F0FDF4' : '#FFF7ED', color: (form.total_ttc - form.montant_regle) <= 0 ? '#059669' : '#C2410C' }">
+            <div class="card-header-icon" style="background: #FFF7ED; color: #C2410C;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <h3>Encaisser / Corriger un Paiement</h3>
@@ -354,21 +341,33 @@
             </button>
           </div>
         </section>
+      </div>
 
-        <section v-if="!isNew && (form.total_ttc - form.montant_regle) <= 0" class="info-card mb-4">
-          <div class="card-body" style="padding: 20px 30px; text-align: center; background: #ECFDF5;">
-            <div style="font-size: 1.5rem; margin-bottom: 4px;">✅</div>
-            <p style="font-weight: 800; color: #059669; font-size: 0.9rem; text-transform: uppercase; margin: 0;">Facture Soldée</p>
-          </div>
-        </section>
-
-        <section class="info-card mb-4">
+      <div class="bottom-right">
+        <section class="info-card">
           <div class="card-header">
-            <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-            <h3>Observations</h3>
+            <div class="card-header-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <h3>Général</h3>
           </div>
-          <div class="card-body">
-            <textarea v-model="form.observations" rows="4" class="textarea-custom" placeholder="Notes visibles sur la facture..."></textarea>
+          <div class="card-body p-0">
+            <div class="info-item">
+              <span class="info-label">N° Facture</span>
+              <span class="info-value mono accent">{{ form.numero }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Date d'émission</span>
+              <input v-model="form.date_facture" type="date" class="date-input-transparent" :class="{ 'input-error': errors.date_facture }" />
+            </div>
+            <div class="info-item">
+              <span class="info-label">Échéance de paiement</span>
+              <input v-model="form.date_echeance" type="date" class="date-input-transparent" />
+            </div>
+            <div class="info-item" v-if="!form.has_bl">
+              <span class="info-label">Entrepôt (Sortie Stock)</span>
+              <select v-model="form.entrepot_id" class="input-custom mt-1">
+                <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.nom }}</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -395,8 +394,8 @@
             </div>
           </div>
         </section>
-
       </div>
+    </div>
     </div>
 
     <div v-if="form.has_bl" class="sync-notice-box animate-pulse mt-6">
@@ -957,12 +956,7 @@ async function executeGenerateBL() {
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */
-.content-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
-
-@media (max-width: 1200px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .col-side { order: 2; }
-}
+.content-grid { display: flex; flex-direction: column; gap: 20px; }
 
 .table-container-custom { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
@@ -1004,19 +998,20 @@ async function executeGenerateBL() {
 .empty-result { padding: 16px; text-align: center; color: var(--c-muted); font-size: .85rem; font-style: italic; }
 
 /* ─── Table ─── */
-.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 800px; }
-.saas-table th { background: #F9FAFB; padding: 13px 18px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 950px; }
+.saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
 .saas-table th.text-center { text-align: center; }
 .saas-table th.text-right { text-align: right; }
 
-.ligne-row { transition: background .15s; }
-.ligne-row:hover { background: #FAFBFD; }
+.ligne-row { background: #FCFDFE; transition: background .15s; }
+.ligne-row:nth-child(even) { background: #F5F8FF; }
+.ligne-row:hover { background: #EEF4FF !important; }
 .ligne-row:last-child td { border-bottom: none; }
 
-.saas-table td { padding: 14px 18px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
 .td-article { vertical-align: top; padding-top: 16px; }
-.td-center { vertical-align: middle; padding: 14px 6px; }
-.td-total { vertical-align: middle; padding: 14px 18px; }
+.td-center { vertical-align: middle; padding: 14px 4px; }
+.td-total { vertical-align: middle; padding: 14px 10px; }
 .td-action { vertical-align: middle; padding: 14px 8px; text-align: center; }
 
 .montant-ht { font-size: .95rem; font-weight: 800; color: var(--c-text); }
@@ -1024,9 +1019,9 @@ async function executeGenerateBL() {
 
 .select-inline-table { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-weight: 700; color: var(--c-accent); padding: 9px 10px; background: #fff; margin-bottom: 8px; font-size: .85rem; }
 .input-inline-sub { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-size: .84rem; color: var(--c-text); padding: 9px 10px; min-height: 56px; font-family: inherit; resize: vertical; display: block; }
-.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 10px; background: #fff; font-size: .88rem; }
+.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 6px; background: #fff; font-size: .88rem; }
 .input-inline-table:focus { border-color: var(--c-accent); outline: none; }
-.tva-select { font-weight: 600; font-size: .85rem; text-align-last: center; }
+.tva-select { font-weight: 600; font-size: .85rem; text-align-last: center; padding: 10px 4px; }
 
 .btn-row-delete { background: none; border: none; color: #94A3B8; cursor: pointer; padding: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
 .btn-row-delete:hover { background: #FEE2E2; color: #DC2626; }
@@ -1090,4 +1085,21 @@ async function executeGenerateBL() {
 .kpi-item.warning .kpi-value.highlighted-kpi { color: #f97316; }
 .kpi-item.success .kpi-icon { background: #dcfce7; color: #22c55e; }
 .kpi-item.success .kpi-value.highlighted-kpi { color: #22c55e; }
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+.bottom-left, .bottom-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (max-width: 1024px) {
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

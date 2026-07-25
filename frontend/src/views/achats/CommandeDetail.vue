@@ -84,8 +84,7 @@
     </div>
 
     <div class="content-grid">
-      <div class="col-main">
-        <section class="info-card mb-4">
+      <section class="info-card">
           <div class="card-header">
             <div class="card-header-icon cmd-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <h3>Fournisseur & Dates</h3>
@@ -179,11 +178,11 @@
               <table class="saas-table">
                 <thead>
                   <tr>
-                    <th style="width: 38%">Article / Service</th>
-                    <th style="width: 13%" class="text-center">Qté</th>
-                    <th style="width: 15%" class="text-right">P.U HT</th>
-                    <th style="width: 12%" class="text-center">TVA</th>
-                    <th style="width: 17%" class="text-right">Total HT</th>
+                    <th style="width: 44%">Article / Service</th>
+                    <th style="width: 12%; padding: 13px 4px;" class="text-center">Qté</th>
+                    <th style="width: 18%; padding: 13px 4px;" class="text-right">P.U HT</th>
+                    <th style="width: 12%; padding: 13px 4px;" class="text-center">TVA</th>
+                    <th style="width: 14%; padding: 13px 10px;" class="text-right">Total HT</th>
                     <th style="width: 5%"></th>
                   </tr>
                 </thead>
@@ -235,9 +234,7 @@
             </div>
           </div>
         </section>
-      </div>
 
-      <div class="col-side">
         <section class="info-card">
           <div class="card-header">
             <div class="card-header-icon notes"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
@@ -249,7 +246,6 @@
         </section>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -568,12 +564,7 @@ onMounted(async () => {
 .kpi-value span { font-size: .7rem; opacity: .6; margin-left: 3px; }
 
 /* ─── Grid ─── */
-.content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-
-@media (max-width: 1200px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .col-side { order: 2; }
-}
+.content-grid { display: flex; flex-direction: column; gap: 20px; }
 
 .table-container-custom { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; }
@@ -609,19 +600,20 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 .empty-result { padding: 16px; text-align: center; color: var(--c-muted); font-size: .85rem; font-style: italic; }
 
 /* ─── Table ─── */
-.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 800px; }
-.saas-table th { background: #F9FAFB; padding: 13px 18px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 950px; }
+.saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
 .saas-table th.text-center { text-align: center; }
 .saas-table th.text-right { text-align: right; }
 
-.ligne-row { transition: background .15s; }
-.ligne-row:hover { background: #FAFBFD; }
+.ligne-row { background: #FCFDFE; transition: background .15s; }
+.ligne-row:nth-child(even) { background: #F5F8FF; }
+.ligne-row:hover { background: #EEF4FF !important; }
 .ligne-row:last-child td { border-bottom: none; }
 
-.saas-table td { padding: 14px 18px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
 .td-article { vertical-align: top; padding-top: 16px; }
-.td-center { vertical-align: middle; padding: 14px 6px; }
-.td-total { vertical-align: middle; padding: 14px 18px; }
+.td-center { vertical-align: middle; padding: 14px 4px; }
+.td-total { vertical-align: middle; padding: 14px 10px; }
 .td-action { vertical-align: middle; padding: 14px 8px; text-align: center; }
 
 .montant-ht { font-size: .95rem; font-weight: 800; color: var(--c-text); }
@@ -629,9 +621,9 @@ input, select, textarea { padding: 10px; border: 1.5px solid #D5D9E2; border-rad
 
 .select-inline-table { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-weight: 700; color: var(--c-accent); padding: 9px 10px; background: #fff; margin-bottom: 8px; font-size: .85rem; }
 .input-inline-sub { width: 100%; border: 1.5px solid #E2E8F0; border-radius: 7px; font-size: .84rem; color: var(--c-text); padding: 9px 10px; min-height: 56px; font-family: inherit; resize: vertical; display: block; }
-.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 10px; background: #fff; font-size: .88rem; }
+.input-inline-table { width: 100%; border: 1.5px solid #D5D9E2; border-radius: 8px; padding: 10px 6px; background: #fff; font-size: .88rem; }
 .input-inline-table:focus { border-color: var(--c-accent); outline: none; }
-.tva-select { font-weight: 600; font-size: .85rem; text-align-last: center; }
+.tva-select { font-weight: 600; font-size: .85rem; text-align-last: center; padding: 10px 4px; }
 
 .btn-row-delete { background: none; border: none; color: #94A3B8; cursor: pointer; padding: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
 .btn-row-delete:hover { background: #FEE2E2; color: #DC2626; }

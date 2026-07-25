@@ -80,55 +80,25 @@
     </div>
 
     <div class="content-grid">
-      <div class="col-main">
-        <section class="info-card mb-4">
-          <div class="card-header">
-            <div class="card-header-icon fa-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-            <h3>Informations Générales</h3>
-          </div>
-          <div class="card-body p-0">
-            <div class="info-grid-simple">
-              <div class="info-group">
-                <span class="label">Date Émission</span>
-                <span class="value">{{ formatDate(facture.date_facture) }}</span>
-              </div>
-              <div class="info-group">
-                <span class="label">Date Échéance</span>
-                <span class="value font-bold" :class="{'text-danger': isEnRetard}">{{ formatDate(facture.date_echeance) }}</span>
-              </div>
-              <div class="info-group">
-                <span class="label">Réception(s) liée(s)</span>
-                <div class="value">
-                  <span v-for="br in facture.reception_notes" :key="br.id" class="source-tag">{{ br.numero }}</span>
-                  <span v-if="!facture.reception_notes?.length">—</span>
-                </div>
-              </div>
-              <div class="info-group">
-                <span class="label">Établissement</span>
-                <span class="value">{{ facture.fournisseur?.societe }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="info-card">
-          <div class="card-header">
-            <div class="card-header-icon fa-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
-            <h3>Détails des articles</h3>
-          </div>
-          <div class="card-body p-0">
+      <section class="info-card">
+        <div class="card-header">
+          <div class="card-header-icon fa-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+          <h3>Détails des articles</h3>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-container-custom">
             <table class="saas-table lines-table">
               <thead>
                 <tr>
-                  <th style="width: 50%">Désignation</th>
-                  <th class="text-center">Qté</th>
-                  <th class="text-right">P.U HT</th>
-                  <th class="text-center">TVA</th>
-                  <th class="text-right">Total HT</th>
+                  <th style="width: 44%">Désignation</th>
+                  <th class="text-center" style="width: 12%">Qté</th>
+                  <th class="text-right" style="width: 18%">P.U HT</th>
+                  <th class="text-center" style="width: 12%">TVA</th>
+                  <th class="text-right" style="width: 14%">Total HT</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="l in facture.lignes" :key="l.id">
+                <tr v-for="l in facture.lignes" :key="l.id" class="ligne-row">
                   <td><div class="line-name">{{ l.designation }}</div></td>
                   <td class="text-center font-semibold">{{ l.quantite }}</td>
                   <td class="text-right mono">{{ formatMoney(l.prix_unitaire) }}</td>
@@ -138,54 +108,88 @@
               </tbody>
             </table>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
-      <div class="col-side">
-        <section class="info-card side-card mb-4">
-          <div class="card-header">
-            <div class="card-header-icon notes-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-            <h3>Observations</h3>
-          </div>
-          <div class="card-body p-4">
-            <div class="observation-display-box">
-               <p :class="facture.observations ? 'text-dark' : 'text-muted italic'">
-                 {{ facture.observations || 'Aucune observation enregistrée.' }}
-               </p>
+      <div class="bottom-grid">
+        <div class="bottom-left">
+          <section class="info-card side-card">
+            <div class="card-header">
+              <div class="card-header-icon notes-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <h3>Observations</h3>
             </div>
-          </div>
-        </section>
-
-        <section class="premium-total-card totals-clean-white">
-          <div class="total-inner">
-            <div class="total-flex-row">
-              <span class="total-label">Sous-total HT</span>
-              <span class="total-value mono">{{ formatMoney(facture.montant_ht) }} <small>DH</small></span>
-            </div>
-            <div class="total-flex-row">
-              <span class="total-label">Montant TVA</span>
-              <span class="total-value mono">{{ formatMoney(facture.montant_tva) }} <small>DH</small></span>
-            </div>
-            <div class="total-separator-line"></div>
-            <div class="total-flex-row main-total-row">
-              <span class="total-label" style="color: var(--c-text); font-weight: 700;">TOTAL TTC</span>
-              <span class="total-value mono">{{ formatMoney(facture.montant_ttc) }} <small>DH</small></span>
-            </div>
-            <div class="total-flex-row" style="color: #059669; margin-top: 4px;">
-              <span class="total-label" style="color: inherit;">Déjà Payé</span>
-              <span class="total-value mono" style="color: inherit;">- {{ formatMoney(facture.montant_paye) }} <small>DH</small></span>
-            </div>
-
-            <div class="reste-a-payer-block" :class="{'is-paid': facture.reste_a_payer <= 0}">
-              <div class="rap-label">{{ facture.reste_a_payer <= 0 ? 'FACTURE SOLDÉE' : 'RESTE À PAYER' }}</div>
-              <div class="rap-amount mono">
-                {{ formatMoney(facture.reste_a_payer) }} <small>DH</small>
+            <div class="card-body p-4">
+              <div class="observation-display-box">
+                 <p :class="facture.observations ? 'text-dark' : 'text-muted italic'">
+                   {{ facture.observations || 'Aucune observation enregistrée.' }}
+                 </p>
               </div>
             </div>
+          </section>
+        </div>
 
-          </div>
-          <div class="total-footer-bar">Facture d'Achat Réglementaire</div>
-        </section>
+        <div class="bottom-right">
+          <section class="info-card">
+            <div class="card-header">
+              <div class="card-header-icon fa-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <h3>Informations Générales</h3>
+            </div>
+            <div class="card-body p-0">
+              <div class="info-grid-simple">
+                <div class="info-group">
+                  <span class="label">Date Émission</span>
+                  <span class="value">{{ formatDate(facture.date_facture) }}</span>
+                </div>
+                <div class="info-group">
+                  <span class="label">Date Échéance</span>
+                  <span class="value font-bold" :class="{'text-danger': isEnRetard}">{{ formatDate(facture.date_echeance) }}</span>
+                </div>
+                <div class="info-group">
+                  <span class="label">Réception(s) liée(s)</span>
+                  <div class="value">
+                    <span v-for="br in facture.reception_notes" :key="br.id" class="source-tag">{{ br.numero }}</span>
+                    <span v-if="!facture.reception_notes?.length">—</span>
+                  </div>
+                </div>
+                <div class="info-group">
+                  <span class="label">Établissement</span>
+                  <span class="value">{{ facture.fournisseur?.societe }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="premium-total-card totals-clean-white">
+            <div class="total-inner">
+              <div class="total-flex-row">
+                <span class="total-label">Sous-total HT</span>
+                <span class="total-value mono">{{ formatMoney(facture.montant_ht) }} <small>DH</small></span>
+              </div>
+              <div class="total-flex-row">
+                <span class="total-label">Montant TVA</span>
+                <span class="total-value mono">{{ formatMoney(facture.montant_tva) }} <small>DH</small></span>
+              </div>
+              <div class="total-separator-line"></div>
+              <div class="total-flex-row main-total-row">
+                <span class="total-label" style="color: var(--c-text); font-weight: 700;">TOTAL TTC</span>
+                <span class="total-value mono">{{ formatMoney(facture.montant_ttc) }} <small>DH</small></span>
+              </div>
+              <div class="total-flex-row" style="color: #059669; margin-top: 4px;">
+                <span class="total-label" style="color: inherit;">Déjà Payé</span>
+                <span class="total-value mono" style="color: inherit;">- {{ formatMoney(facture.montant_paye) }} <small>DH</small></span>
+              </div>
+
+              <div class="reste-a-payer-block" :class="{'is-paid': facture.reste_a_payer <= 0}">
+                <div class="rap-label">{{ facture.reste_a_payer <= 0 ? 'FACTURE SOLDÉE' : 'RESTE À PAYER' }}</div>
+                <div class="rap-amount mono">
+                  {{ formatMoney(facture.reste_a_payer) }} <small>DH</small>
+                </div>
+              </div>
+
+            </div>
+            <div class="total-footer-bar">Facture d'Achat Réglementaire</div>
+          </section>
+        </div>
       </div>
     </div>
   </div>
@@ -307,7 +311,7 @@ onMounted(loadData)
 .success-item .kpi-icon { background: #ECFDF5; color: #059669; }
 
 /* ─── Content Grid ─── */
-.content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.content-grid { display: flex; flex-direction: column; gap: 20px; }
 .info-card { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
 .card-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #F9FAFB; border-bottom: 1px solid var(--c-border); }
 .card-header h3 { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); margin: 0; }
@@ -390,9 +394,14 @@ onMounted(loadData)
 .total-footer-bar { background: #F9FAFB; padding: 10px 24px; font-size: 0.65rem; text-align: right; color: var(--c-muted); font-weight: 700; text-transform: uppercase; border-top: 1px solid #F1F5F9; }
 
 /* ─── Table & Utils ─── */
-.saas-table { width: 100%; border-collapse: collapse; }
-.saas-table th { background: #F9FAFB; padding: 12px 16px; font-size: .65rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 1px solid var(--c-border); }
-.saas-table td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 950px; }
+.saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
+.saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+
+.ligne-row { background: #FCFDFE; transition: background .15s; }
+.ligne-row:nth-child(even) { background: #F5F8FF; }
+.ligne-row:hover { background: #EEF4FF !important; }
+.ligne-row:last-child td { border-bottom: none; }
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 .btn-save { background: var(--c-accent); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; box-shadow: 0 4px 12px rgba(5, 150, 105, .2); }
@@ -400,4 +409,22 @@ onMounted(loadData)
 .loader-ring div { position: absolute; width: 32px; height: 32px; border: 3px solid transparent; border-top-color: var(--c-accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .toast-notification { position: fixed; top: 1rem; right: 1rem; padding: .85rem 1.5rem; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+.bottom-left, .bottom-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (max-width: 1024px) {
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

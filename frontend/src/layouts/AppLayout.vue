@@ -40,7 +40,7 @@
           </router-link>
           <router-link to="/projets" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span>Projets</span>
+            <span>Projets Clients</span>
           </router-link>
         </div>
 
@@ -211,7 +211,7 @@ const pageTitle = computed(() => {
   const titles = {
     Dashboard: 'Tableau de bord',
     Clients: 'Gestion des Clients', Fournisseurs: 'Gestion des Fournisseurs',
-    Produits: 'Catalogue Produits', Projets: 'Projets',
+    Produits: 'Catalogue Produits', Projets: 'Projets Clients',
     Devis: 'Devis', Factures: 'Factures de Vente', FactureDetail: 'Facture de Vente', Commandes: 'Commandes Fournisseur',
     BCCList: 'Bons de Commande Client', BCCDetail: 'Bon de Commande Client',
     BLList: 'Bons de Livraison', BLDetail: 'Bon de Livraison',

@@ -43,11 +43,38 @@
     <div class="filters-card">
       <div class="search-wrapper">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="filters.search" type="text" placeholder="Rechercher un projet ou un code..." />
+        <input v-model="filters.search" type="text" placeholder="Rechercher un client, projet, code..." />
+      </div>
+      <div class="filter-group">
+        <select v-model="filters.client_id" class="filter-select">
+          <option value="">Tous les clients</option>
+          <option v-for="c in clients" :key="c.id" :value="c.id">
+            {{ c.societe || c.display_name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select v-model="filters.priorite" class="filter-select">
+          <option value="">Toutes les priorités</option>
+          <option value="basse">Basse</option>
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select v-model="filters.statut" class="filter-select">
+          <option value="">Tous les statuts</option>
+          <option value="brouillon">Brouillon</option>
+          <option value="en_cours">En Cours</option>
+          <option value="en_pause">Suspendu</option>
+          <option value="termine">Terminé</option>
+          <option value="annule">Annulé</option>
+        </select>
       </div>
       <div class="filter-group">
         <select v-model="filters.etat_id" class="filter-select">
-          <option value="">Tous les statuts</option>
+          <option value="">Tous les états</option>
           <option v-for="s in etats" :key="s.id" :value="s.id">{{ s.libelle }}</option>
         </select>
       </div>
@@ -128,7 +155,8 @@ import ConfirmModal from '../../components/shared/ConfirmModal.vue'
 const loading = ref(true)
 const projets = ref([])
 const etats = ref([])
-const filters = reactive({ search: '', etat_id: '', statut: '' })
+const clients = ref([])
+const filters = reactive({ search: '', client_id: '', etat_id: '', statut: '', priorite: '' })
 
 const toast = reactive({ show: false, message: '', type: 'success' })
 const showConfirm = ref(false)
@@ -151,14 +179,27 @@ async function fetchEtats() {
   }
 }
 
+async function fetchClients() {
+  try {
+    const { data } = await api.get('/clients', { params: { per_page: 500 } })
+    clients.value = data.data || data || []
+  } catch (e) {
+    console.error("Erreur lors de la récupération des clients", e)
+  }
+}
+
 const projectsFiltered = computed(() => {
   return projets.value.filter(p => {
+    const clientName = (p.client?.societe || '') + ' ' + (p.client?.nom || '') + ' ' + (p.client?.prenom || '') + ' ' + (p.client?.display_name || '');
     const matchSearch = !filters.search || 
       p.nom_projet?.toLowerCase().includes(filters.search.toLowerCase()) || 
-      p.code_projet?.toLowerCase().includes(filters.search.toLowerCase())
+      p.code_projet?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      clientName.toLowerCase().includes(filters.search.toLowerCase())
     const matchStatut = !filters.etat_id || p.etat_id == filters.etat_id
     const matchLegacy = !filters.statut || p.statut === filters.statut
-    return matchSearch && matchStatut && matchLegacy
+    const matchClient = !filters.client_id || p.client_id === filters.client_id
+    const matchPriorite = !filters.priorite || p.priorite === filters.priorite
+    return matchSearch && matchStatut && matchLegacy && matchClient && matchPriorite
   })
 })
 
@@ -215,6 +256,7 @@ async function executeDelete() {
 onMounted(() => {
   fetchProjets()
   fetchEtats()
+  fetchClients()
 })
 </script>
 

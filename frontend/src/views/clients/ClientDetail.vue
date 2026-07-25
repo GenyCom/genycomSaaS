@@ -105,8 +105,33 @@
       </div>
     </div>
 
+    <!-- Navigation Tabs -->
+    <div class="detail-tabs">
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'fiche' }" 
+        @click="activeTab = 'fiche'"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Fiche Client</span>
+      </button>
+      <button 
+        class="tab-btn" 
+        :class="{ active: activeTab === 'transactions' }" 
+        @click="activeTab = 'transactions'"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="165" y1="1" x2="165" y2="1"/><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>Transactions Commerciales</span>
+        <span class="tab-badge" v-if="totalTransactionsCount > 0">{{ totalTransactionsCount }}</span>
+      </button>
+    </div>
+
     <!-- Main Content Grid -->
-    <div class="content-grid">
+    <div class="content-grid" v-if="activeTab === 'fiche'">
 
       <!-- Column Left -->
       <div class="col-left">
@@ -294,6 +319,117 @@
 
       </div>
     </div>
+
+    <!-- Transactions Tab View -->
+    <div class="transactions-tab-container" v-else-if="activeTab === 'transactions'">
+      
+      <!-- Sub-filters and Search Bar -->
+      <div class="transactions-header-bar">
+        <div class="sub-filters">
+          <button class="filter-pill" :class="{ active: subFilter === 'all' }" @click="subFilter = 'all'">
+            Tout <span class="pill-count">{{ countsByType.all }}</span>
+          </button>
+          <button class="filter-pill" :class="{ active: subFilter === 'devis' }" @click="subFilter = 'devis'">
+            Devis <span class="pill-count">{{ countsByType.devis }}</span>
+          </button>
+          <button class="filter-pill" :class="{ active: subFilter === 'bcc' }" @click="subFilter = 'bcc'">
+            Commandes <span class="pill-count">{{ countsByType.bcc }}</span>
+          </button>
+          <button class="filter-pill" :class="{ active: subFilter === 'bl' }" @click="subFilter = 'bl'">
+            Livraisons <span class="pill-count">{{ countsByType.bl }}</span>
+          </button>
+          <button class="filter-pill" :class="{ active: subFilter === 'facture' }" @click="subFilter = 'facture'">
+            Factures <span class="pill-count">{{ countsByType.facture }}</span>
+          </button>
+          <button class="filter-pill" :class="{ active: subFilter === 'avoir' }" @click="subFilter = 'avoir'">
+            Avoirs <span class="pill-count">{{ countsByType.avoir }}</span>
+          </button>
+        </div>
+
+        <div class="search-box-custom">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            v-model="searchTransactionQuery" 
+            placeholder="Rechercher par N°..." 
+            class="search-input-custom"
+          />
+        </div>
+      </div>
+
+      <!-- Transactions Grid / Table -->
+      <div class="info-card mt-4" style="overflow-x: auto;">
+        <table class="saas-table" style="min-width: 900px; width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 15%">Type</th>
+              <th style="width: 20%">Référence</th>
+              <th style="width: 15%">Date</th>
+              <th style="width: 15%" class="text-right">Total HT</th>
+              <th style="width: 18%" class="text-right">Total TTC</th>
+              <th style="width: 12%" class="text-center">Statut</th>
+              <th style="width: 5%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in filteredTransactions" :key="`${t.type}-${t.id}`" class="ligne-row">
+              <td>
+                <span class="type-tag" :class="t.type">
+                  {{ t.typeLabel }}
+                </span>
+              </td>
+              <td>
+                <router-link :to="t.link" class="ref-link bold mono">{{ t.numero || 'N/A' }}</router-link>
+              </td>
+              <td class="date-cell">
+                {{ formatDate(t.date) }}
+              </td>
+              <td class="text-right mono font-medium">
+                {{ formatMoney(t.total_ht) }} DH
+              </td>
+              <td class="text-right mono font-bold accent-amount">
+                {{ formatMoney(t.total_ttc) }} DH
+              </td>
+              <td class="text-center">
+                <span 
+                  class="status-badge" 
+                  :style="getStatusBadgeStyle(t)"
+                >
+                  {{ t.etat?.libelle || getDefaultStatusLabel(t) }}
+                </span>
+              </td>
+              <td class="text-center">
+                <router-link :to="t.link" class="btn-consult" title="Consulter le document">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </router-link>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr v-if="filteredTransactions.length === 0">
+              <td colspan="7" class="text-center">
+                <div class="empty-state-box">
+                  <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <p class="empty-title">Aucune transaction trouvée</p>
+                  <p class="empty-desc">Il n'y a aucun document commercial correspondant à ces critères pour ce client.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -308,6 +444,10 @@ const client = ref({})
 const loading = ref(true)
 const ribCopied = ref(false)
 
+const activeTab = ref('fiche') // 'fiche' or 'transactions'
+const subFilter = ref('all') // 'all', 'devis', 'bcc', 'bl', 'facture', 'avoir'
+const searchTransactionQuery = ref('')
+
 const avatarInitials = computed(() => {
   const name = client.value?.societe || ''
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'CL'
@@ -315,6 +455,13 @@ const avatarInitials = computed(() => {
 
 function formatMoney(val) {
   return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatDate(dStr) {
+  if (!dStr) return '—'
+  const date = new Date(dStr)
+  if (isNaN(date.getTime())) return dStr
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function formatRIB(rib) {
@@ -344,6 +491,159 @@ async function fetchClient(id) {
   } finally {
     loading.value = false
   }
+}
+
+const allTransactions = computed(() => {
+  const list = []
+  
+  // Devis
+  if (client.value?.devis) {
+    client.value.devis.forEach(d => {
+      list.push({
+        id: d.id,
+        type: 'devis',
+        typeLabel: 'Devis',
+        numero: d.numero,
+        date: d.date_devis || d.created_at,
+        total_ht: d.total_ht,
+        total_ttc: d.total_ttc,
+        etat: d.etat,
+        link: `/devis/${d.id}`
+      })
+    })
+  }
+
+  // BCC
+  if (client.value?.bons_commande) {
+    client.value.bons_commande.forEach(bcc => {
+      list.push({
+        id: bcc.id,
+        type: 'bcc',
+        typeLabel: 'Commande',
+        numero: bcc.numero,
+        date: bcc.date_commande || bcc.created_at,
+        total_ht: bcc.total_ht,
+        total_ttc: bcc.total_ttc,
+        etat: bcc.etat,
+        link: `/bons-commande-client/${bcc.id}`
+      })
+    })
+  }
+
+  // BL
+  if (client.value?.bons_livraison) {
+    client.value.bons_livraison.forEach(blDoc => {
+      list.push({
+        id: blDoc.id,
+        type: 'bl',
+        typeLabel: 'Livraison',
+        numero: blDoc.numero,
+        date: blDoc.date_livraison || blDoc.created_at,
+        total_ht: blDoc.total_ht,
+        total_ttc: blDoc.total_ttc,
+        etat: blDoc.etat,
+        link: `/bons-livraison/${blDoc.id}`
+      })
+    })
+  }
+
+  // Factures
+  if (client.value?.factures) {
+    client.value.factures.forEach(f => {
+      list.push({
+        id: f.id,
+        type: 'facture',
+        typeLabel: 'Facture',
+        numero: f.numero,
+        date: f.date_facture || f.created_at,
+        total_ht: f.total_ht,
+        total_ttc: f.total_ttc,
+        etat: f.etat,
+        link: `/factures/${f.id}`
+      })
+    })
+  }
+
+  // Avoirs
+  if (client.value?.avoirs) {
+    client.value.avoirs.forEach(av => {
+      list.push({
+        id: av.id,
+        type: 'avoir',
+        typeLabel: 'Avoir',
+        numero: av.numero,
+        date: av.date_avoir || av.created_at,
+        total_ht: av.total_ht,
+        total_ttc: av.total_ttc,
+        etat: av.etat,
+        link: `/avoirs-clients/${av.id}`
+      })
+    })
+  }
+
+  return list.sort((a, b) => {
+    const dateA = new Date(a.date)
+    const dateB = new Date(b.date)
+    return dateB - dateA
+  })
+})
+
+const totalTransactionsCount = computed(() => allTransactions.value.length)
+
+const countsByType = computed(() => {
+  return {
+    all: allTransactions.value.length,
+    devis: allTransactions.value.filter(t => t.type === 'devis').length,
+    bcc: allTransactions.value.filter(t => t.type === 'bcc').length,
+    bl: allTransactions.value.filter(t => t.type === 'bl').length,
+    facture: allTransactions.value.filter(t => t.type === 'facture').length,
+    avoir: allTransactions.value.filter(t => t.type === 'avoir').length,
+  }
+})
+
+const filteredTransactions = computed(() => {
+  let result = allTransactions.value
+
+  if (subFilter.value !== 'all') {
+    result = result.filter(t => t.type === subFilter.value)
+  }
+
+  if (searchTransactionQuery.value.trim()) {
+    const q = searchTransactionQuery.value.toLowerCase()
+    result = result.filter(t => 
+      (t.numero && t.numero.toLowerCase().includes(q)) || 
+      (t.typeLabel && t.typeLabel.toLowerCase().includes(q))
+    )
+  }
+
+  return result
+})
+
+function getStatusBadgeStyle(t) {
+  if (t.etat?.couleur) {
+    return {
+      backgroundColor: `${t.etat.couleur}15`,
+      color: t.etat.couleur,
+      borderColor: `${t.etat.couleur}30`
+    }
+  }
+  if (t.type === 'avoir') {
+    return {
+      backgroundColor: '#fce7f3',
+      color: '#db2777',
+      borderColor: '#fbcfe8'
+    }
+  }
+  return {
+    backgroundColor: '#f3f4f6',
+    color: '#6b7280',
+    borderColor: '#e5e7eb'
+  }
+}
+
+function getDefaultStatusLabel(t) {
+  if (t.type === 'avoir') return 'Validé'
+  return 'Brouillon'
 }
 
 watch(() => props.id, (newId) => fetchClient(newId), { immediate: true })
@@ -803,4 +1103,224 @@ onMounted(() => { if (!props.id && route.params.id) fetchClient(route.params.id)
   .btn-edit span { display: none; }
   .hero-avatar { width: 46px; height: 46px; font-size: .95rem; }
 }
+
+/* ─── Detail Tabs Navigation ────────────────────────────────────────────────── */
+.detail-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--c-border);
+  margin: 24px 0;
+  padding-bottom: 2px;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+  position: relative;
+  outline: none;
+}
+.tab-btn:hover {
+  color: var(--c-text);
+}
+.tab-btn.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 4px;
+}
+
+/* ─── Transactions Tab Styles ────────────────────────────────────────────── */
+.transactions-tab-container {
+  display: flex;
+  flex-direction: column;
+}
+.transactions-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sub-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.filter-pill:hover {
+  background: var(--c-subtle);
+  color: var(--c-text);
+}
+.filter-pill.active {
+  background: var(--c-accent);
+  color: #fff;
+  border-color: var(--c-accent);
+}
+.pill-count {
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.filter-pill.active .pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* Search Box Custom */
+.search-box-custom {
+  position: relative;
+  max-width: 320px;
+  width: 100%;
+}
+.search-input-custom {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  font-size: .82rem;
+  border: 1.5px solid var(--c-border-mid);
+  border-radius: 8px;
+  background: var(--c-surface);
+  outline: none;
+  transition: all 0.2s;
+}
+.search-input-custom:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.search-box-custom .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--c-muted);
+  pointer-events: none;
+}
+
+/* Type Tags */
+.type-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+.type-tag.devis { background: #FEF3C7; color: #D97706; }
+.type-tag.bcc { background: #E0F2FE; color: #0284C7; }
+.type-tag.bl { background: #F3E8FF; color: #7C3AED; }
+.type-tag.facture { background: #D1FAE5; color: #059669; }
+.type-tag.avoir { background: #FCE7F3; color: #DB2777; }
+
+/* Status Badges & Links */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 100px;
+  border: 1px solid transparent;
+}
+.ref-link {
+  color: var(--c-accent);
+  text-decoration: none;
+  font-weight: 700;
+  transition: opacity 0.15s;
+}
+.ref-link:hover {
+  text-decoration: underline;
+}
+.accent-amount {
+  color: var(--c-text);
+}
+.btn-consult {
+  background: var(--c-subtle);
+  color: var(--c-muted);
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.btn-consult:hover {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+}
+
+/* Empty State */
+.empty-state-box {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-muted);
+}
+.empty-state-icon {
+  color: var(--c-border-mid);
+  margin-bottom: 12px;
+}
+.empty-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--c-text);
+  margin: 0 0 4px;
+}
+.empty-desc {
+  font-size: 0.8rem;
+  max-width: 320px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
+.saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table th.text-center, .saas-table td.text-center { text-align: center; }
+.saas-table th.text-right, .saas-table td.text-right { text-align: right; }
+
+.ligne-row { background: #FCFDFE; transition: background .15s; }
+.ligne-row:nth-child(even) { background: #F5F8FF; }
+.ligne-row:hover { background: #EEF4FF !important; }
+.ligne-row:last-child td { border-bottom: none; }
 </style>

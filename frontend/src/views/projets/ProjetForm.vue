@@ -254,7 +254,7 @@ async function saveProjet() {
   try {
     const payload = { 
       ...form.value,
-      client_id: form.value.client_id ? parseInt(form.value.client_id) : null,
+      client_id: form.value.client_id || null,
       budget_prevu: parseFloat(form.value.budget_prevu) || 0,
       budget_consomme: parseFloat(form.value.budget_consomme) || 0,
       avancement_pcent: parseInt(form.value.avancement_pcent) || 0
