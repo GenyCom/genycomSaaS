@@ -181,6 +181,27 @@
             </div>
           </div>
         </section>
+
+        <section class="info-card" style="margin-top: 20px;">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h3>Description & Détails</h3>
+          </div>
+          <div class="card-body">
+            <div v-if="!editMode">
+              <p class="description-text" v-if="projet.description">{{ projet.description }}</p>
+              <p class="notes-empty" v-else>Aucune description renseignée.</p>
+            </div>
+            <div v-else class="edit-form">
+              <div class="form-group-custom">
+                <label>Description du Projet</label>
+                <textarea v-model="form.description" rows="5" placeholder="Saisir la description ou les détails du projet..."></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div class="col-right">
@@ -210,8 +231,12 @@
           <div class="card-body edit-form">
             <div class="form-group-custom">
               <label>Statut du Projet</label>
-              <select v-model="form.etat_id">
-                <option v-for="s in etats" :key="s.id" :value="s.id">{{ s.libelle }}</option>
+              <select v-model="form.statut">
+                <option value="brouillon">Brouillon</option>
+                <option value="en_cours">En Cours</option>
+                <option value="en_pause">Suspendu</option>
+                <option value="termine">Terminé</option>
+                <option value="annule">Annulé</option>
               </select>
             </div>
             <div class="form-group-custom">
@@ -880,11 +905,13 @@ onMounted(() => {
 .edit-form { display: flex; flex-direction: column; gap: 14px; }
 .form-group-custom { display: flex; flex-direction: column; gap: 6px; }
 .form-group-custom label { font-size: .75rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; }
-.form-group-custom input, .form-group-custom select {
+.form-group-custom input, .form-group-custom select, .form-group-custom textarea {
   padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--c-border-mid);
   font-size: .9rem; font-family: inherit; transition: border-color .2s;
 }
-.form-group-custom input:focus { border-color: var(--c-accent); outline: none; }
+.form-group-custom input:focus, .form-group-custom select:focus, .form-group-custom textarea:focus { border-color: var(--c-accent); outline: none; }
+.form-group-custom textarea { resize: vertical; min-height: 120px; }
+.description-text { font-size: .9rem; color: var(--c-text); line-height: 1.6; white-space: pre-wrap; padding: 5px; }
 .form-row-custom { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* ─── Client Mini Card ───────────────────────────────────────────────────────── */
