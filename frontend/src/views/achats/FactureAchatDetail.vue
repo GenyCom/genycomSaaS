@@ -397,6 +397,8 @@ onMounted(loadData)
 .saas-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 950px; }
 .saas-table th { background: #F9FAFB; padding: 13px 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; color: var(--c-muted); text-align: left; border-bottom: 2px solid var(--c-border); letter-spacing: .04em; }
 .saas-table td { padding: 14px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.saas-table th.text-center, .saas-table td.text-center { text-align: center; }
+.saas-table th.text-right, .saas-table td.text-right { text-align: right; }
 
 .ligne-row { background: #FCFDFE; transition: background .15s; }
 .ligne-row:nth-child(even) { background: #F5F8FF; }

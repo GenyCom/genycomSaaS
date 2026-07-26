@@ -93,16 +93,7 @@
             <div class="total-row"><span class="total-label">Total TVA</span><span>{{ formatMoney(totalTVA) }} DH</span></div>
             <div class="total-row grand-total"><span class="total-label">Total TTC</span><span>{{ formatMoney(totalTTC) }} DH</span></div>
             
-            <template v-if="isFacture">
-              <div class="total-row" style="margin-top: 0.5rem; color: #059669;">
-                <span class="total-label">Montant Payé</span>
-                <span>{{ formatMoney(montantPaye) }} DH</span>
-              </div>
-              <div class="total-row" style="font-size: 0.9rem; font-weight: 800; color: #dc2626; border-top: 1px dashed #e5e7eb; padding-top: 0.5rem;">
-                <span class="total-label">Reste à Payer</span>
-                <span>{{ formatMoney(resteAPayer) }} DH</span>
-              </div>
-            </template>
+
 
          </div>
       </div>
@@ -118,8 +109,7 @@
          </p>
          <hr style="margin-top: 2rem; margin-bottom: 0.5rem; border-color: #ddd;">
          <p class="legal-notice">
-           {{ entreprises.raison_sociale }} - RC : {{ entreprises.rc || '---' }} - IF : {{ entreprises.if_fiscal || '---' }} - Patente : {{ entreprises.patente || '---' }} - ICE : {{ entreprises.ice || '---' }}<br/>
-           <i>Ce document est une pièce commerciale officielle générée par le système GenyCom.</i>
+           {{ entreprises.raison_sociale }} - RC : {{ entreprises.rc || '---' }} - IF : {{ entreprises.if_fiscal || '---' }} - Patente : {{ entreprises.patente || '---' }} - ICE : {{ entreprises.ice || '---' }}
          </p>
       </div>
 
@@ -144,9 +134,12 @@ const docData = ref({})
 const docStatut = ref(null)
 const observations = ref('')
 
-// Détecter s'il s'agit d'une facture pour afficher le bloc "Reste à payer"
 const isFacture = computed(() => {
   return ['facture', 'factures', 'facture-achat', 'factures-achats'].includes(type.toLowerCase())
+})
+
+const isFactureAchat = computed(() => {
+  return ['facture-achat', 'factures-achats'].includes(type.toLowerCase())
 })
 
 const docTitle = computed(() => {
@@ -357,6 +350,8 @@ body { margin: 0; padding: 0; background-color: #f7f9fc; }
   padding: 20mm;
   box-sizing: border-box;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
