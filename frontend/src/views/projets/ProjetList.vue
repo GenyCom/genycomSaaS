@@ -105,7 +105,9 @@
             </span>
             <span v-else class="status-badge">{{ formatStatus(p.statut) }}</span>
           </div>
-          <h3 class="project-name" :title="p.nom_projet">{{ p.nom_projet }}</h3>
+          <router-link :to="'/projets/' + p.id" style="text-decoration: none; color: inherit;">
+            <h3 class="project-name" :title="p.nom_projet" style="cursor: pointer;">{{ p.nom_projet }}</h3>
+          </router-link>
           <span class="project-code">{{ p.code_projet }}</span>
         </div>
 
@@ -134,6 +136,12 @@
             <span class="meta-value">{{ p.date_fin_prevue ? formatDate(p.date_fin_prevue) : '--' }}</span>
           </div>
           <div class="actions-group">
+            <router-link :to="'/projets/' + p.id" class="action-btn view" title="Consulter le projet">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </router-link>
+            <router-link :to="'/projets/' + p.id + '?tab=transactions'" class="action-btn history" title="Historique des transactions">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </router-link>
             <router-link :to="'/projets/' + p.id + '/edit'" class="action-btn edit" title="Gérer le projet">
                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </router-link>
@@ -380,6 +388,8 @@ onMounted(() => {
   background: #fff; display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all .2s; color: var(--c-muted);
 }
+.action-btn.view:hover { border-color: var(--c-success); color: var(--c-success); background: #ECFDF5; }
+.action-btn.history:hover { border-color: #8B5CF6; color: #8B5CF6; background: #F5F3FF; }
 .action-btn.edit:hover { border-color: var(--c-accent); color: var(--c-accent); background: var(--c-accent-bg); }
 .action-btn.delete:hover { border-color: var(--c-danger); color: var(--c-danger); background: #FEF2F2; }
 

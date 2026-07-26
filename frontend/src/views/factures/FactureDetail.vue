@@ -124,7 +124,16 @@
               <label>Projet associé (Optionnel)</label>
               <select v-model="form.projet_id" class="input-custom">
                 <option value="">Aucun projet</option>
-                <option v-for="p in projects" :key="p.id" :value="p.id">[{{ p.code_projet }}] {{ p.nom_projet }}</option>
+                <optgroup v-if="associatedProjects.length > 0" label="Projets de ce client">
+                  <option v-for="p in associatedProjects" :key="p.id" :value="p.id">
+                    ⭐ [{{ p.code_projet }}] {{ p.nom_projet }}
+                  </option>
+                </optgroup>
+                <optgroup v-if="otherProjects.length > 0" label="Autres projets (ou projets généraux)">
+                  <option v-for="p in otherProjects" :key="p.id" :value="p.id">
+                    [{{ p.code_projet }}] {{ p.nom_projet }}{{ getProjectClientLabel(p) }}
+                  </option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -478,6 +487,22 @@ const clients = ref([])
 const products = ref([])
 const produits = ref([])
 const projects = ref([])
+
+const associatedProjects = computed(() => {
+  if (!form.value.client_id) return []
+  return projects.value.filter(p => String(p.client_id) === String(form.value.client_id))
+})
+
+const otherProjects = computed(() => {
+  if (!form.value.client_id) return projects.value
+  return projects.value.filter(p => String(p.client_id) !== String(form.value.client_id))
+})
+
+function getProjectClientLabel(p) {
+  if (!p.client_id) return ' (Projet Interne / Général)'
+  const c = clients.value.find(x => String(x.id) === String(p.client_id))
+  return c ? ` (Client: ${c.societe || c.nom || 'Inconnu'})` : ''
+}
 const warehouses = ref([])
 const tauxTvaList = ref([]) 
 

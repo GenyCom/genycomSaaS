@@ -28,9 +28,11 @@ class Fournisseur extends BaseModel
     public function typeFournisseur() { return $this->belongsTo(TypeFournisseur::class); }
     public function contacts()        { return $this->morphMany(Contact::class, 'contactable'); }
     public function commandes()       { return $this->hasMany(BonCommandeFournisseur::class, 'fournisseur_id'); }
+    public function bonsReception()   { return $this->hasMany(BR::class, 'fournisseur_id'); }
     public function dettes()          { return $this->hasMany(DetteFournisseur::class); }
     public function produits()        { return $this->hasMany(Produit::class); }
-    public function facturesAchats()  { return $this->hasMany(FactureAchat::class); }
+    public function facturesAchats()  { return $this->hasMany(FactureAchat::class, 'fournisseur_id'); }
+    public function avoirs()          { return $this->hasMany(AvoirFournisseur::class, 'fournisseur_id'); }
     public function fichiers()        { return $this->morphMany(Fichier::class, 'fileable'); }
 
     public function scopeSearch($query, ?string $search)

@@ -73,7 +73,15 @@ class ProjetController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $projet = Projet::with(['client:id,societe,nom,prenom', 'responsable:id,nom,prenom', 'etat', 'devis', 'factures'])->findOrFail($id);
+        $projet = Projet::with([
+            'client:id,societe,nom,prenom',
+            'responsable:id,nom,prenom',
+            'etat',
+            'devis.etat',
+            'bonsCommande.etat',
+            'bonsLivraison.etat',
+            'factures.etat'
+        ])->findOrFail($id);
         return response()->json($projet);
     }
 

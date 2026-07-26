@@ -41,10 +41,12 @@ class Projet extends BaseModel
         'taux_change_document' => 'decimal:6'
     ];
 
-    public function client()      { return $this->belongsTo(Client::class); }
-    public function responsable() { return $this->belongsTo(User::class, 'responsable_id'); }
+    public function client()       { return $this->belongsTo(Client::class); }
+    public function responsable()  { return $this->belongsTo(User::class, 'responsable_id'); }
     public function etat()         { return $this->belongsTo(EtatDocument::class, 'etat_id'); }
     public function devise()       { return $this->belongsTo(Devise::class); }
-    public function devis()       { return $this->hasMany(Devis::class); }
-    public function factures()    { return $this->hasMany(Facture::class); }
+    public function devis()        { return $this->hasMany(Devis::class); }
+    public function bonsCommande() { return $this->hasMany(BonCommandeClient::class, 'projet_id'); }
+    public function bonsLivraison() { return $this->hasMany(BonLivraison::class, 'projet_id'); }
+    public function factures()     { return $this->hasMany(Facture::class); }
 }

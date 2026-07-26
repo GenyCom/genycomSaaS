@@ -346,17 +346,41 @@
           </button>
         </div>
 
-        <div class="search-box-custom">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input 
-            type="text" 
-            v-model="searchTransactionQuery" 
-            placeholder="Rechercher par N°..." 
-            class="search-input-custom"
-          />
+        <!-- Search & Export Actions -->
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="search-box-custom">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              v-model="searchTransactionQuery" 
+              placeholder="Rechercher par N°..." 
+              class="search-input-custom"
+            />
+          </div>
+          <div class="export-dropdown-wrapper">
+            <button @click.stop="toggleExportMenu" class="btn-export-trigger">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Exporter</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div v-show="showExportMenu" class="export-menu">
+              <button @click="exportData('csv')" class="export-item">
+                <span class="file-icon csv">CSV</span>
+                <span>Format CSV (.csv)</span>
+              </button>
+              <button @click="exportData('xlsx')" class="export-item">
+                <span class="file-icon xlsx">XLSX</span>
+                <span>Format Excel (.xls)</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -434,7 +458,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../services/api'
 
@@ -462,6 +486,129 @@ function formatDate(dStr) {
   const date = new Date(dStr)
   if (isNaN(date.getTime())) return dStr
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const showExportMenu = ref(false)
+
+function toggleExportMenu() {
+  showExportMenu.value = !showExportMenu.value
+}
+
+function closeExportMenu(e) {
+  if (!e.target.closest('.export-dropdown-wrapper')) {
+    showExportMenu.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('click', closeExportMenu)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', closeExportMenu)
+})
+
+function exportData(format) {
+  showExportMenu.value = false
+  if (format === 'csv') {
+    exportToCSV()
+  } else {
+    exportToExcel()
+  }
+}
+
+function exportToCSV() {
+  const headers = ['Type Document', 'Référence', 'Date', 'Montant HT (DH)', 'Montant TTC (DH)', 'Statut']
+  const rows = filteredTransactions.value.map(t => [
+    t.typeLabel,
+    t.numero || '',
+    formatDate(t.date),
+    t.total_ht !== null ? (parseFloat(t.total_ht) || 0).toFixed(2) : '',
+    t.total_ttc !== null ? (parseFloat(t.total_ttc) || 0).toFixed(2) : '',
+    t.etat?.libelle || 'Brouillon'
+  ])
+
+  const csvContent = "\uFEFF" + [
+    headers.join(';'),
+    ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(';'))
+  ].join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  
+  const prefix = client.value?.societe || 'client_transactions'
+  const filename = `transactions_client_${prefix.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv`
+  
+  link.setAttribute("download", filename)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+function escapeXML(str) {
+  if (str === null || str === undefined) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function exportToExcel() {
+  const headers = ['Type Document', 'Référence', 'Date', 'Montant HT (DH)', 'Montant TTC (DH)', 'Statut']
+  const rows = filteredTransactions.value.map(t => [
+    t.typeLabel,
+    t.numero || '',
+    formatDate(t.date),
+    t.total_ht !== null ? (parseFloat(t.total_ht) || 0).toFixed(2) : '0.00',
+    t.total_ttc !== null ? (parseFloat(t.total_ttc) || 0).toFixed(2) : '0.00',
+    t.etat?.libelle || 'Brouillon'
+  ])
+
+  let xml = '\x3C?xml version="1.0" encoding="utf-8"?\x3E\n'
+  xml += '\x3C?mso-application progid="Excel.Sheet"?\x3E\n'
+  xml += '\x3CWorkbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n'
+  xml += ' xmlns:o="urn:schemas-microsoft-com:office:office"\n'
+  xml += ' xmlns:x="urn:schemas-microsoft-com:office:excel"\n'
+  xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n'
+  xml += ' xmlns:html="http://www.w3.org/TR/REC-html40"\x3E\n'
+  xml += ' \x3CWorksheet ss:Name="Transactions"\x3E\n'
+  xml += '  \x3CTable\x3E\n'
+  xml += '   \x3CRow\x3E\n'
+  
+  headers.forEach(h => {
+    xml += '    \x3CCell\x3E\x3CData ss:Type="String"\x3E' + escapeXML(h) + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+  })
+  xml += '   \x3C/Row\x3E\n'
+
+  rows.forEach(row => {
+    xml += '   \x3CRow\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="String"\x3E' + escapeXML(row[0]) + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="String"\x3E' + escapeXML(row[1]) + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="String"\x3E' + escapeXML(row[2]) + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="Number"\x3E' + row[3] + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="Number"\x3E' + row[4] + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '    \x3CCell\x3E\x3CData ss:Type="String"\x3E' + escapeXML(row[5]) + '\x3C/Data\x3E\x3C/Cell\x3E\n'
+    xml += '   \x3C/Row\x3E\n'
+  })
+
+  xml += '  \x3C/Table\x3E\n'
+  xml += ' \x3C/Worksheet\x3E\n'
+  xml += '\x3C/Workbook\x3E'
+
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  const prefix = client.value?.societe || 'client_transactions'
+  const filename = `transactions_client_${prefix.toLowerCase().replace(/[^a-z0-9]/g, '_')}.xls`
+  link.setAttribute("download", filename)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 function formatRIB(rib) {
@@ -1323,4 +1470,82 @@ onMounted(() => { if (!props.id && route.params.id) fetchClient(route.params.id)
 .ligne-row:nth-child(even) { background: #F5F8FF; }
 .ligne-row:hover { background: #EEF4FF !important; }
 .ligne-row:last-child td { border-bottom: none; }
+
+/* ─── Export Dropdown Premium Styles ───────────────────────────────────────── */
+.export-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.btn-export-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--c-surface, #fff);
+  border: 1.5px solid var(--c-border-mid, #D5D9E2);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-text, #1A1D23);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 36px;
+  outline: none;
+}
+.btn-export-trigger:hover {
+  border-color: var(--c-accent, #2563EB);
+  color: var(--c-accent, #2563EB);
+  background: var(--c-accent-bg, #EEF4FF);
+}
+.export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #E8EAEE);
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 100;
+  width: 190px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.export-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c-text, #1A1D23);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+  width: 100%;
+}
+.export-item:hover {
+  background: var(--c-subtle, #F1F3F6);
+}
+.file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #fff;
+  min-width: 32px;
+}
+.file-icon.csv {
+  background: #0284C7;
+}
+.file-icon.xlsx {
+  background: #16A34A;
+}
 </style>
