@@ -140,6 +140,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
 
     // Reporting
     Route::prefix('reporting')->group(function () {
+        Route::get('/all', [ReportingController::class, 'all']);
         Route::get('/sales', [ReportingController::class, 'sales']);
         Route::get('/purchases', [ReportingController::class, 'purchases']);
         Route::get('/finance', [ReportingController::class, 'finance']);

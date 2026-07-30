@@ -689,18 +689,10 @@ async function fetchData() {
     fournisseur_id: filters.supplierId
   }
   try {
-    const [salesRes, purchaseRes, financeRes, stockRes, paymentsRes, unpaidRes, cashRes, chequesRes] = await Promise.all([
-      api.get('/reporting/sales', { params }),
-      api.get('/reporting/purchases', { params }),
-      api.get('/reporting/finance', { params }),
-      api.get('/reporting/stock'),
-      api.get('/reporting/payments', { params }),
-      api.get('/reporting/unpaid'),
-      api.get('/reporting/cash-flow', { params }),
-      api.get('/reporting/cheques')
-    ])
+    const res = await api.get('/reporting/all', { params })
+    const data = res.data
 
-    salesData.value = salesRes.data
+    salesData.value = data.sales
     // Calculate sales totals
     salesData.value.totals = salesData.value.journal.reduce((acc, curr) => {
       acc.ht += parseFloat(curr.total_ht)
@@ -709,13 +701,13 @@ async function fetchData() {
       return acc
     }, { ht: 0, tva: 0, ttc: 0 })
 
-    purchaseData.value = purchaseRes.data
-    financeData.value = financeRes.data
-    stockData.value = stockRes.data
-    paymentData.value = paymentsRes.data
-    unpaidData.value = unpaidRes.data
-    cashData.value = cashRes.data
-    chequeData.value = chequesRes.data
+    purchaseData.value = data.purchases
+    financeData.value = data.finance
+    stockData.value = data.stock
+    paymentData.value = data.payments
+    unpaidData.value = data.unpaid
+    cashData.value = data.cash_flow
+    chequeData.value = data.cheques
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
   } finally {

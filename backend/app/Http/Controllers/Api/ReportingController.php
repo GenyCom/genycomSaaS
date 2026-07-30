@@ -10,6 +10,32 @@ class ReportingController extends Controller
 {
     public function __construct(private ReportingService $reporting) {}
 
+    public function all(Request $request): JsonResponse
+    {
+        $start = $request->get('start', now()->startOfMonth()->toDateString());
+        $end = $request->get('end', now()->toDateString());
+        $clientId = $request->get('client_id');
+        $supplierId = $request->get('fournisseur_id');
+        $status = $request->get('status');
+
+        return response()->json([
+            'sales' => [
+                'journal' => $this->reporting->salesJournal($start, $end, $clientId),
+                'by_client' => $this->reporting->salesByClient($start, $end)
+            ],
+            'purchases' => $this->reporting->purchaseJournal($start, $end, $supplierId),
+            'finance' => [
+                'vat' => $this->reporting->vatReport($start, $end),
+                'profitability' => $this->reporting->profitabilityByProject($start, $end)
+            ],
+            'stock' => $this->reporting->inventoryValuation(),
+            'payments' => $this->reporting->paymentsJournal($start, $end),
+            'unpaid' => $this->reporting->unpaidInvoices(),
+            'cash_flow' => $this->reporting->cashAndProfitReport($start, $end),
+            'cheques' => $this->reporting->chequeReport($status),
+        ]);
+    }
+
     public function sales(Request $request): JsonResponse
     {
         $start = $request->get('start', now()->startOfMonth()->toDateString());
