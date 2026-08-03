@@ -367,16 +367,25 @@
               <button @click="exportCSV(unpaidStatementData.clients.map(c => ({ societe: c.societe, nb_factures: c.nb_factures, total_ttc: c.total_ttc, total_regle: c.total_regle, reste_a_payer: c.reste_a_payer })), 'creances_clients')" class="btn-export">Exporter CSV</button>
             </div>
             <div class="table-responsive">
-              <table class="report-table">
+              <table class="report-table statement-table">
+                <colgroup>
+                  <col style="width: 36px;" />
+                  <col />
+                  <col style="width: 80px;" />
+                  <col style="width: 150px;" />
+                  <col style="width: 140px;" />
+                  <col style="width: 150px;" />
+                  <col style="width: 120px;" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style="width: 30px;"></th>
+                    <th></th>
                     <th>Client</th>
                     <th class="text-center">Factures</th>
                     <th class="text-right">Total TTC</th>
                     <th class="text-right">Réglé</th>
                     <th class="text-right">Reste à Payer</th>
-                    <th class="text-center" style="width: 130px;">Actions</th>
+                    <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -462,16 +471,25 @@
               <button @click="exportCSV(unpaidStatementData.fournisseurs.map(f => ({ societe: f.societe, nb_factures: f.nb_factures, total_ttc: f.total_ttc, total_regle: f.total_regle, reste_a_payer: f.reste_a_payer })), 'dettes_fournisseurs')" class="btn-export">Exporter CSV</button>
             </div>
             <div class="table-responsive">
-              <table class="report-table">
+              <table class="report-table statement-table">
+                <colgroup>
+                  <col style="width: 36px;" />
+                  <col />
+                  <col style="width: 80px;" />
+                  <col style="width: 150px;" />
+                  <col style="width: 140px;" />
+                  <col style="width: 150px;" />
+                  <col style="width: 120px;" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style="width: 30px;"></th>
+                    <th></th>
                     <th>Fournisseur</th>
                     <th class="text-center">Factures</th>
                     <th class="text-right">Total TTC</th>
                     <th class="text-right">Réglé</th>
                     <th class="text-right">Reste à Payer</th>
-                    <th class="text-center" style="width: 130px;">Actions</th>
+                    <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1157,8 +1175,9 @@ onMounted(() => {
 .report-table th { text-align: left; padding: 12px 20px; background: #f8fafc; color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.65rem; border-bottom: 1px solid #e2e8f0; }
 .report-table td { padding: 12px 20px; border-bottom: 1px solid #f1f5f9; color: #334155; }
 .report-table tr:last-child td { border-bottom: none; }
-.text-right { text-align: right; }
-.text-center { text-align: center; }
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
+.statement-table { table-layout: fixed; width: 100%; }
 .font-bold { font-weight: 700; }
 .badge-code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; color: #3b82f6; }
 .status-pill { padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; }

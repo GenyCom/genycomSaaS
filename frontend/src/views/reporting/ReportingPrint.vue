@@ -211,7 +211,7 @@ h3 { font-size: 1rem; border-left: 4px solid #3b82f6; padding-left: 10px; margin
 .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .print-table th { background: #f8fafc; padding: 10px; text-align: left; font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
 .print-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-.text-right { text-align: right; }
+.text-right { text-align: right !important; }
 .text-muted { color: #64748b; }
 .font-bold { font-weight: 700; }
 .success { color: #059669; }

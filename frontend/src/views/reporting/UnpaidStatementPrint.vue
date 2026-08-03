@@ -244,8 +244,8 @@ h3 { font-size: 0.95rem; border-left: 4px solid #3b82f6; padding-left: 10px; mar
 .print-table th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.72rem; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 700; letter-spacing: 0.3px; }
 .print-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; color: #334155; }
 .print-table tfoot td { border-bottom: none; border-top: 2px solid #334155; padding-top: 12px; }
-.text-right { text-align: right; }
-.text-center { text-align: center; }
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
 .text-muted { color: #64748b; }
 .font-bold { font-weight: 700; }
 
