@@ -276,55 +276,273 @@
         <div class="summary-cards mb-24">
           <div class="mini-card accent">
             <span class="label">Créances Clients (À encaisser)</span>
-            <span class="value">{{ formatMoney(unpaidData.total_clients) }}</span>
+            <span class="value">{{ formatMoney(unpaidStatementData.total_creances ?? unpaidData.total_clients) }}</span>
           </div>
           <div class="mini-card neg">
             <span class="label">Dettes Fournisseurs (À décaisser)</span>
-            <span class="value">{{ formatMoney(unpaidData.total_fournisseurs) }}</span>
+            <span class="value">{{ formatMoney(unpaidStatementData.total_dettes ?? unpaidData.total_fournisseurs) }}</span>
+          </div>
+          <div class="mini-card" :class="(unpaidStatementData.total_creances - unpaidStatementData.total_dettes) >= 0 ? 'success' : 'neg'">
+            <span class="label">Solde Net</span>
+            <span class="value">{{ formatMoney((unpaidStatementData.total_creances ?? 0) - (unpaidStatementData.total_dettes ?? 0)) }}</span>
           </div>
         </div>
 
-        <div class="reporting-grid-2">
-          <div class="table-card">
-            <div class="card-header"><h3>Factures de Vente Impayées</h3></div>
+        <!-- Sub-tabs -->
+        <div class="unpaid-subtabs">
+          <button :class="['subtab-btn', { active: unpaidSubTab === 'factures' }]" @click="unpaidSubTab = 'factures'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Vue par facture
+          </button>
+          <button :class="['subtab-btn', { active: unpaidSubTab === 'tiers' }]" @click="switchToTiersView">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            État par Tiers
+          </button>
+        </div>
+
+        <!-- Sub-tab: Vue par facture (existing) -->
+        <div v-if="unpaidSubTab === 'factures'" class="sub-tab-content">
+          <div class="reporting-grid-2">
+            <div class="table-card">
+              <div class="card-header"><h3>Factures de Vente Impayées</h3></div>
+              <div class="table-responsive">
+                <table class="report-table mini">
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Client</th>
+                      <th class="text-right">Reste à payer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(f, idx) in unpaidData.clients" :key="idx">
+                      <td><span class="badge-code">{{ f.numero }}</span></td>
+                      <td class="text-xs">{{ f.societe }}</td>
+                      <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                    </tr>
+                    <tr v-if="unpaidData.clients.length === 0">
+                      <td colspan="3" class="empty-state">Aucune facture client impayée</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="table-card">
+              <div class="card-header"><h3>Factures Fournisseurs Impayées</h3></div>
+              <div class="table-responsive">
+                <table class="report-table mini">
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Fournisseur</th>
+                      <th class="text-right">Reste à payer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(f, idx) in unpaidData.fournisseurs" :key="idx">
+                      <td><span class="badge-code">{{ f.numero }}</span></td>
+                      <td class="text-xs">{{ f.societe }}</td>
+                      <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                    </tr>
+                    <tr v-if="unpaidData.fournisseurs.length === 0">
+                      <td colspan="3" class="empty-state">Aucune facture fournisseur impayée</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-tab: État par Tiers -->
+        <div v-if="unpaidSubTab === 'tiers'" class="sub-tab-content">
+          <!-- Créances Clients -->
+          <div class="table-card mb-24">
+            <div class="card-header">
+              <div class="header-with-filter">
+                <h3 style="margin:0; border:none; padding:0;">Créances Clients</h3>
+                <span class="header-badge accent">{{ unpaidStatementData.clients.length }} client{{ unpaidStatementData.clients.length > 1 ? 's' : '' }}</span>
+              </div>
+              <button @click="exportCSV(unpaidStatementData.clients.map(c => ({ societe: c.societe, nb_factures: c.nb_factures, total_ttc: c.total_ttc, total_regle: c.total_regle, reste_a_payer: c.reste_a_payer })), 'creances_clients')" class="btn-export">Exporter CSV</button>
+            </div>
             <div class="table-responsive">
-              <table class="report-table mini">
+              <table class="report-table">
                 <thead>
                   <tr>
-                    <th>N°</th>
+                    <th style="width: 30px;"></th>
                     <th>Client</th>
-                    <th class="text-right">Reste à payer</th>
+                    <th class="text-center">Factures</th>
+                    <th class="text-right">Total TTC</th>
+                    <th class="text-right">Réglé</th>
+                    <th class="text-right">Reste à Payer</th>
+                    <th class="text-center" style="width: 130px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(f, idx) in unpaidData.clients" :key="idx">
-                    <td><span class="badge-code">{{ f.numero }}</span></td>
-                    <td class="text-xs">{{ f.societe }}</td>
-                    <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                  <template v-for="(client, idx) in unpaidStatementData.clients" :key="'c-' + idx">
+                    <tr class="tiers-row" @click="toggleTiersExpand('client', idx)">
+                      <td class="expand-cell">
+                        <svg :class="['expand-icon', { rotated: expandedTiers['client-' + idx] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                      </td>
+                      <td class="font-bold">{{ client.societe }}</td>
+                      <td class="text-center">
+                        <span class="count-badge">{{ client.nb_factures }}</span>
+                      </td>
+                      <td class="text-right">{{ formatMoney(client.total_ttc) }}</td>
+                      <td class="text-right text-success">{{ formatMoney(client.total_regle) }}</td>
+                      <td class="text-right font-bold text-danger">{{ formatMoney(client.reste_a_payer) }}</td>
+                      <td class="text-center" @click.stop>
+                        <button @click="printUnpaidStatement('client', client.tiers_id)" class="btn-export" style="padding: 4px 10px; font-size: 0.7rem;">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                          Imprimer l'état
+                        </button>
+                      </td>
+                    </tr>
+                    <!-- Expanded detail rows -->
+                    <tr v-if="expandedTiers['client-' + idx]" class="detail-header-row">
+                      <td></td>
+                      <td colspan="6">
+                        <div class="detail-table-wrapper">
+                          <table class="detail-table">
+                            <thead>
+                              <tr>
+                                <th>N° Facture</th>
+                                <th>Date</th>
+                                <th>Échéance</th>
+                                <th class="text-right">TTC</th>
+                                <th class="text-right">Réglé</th>
+                                <th class="text-right">Reste</th>
+                                <th class="text-center">Retard</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="(f, fIdx) in client.factures" :key="fIdx">
+                                <td><span class="badge-code">{{ f.numero }}</span></td>
+                                <td>{{ f.date_facture ? formatDate(f.date_facture) : '—' }}</td>
+                                <td :class="{ 'text-danger': f.jours_retard }">{{ f.date_echeance ? formatDate(f.date_echeance) : '—' }}</td>
+                                <td class="text-right">{{ formatMoney(f.total_ttc) }}</td>
+                                <td class="text-right text-success">{{ formatMoney(f.montant_regle) }}</td>
+                                <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                                <td class="text-center">
+                                  <span v-if="f.jours_retard" class="retard-pill">{{ f.jours_retard }} j</span>
+                                  <span v-else class="text-muted">—</span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr v-if="unpaidStatementData.clients.length === 0">
+                    <td colspan="7" class="empty-state">Aucune créance client en cours</td>
                   </tr>
                 </tbody>
+                <tfoot v-if="unpaidStatementData.clients.length > 0">
+                  <tr class="total-footer-row">
+                    <td colspan="3" class="font-bold">TOTAL CRÉANCES</td>
+                    <td class="text-right font-bold">{{ formatMoney(unpaidStatementData.clients.reduce((s,c) => s + c.total_ttc, 0)) }}</td>
+                    <td class="text-right font-bold text-success">{{ formatMoney(unpaidStatementData.clients.reduce((s,c) => s + c.total_regle, 0)) }}</td>
+                    <td class="text-right font-bold text-danger" style="font-size: 0.95rem;">{{ formatMoney(unpaidStatementData.total_creances) }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
 
+          <!-- Dettes Fournisseurs -->
           <div class="table-card">
-            <div class="card-header"><h3>Factures Fournisseurs Impayées</h3></div>
+            <div class="card-header">
+              <div class="header-with-filter">
+                <h3 style="margin:0; border:none; padding:0;">Dettes Fournisseurs</h3>
+                <span class="header-badge neg">{{ unpaidStatementData.fournisseurs.length }} fournisseur{{ unpaidStatementData.fournisseurs.length > 1 ? 's' : '' }}</span>
+              </div>
+              <button @click="exportCSV(unpaidStatementData.fournisseurs.map(f => ({ societe: f.societe, nb_factures: f.nb_factures, total_ttc: f.total_ttc, total_regle: f.total_regle, reste_a_payer: f.reste_a_payer })), 'dettes_fournisseurs')" class="btn-export">Exporter CSV</button>
+            </div>
             <div class="table-responsive">
-              <table class="report-table mini">
+              <table class="report-table">
                 <thead>
                   <tr>
-                    <th>N°</th>
+                    <th style="width: 30px;"></th>
                     <th>Fournisseur</th>
-                    <th class="text-right">Reste à payer</th>
+                    <th class="text-center">Factures</th>
+                    <th class="text-right">Total TTC</th>
+                    <th class="text-right">Réglé</th>
+                    <th class="text-right">Reste à Payer</th>
+                    <th class="text-center" style="width: 130px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(f, idx) in unpaidData.fournisseurs" :key="idx">
-                    <td><span class="badge-code">{{ f.numero }}</span></td>
-                    <td class="text-xs">{{ f.societe }}</td>
-                    <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                  <template v-for="(fournisseur, idx) in unpaidStatementData.fournisseurs" :key="'f-' + idx">
+                    <tr class="tiers-row" @click="toggleTiersExpand('fournisseur', idx)">
+                      <td class="expand-cell">
+                        <svg :class="['expand-icon', { rotated: expandedTiers['fournisseur-' + idx] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                      </td>
+                      <td class="font-bold">{{ fournisseur.societe }}</td>
+                      <td class="text-center">
+                        <span class="count-badge">{{ fournisseur.nb_factures }}</span>
+                      </td>
+                      <td class="text-right">{{ formatMoney(fournisseur.total_ttc) }}</td>
+                      <td class="text-right text-success">{{ formatMoney(fournisseur.total_regle) }}</td>
+                      <td class="text-right font-bold text-danger">{{ formatMoney(fournisseur.reste_a_payer) }}</td>
+                      <td class="text-center" @click.stop>
+                        <button @click="printUnpaidStatement('fournisseur', fournisseur.tiers_id)" class="btn-export" style="padding: 4px 10px; font-size: 0.7rem;">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                          Imprimer l'état
+                        </button>
+                      </td>
+                    </tr>
+                    <!-- Expanded detail rows -->
+                    <tr v-if="expandedTiers['fournisseur-' + idx]" class="detail-header-row">
+                      <td></td>
+                      <td colspan="6">
+                        <div class="detail-table-wrapper">
+                          <table class="detail-table">
+                            <thead>
+                              <tr>
+                                <th>N° Facture</th>
+                                <th>Date</th>
+                                <th>Échéance</th>
+                                <th class="text-right">TTC</th>
+                                <th class="text-right">Réglé</th>
+                                <th class="text-right">Reste</th>
+                                <th class="text-center">Retard</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="(f, fIdx) in fournisseur.factures" :key="fIdx">
+                                <td><span class="badge-code">{{ f.numero }}</span></td>
+                                <td>{{ f.date_facture ? formatDate(f.date_facture) : '—' }}</td>
+                                <td :class="{ 'text-danger': f.jours_retard }">{{ f.date_echeance ? formatDate(f.date_echeance) : '—' }}</td>
+                                <td class="text-right">{{ formatMoney(f.total_ttc) }}</td>
+                                <td class="text-right text-success">{{ formatMoney(f.montant_regle) }}</td>
+                                <td class="text-right font-bold text-danger">{{ formatMoney(f.reste_a_payer) }}</td>
+                                <td class="text-center">
+                                  <span v-if="f.jours_retard" class="retard-pill">{{ f.jours_retard }} j</span>
+                                  <span v-else class="text-muted">—</span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr v-if="unpaidStatementData.fournisseurs.length === 0">
+                    <td colspan="7" class="empty-state">Aucune dette fournisseur en cours</td>
                   </tr>
                 </tbody>
+                <tfoot v-if="unpaidStatementData.fournisseurs.length > 0">
+                  <tr class="total-footer-row">
+                    <td colspan="3" class="font-bold">TOTAL DETTES</td>
+                    <td class="text-right font-bold">{{ formatMoney(unpaidStatementData.fournisseurs.reduce((s,f) => s + f.total_ttc, 0)) }}</td>
+                    <td class="text-right font-bold text-success">{{ formatMoney(unpaidStatementData.fournisseurs.reduce((s,f) => s + f.total_regle, 0)) }}</td>
+                    <td class="text-right font-bold text-danger" style="font-size: 0.95rem;">{{ formatMoney(unpaidStatementData.total_dettes) }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
@@ -647,6 +865,38 @@ const chequeData = ref([])
 const chequeStatusFilter = ref('tous')
 const selectedChequeImageUrl = ref(null)
 
+// ─── Unpaid Statement (État par Tiers) ───
+const unpaidSubTab = ref('factures')
+const unpaidStatementData = ref({ clients: [], fournisseurs: [], total_creances: 0, total_dettes: 0 })
+const expandedTiers = reactive({})
+const unpaidStatementLoaded = ref(false)
+
+async function fetchUnpaidStatement() {
+  if (unpaidStatementLoaded.value) return
+  try {
+    const res = await api.get('/reporting/unpaid-statement')
+    unpaidStatementData.value = res.data
+    unpaidStatementLoaded.value = true
+  } catch (e) {
+    console.error('Erreur chargement état des impayés:', e)
+  }
+}
+
+function switchToTiersView() {
+  unpaidSubTab.value = 'tiers'
+  fetchUnpaidStatement()
+}
+
+function toggleTiersExpand(type, idx) {
+  const key = type + '-' + idx
+  expandedTiers[key] = !expandedTiers[key]
+}
+
+function printUnpaidStatement(type, tiersId) {
+  const url = `/print-report/unpaid-statement?type=${type}&tiers_id=${tiersId}`
+  window.open(url, '_blank')
+}
+
 const pendingChequesTotal = computed(() => {
   return chequeData.value.filter(c => c.statut_cheque === 'en_attente').reduce((sum, c) => sum + parseFloat(c.montant || 0), 0)
 })
@@ -708,6 +958,7 @@ async function fetchData() {
     unpaidData.value = data.unpaid
     cashData.value = data.cash_flow
     chequeData.value = data.cheques
+    unpaidStatementLoaded.value = false // invalidate cache so État par Tiers reloads
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
   } finally {
@@ -1012,5 +1263,114 @@ onMounted(() => {
   font-size: 2.5rem;
   cursor: pointer;
   outline: none;
+}
+
+/* ─── Unpaid Statement (État par Tiers) ─── */
+.unpaid-subtabs {
+  display: flex;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 3px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+.subtab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.subtab-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.subtab-btn:hover:not(.active) { color: #334155; }
+
+.sub-tab-content { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.header-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+}
+.header-badge.accent { background: #dbeafe; color: #1e40af; }
+.header-badge.neg { background: #fee2e2; color: #991b1b; }
+
+.tiers-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.tiers-row:hover { background: #f8fafc; }
+.expand-cell { padding: 12px 8px 12px 16px !important; }
+.expand-icon {
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+.expand-icon.rotated { transform: rotate(90deg); color: #3b82f6; }
+
+.count-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.detail-header-row > td {
+  padding: 0 0 0 0 !important;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.detail-table-wrapper {
+  padding: 8px 12px 12px 0;
+}
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.detail-table th {
+  text-align: left;
+  padding: 6px 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.detail-table td {
+  padding: 8px 12px;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+}
+.detail-table tr:last-child td { border-bottom: none; }
+
+.retard-pill {
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.total-footer-row td {
+  padding: 14px 20px !important;
+  border-top: 2px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 0.85rem;
 }
 </style>

@@ -85,6 +85,16 @@ class ReportingController extends Controller
         return response()->json($this->reporting->unpaidInvoices());
     }
 
+    public function unpaidStatement(Request $request): JsonResponse
+    {
+        $tiersType = $request->get('tiers_type'); // 'client' or 'fournisseur'
+        $tiersId = $request->get('tiers_id');
+
+        return response()->json(
+            $this->reporting->unpaidStatement($tiersType, $tiersId ? (int) $tiersId : null)
+        );
+    }
+
     public function cashFlow(Request $request): JsonResponse
     {
         $start = $request->get('start', now()->startOfMonth()->toDateString());

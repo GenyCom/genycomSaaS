@@ -414,6 +414,188 @@ class ReportingService
     }
 
     /**
+     * État des impayés groupé par tiers (Client / Fournisseur)
+     * Pour générer un état de compte clair par tiers
+     */
+    public function unpaidStatement(?string $tiersType = null, ?int $tiersId = null): array
+    {
+        $tid = $this->tid();
+        $result = ['clients' => [], 'fournisseurs' => []];
+
+        // ── 1. Créances Clients ──
+        if (!$tiersType || $tiersType === 'client') {
+            $query = DB::connection('tenant')->table('factures as f')
+                ->join('clients as c', 'c.id', '=', 'f.client_id')
+                ->where('f.tenant_id', $tid)
+                ->whereNull('f.deleted_at')
+                ->where('f.est_reglee', 0)
+                ->whereNotNull('f.numero')
+                ->whereRaw('(f.total_ttc - f.montant_regle) > 0.01');
+
+            if ($tiersId && $tiersType === 'client') {
+                $query->where('f.client_id', $tiersId);
+            }
+
+            $factures = $query->select(
+                'f.id', 'f.numero', 'f.date_facture', 'f.date_echeance',
+                'f.total_ht', 'f.total_tva', 'f.total_ttc',
+                'f.montant_regle',
+                DB::raw('(f.total_ttc - f.montant_regle) as reste_a_payer'),
+                'f.client_id', 'c.societe', 'c.telephone', 'c.email', 'c.ice'
+            )
+            ->orderBy('c.societe')
+            ->orderBy('f.date_facture')
+            ->get();
+
+            // Ajouter les soldes initiaux clients
+            $soldesQuery = DB::connection('tenant')->table('clients')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->where('solde_initial', '>', 0.01);
+
+            if ($tiersId && $tiersType === 'client') {
+                $soldesQuery->where('id', $tiersId);
+            }
+
+            $soldesInitiaux = $soldesQuery->select('id', 'societe', 'telephone', 'email', 'ice', 'solde_initial')
+                ->get()
+                ->map(function($c) {
+                    return (object) [
+                        'id' => null,
+                        'numero' => 'SOLDE INIT.',
+                        'date_facture' => null,
+                        'date_echeance' => null,
+                        'total_ht' => (float) $c->solde_initial,
+                        'total_tva' => 0,
+                        'total_ttc' => (float) $c->solde_initial,
+                        'montant_regle' => 0,
+                        'reste_a_payer' => (float) $c->solde_initial,
+                        'client_id' => $c->id,
+                        'societe' => $c->societe,
+                        'telephone' => $c->telephone,
+                        'email' => $c->email,
+                        'ice' => $c->ice,
+                    ];
+                });
+
+            $allClientInvoices = $factures->concat($soldesInitiaux);
+
+            // Grouper par client
+            $grouped = $allClientInvoices->groupBy('client_id');
+            foreach ($grouped as $clientId => $invoices) {
+                $first = $invoices->first();
+                $today = now()->startOfDay();
+
+                $invoicesArray = $invoices->map(function($f) use ($today) {
+                    $retard = null;
+                    if ($f->date_echeance) {
+                        $echeance = \Carbon\Carbon::parse($f->date_echeance)->startOfDay();
+                        if ($echeance->lt($today)) {
+                            $retard = $today->diffInDays($echeance);
+                        }
+                    }
+                    return [
+                        'id' => $f->id,
+                        'numero' => $f->numero,
+                        'date_facture' => $f->date_facture,
+                        'date_echeance' => $f->date_echeance,
+                        'total_ht' => (float) $f->total_ht,
+                        'total_tva' => (float) $f->total_tva,
+                        'total_ttc' => (float) $f->total_ttc,
+                        'montant_regle' => (float) $f->montant_regle,
+                        'reste_a_payer' => (float) $f->reste_a_payer,
+                        'jours_retard' => $retard,
+                    ];
+                })->values()->toArray();
+
+                $result['clients'][] = [
+                    'tiers_id' => $clientId,
+                    'societe' => $first->societe,
+                    'telephone' => $first->telephone ?? null,
+                    'email' => $first->email ?? null,
+                    'ice' => $first->ice ?? null,
+                    'nb_factures' => count($invoicesArray),
+                    'total_ttc' => (float) $invoices->sum('total_ttc'),
+                    'total_regle' => (float) $invoices->sum('montant_regle'),
+                    'reste_a_payer' => (float) $invoices->sum('reste_a_payer'),
+                    'factures' => $invoicesArray,
+                ];
+            }
+        }
+
+        // ── 2. Dettes Fournisseurs ──
+        if (!$tiersType || $tiersType === 'fournisseur') {
+            $query = DB::connection('tenant')->table('factures_achats as fa')
+                ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
+                ->where('fa.tenant_id', $tid)
+                ->whereNull('fa.deleted_at')
+                ->where('fa.statut', '!=', 'paye')
+                ->where('fa.reste_a_payer', '>', 0.01);
+
+            if ($tiersId && $tiersType === 'fournisseur') {
+                $query->where('fa.fournisseur_id', $tiersId);
+            }
+
+            $factures = $query->select(
+                'fa.id', 'fa.numero', 'fa.date_facture', 'fa.date_echeance',
+                'fa.montant_ht as total_ht', 'fa.montant_tva as total_tva', 'fa.montant_ttc as total_ttc',
+                'fa.montant_paye as montant_regle', 'fa.reste_a_payer',
+                'fa.fournisseur_id', 'fr.societe', 'fr.telephone', 'fr.email', 'fr.ice'
+            )
+            ->orderBy('fr.societe')
+            ->orderBy('fa.date_facture')
+            ->get();
+
+            $grouped = $factures->groupBy('fournisseur_id');
+            foreach ($grouped as $fournisseurId => $invoices) {
+                $first = $invoices->first();
+                $today = now()->startOfDay();
+
+                $invoicesArray = $invoices->map(function($f) use ($today) {
+                    $retard = null;
+                    if ($f->date_echeance) {
+                        $echeance = \Carbon\Carbon::parse($f->date_echeance)->startOfDay();
+                        if ($echeance->lt($today)) {
+                            $retard = $today->diffInDays($echeance);
+                        }
+                    }
+                    return [
+                        'id' => $f->id,
+                        'numero' => $f->numero,
+                        'date_facture' => $f->date_facture,
+                        'date_echeance' => $f->date_echeance,
+                        'total_ht' => (float) $f->total_ht,
+                        'total_tva' => (float) $f->total_tva,
+                        'total_ttc' => (float) $f->total_ttc,
+                        'montant_regle' => (float) $f->montant_regle,
+                        'reste_a_payer' => (float) $f->reste_a_payer,
+                        'jours_retard' => $retard,
+                    ];
+                })->values()->toArray();
+
+                $result['fournisseurs'][] = [
+                    'tiers_id' => $fournisseurId,
+                    'societe' => $first->societe,
+                    'telephone' => $first->telephone ?? null,
+                    'email' => $first->email ?? null,
+                    'ice' => $first->ice ?? null,
+                    'nb_factures' => count($invoicesArray),
+                    'total_ttc' => (float) $invoices->sum('total_ttc'),
+                    'total_regle' => (float) $invoices->sum('montant_regle'),
+                    'reste_a_payer' => (float) $invoices->sum('reste_a_payer'),
+                    'factures' => $invoicesArray,
+                ];
+            }
+        }
+
+        // Totaux globaux
+        $result['total_creances'] = collect($result['clients'])->sum('reste_a_payer');
+        $result['total_dettes'] = collect($result['fournisseurs'])->sum('reste_a_payer');
+
+        return $result;
+    }
+
+    /**
      * Rapport de suivi des chèques (encaissement, impayé, etc.)
      */
     public function chequeReport(?string $status = null): array
