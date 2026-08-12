@@ -186,25 +186,58 @@ class StockService
         $manquants = [];
 
         foreach ($lignes as $ligne) {
-            if (!$ligne['produit_id']) continue;
+            $isFini = !empty($ligne['is_produit_fini']) || !empty($ligne['produit_fini_id']);
 
-            $stock = Stock::where('produit_id', $ligne['produit_id'])
-                ->where('entrepot_id', $entrepotId)
-                ->where('tenant_id', $tenantId)
-                ->first();
+            if ($isFini) {
+                $pfId = $ligne['produit_fini_id'] ?? null;
+                if (!$pfId) continue;
+                $produitFini = \App\Models\ProduitFini::with('nomenclature.produit')->find($pfId);
+                if (!$produitFini) continue;
 
-            $quantiteDisponible = $stock ? $stock->quantite : 0;
-            $quantiteRequise = (float) $ligne['quantite'];
+                $compositeQty = (float) $ligne['quantite'];
+                foreach ($produitFini->nomenclature as $nomItem) {
+                    $comp = $nomItem->produit;
+                    if ($comp && !$comp->is_service) {
+                        $stock = Stock::where('produit_id', $comp->id)
+                            ->where('entrepot_id', $entrepotId)
+                            ->where('tenant_id', $tenantId)
+                            ->first();
 
-            if ($quantiteDisponible < $quantiteRequise) {
-                $produit = \App\Models\Produit::find($ligne['produit_id']);
-                $manquants[] = [
-                    'produit_id' => $ligne['produit_id'],
-                    'designation' => $produit ? $produit->designation : "Produit inconnu",
-                    'disponible' => $quantiteDisponible,
-                    'requis' => $quantiteRequise,
-                    'manquant' => $quantiteRequise - $quantiteDisponible
-                ];
+                        $quantiteDisponible = $stock ? $stock->quantite : 0;
+                        $quantiteRequise = $nomItem->quantite * $compositeQty;
+
+                        if ($quantiteDisponible < $quantiteRequise) {
+                            $manquants[] = [
+                                'produit_id'  => $comp->id,
+                                'designation' => "{$comp->designation} (Composant de {$produitFini->designation})",
+                                'disponible'  => $quantiteDisponible,
+                                'requis'      => $quantiteRequise,
+                                'manquant'    => $quantiteRequise - $quantiteDisponible
+                            ];
+                        }
+                    }
+                }
+            } else {
+                if (empty($ligne['produit_id'])) continue;
+
+                $stock = Stock::where('produit_id', $ligne['produit_id'])
+                    ->where('entrepot_id', $entrepotId)
+                    ->where('tenant_id', $tenantId)
+                    ->first();
+
+                $quantiteDisponible = $stock ? $stock->quantite : 0;
+                $quantiteRequise = (float) $ligne['quantite'];
+
+                if ($quantiteDisponible < $quantiteRequise) {
+                    $produit = \App\Models\Produit::find($ligne['produit_id']);
+                    $manquants[] = [
+                        'produit_id'  => $ligne['produit_id'],
+                        'designation' => $produit ? $produit->designation : "Produit inconnu",
+                        'disponible'  => $quantiteDisponible,
+                        'requis'      => $quantiteRequise,
+                        'manquant'    => $quantiteRequise - $quantiteDisponible
+                    ];
+                }
             }
         }
 

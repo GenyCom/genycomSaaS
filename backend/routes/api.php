@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\{
     AvoirFournisseurController,
     FournisseurController,
     ProduitController,
+    ProduitFiniController,
     DevisController,
     CommandeController,
     StockController,
@@ -84,8 +85,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     // --- Autres modules activés ---
     Route::apiResource('fournisseurs', FournisseurController::class);
     Route::apiResource('produits', ProduitController::class);
+    Route::post('produits/upload-image', [ProduitController::class, 'uploadImage']);
     Route::get('produits-next-ref', [ProduitController::class, 'nextReference']);
     Route::get('produits-next-barcode', [ProduitController::class, 'nextBarcode']);
+    Route::apiResource('produits-finis', ProduitFiniController::class);
+    Route::get('produits-finis-next-ref', [ProduitFiniController::class, 'nextReference']);
     Route::apiResource('devis', DevisController::class);
     Route::apiResource('commandes', CommandeController::class);
     Route::post('stock/adjust', [StockController::class, 'adjust']);

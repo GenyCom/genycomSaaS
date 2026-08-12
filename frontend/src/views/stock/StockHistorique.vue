@@ -67,7 +67,14 @@
                 </span>
               </td>
               <td>
-                <span class="code-badge mono">{{ mvt.document_type }} #{{ mvt.document_id || '—' }}</span>
+                <router-link 
+                  v-if="getDocumentRoute(mvt.document_type, mvt.document_id)" 
+                  :to="getDocumentRoute(mvt.document_type, mvt.document_id)" 
+                  class="code-badge mono clickable-code-badge"
+                >
+                  {{ mvt.document_type }} #{{ mvt.document_id }}
+                </router-link>
+                <span v-else class="code-badge mono">{{ mvt.document_type }} #{{ mvt.document_id || '—' }}</span>
               </td>
               <td class="font-medium">{{ mvt.libelle || formatType(mvt.type_mouvement) }}</td>
               <td class="text-right">
@@ -136,6 +143,20 @@ function formatType(type) {
   return types[type] || type
 }
 
+const getDocumentRoute = (type, id) => {
+  if (!id) return null
+  const cleanType = String(type).toUpperCase().trim()
+  if (cleanType === 'BL' || cleanType === 'BON_LIVRAISON') return `/bons-livraison/${id}`
+  if (cleanType === 'BR' || cleanType === 'BON_RECEPTION' || cleanType === 'BONRECEPTION') return `/bons-reception/${id}`
+  if (cleanType === 'AVOIR_CLIENT' || cleanType === 'AVOIRCLIENT') return `/avoirs-clients/${id}`
+  if (cleanType === 'AVOIR_FOURNISSEUR' || cleanType === 'AVOIRFOURNISSEUR') return `/avoirs-fournisseurs/${id}`
+  if (cleanType === 'DEVIS') return `/devis/${id}`
+  if (cleanType === 'FACTURE') return `/factures/${id}`
+  if (cleanType === 'BCC' || cleanType === 'BON_COMMANDE_CLIENT') return `/bons-commande-client/${id}`
+  if (cleanType === 'COMMANDE' || cleanType === 'BON_COMMANDE_FOURNISSEUR') return `/commandes/${id}`
+  return null
+}
+
 function isPositive(type) {
   return ['entree_achat', 'entree_retour', 'ajustement_positif', 'transfert_in'].includes(type)
 }
@@ -196,6 +217,21 @@ onMounted(fetchData)
 .table-row:hover { background: #F9FAFB; }
 
 .code-badge { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 700; color: #0D9488; background: #F0FDFA; padding: 2px 6px; border-radius: 4px; }
+.clickable-code-badge {
+  color: #0D9488 !important;
+  background: #F0FDFA !important;
+  border: 1px solid #99F6E4 !important;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+.clickable-code-badge:hover {
+  background: #0D9488 !important;
+  color: #FFFFFF !important;
+  border-color: #0D9488 !important;
+}
 .status-pill { padding: 4px 10px; border-radius: 100px; font-size: .65rem; font-weight: 800; }
 .status-success { background: #DCFCE7; color: #166534; }
 .status-danger { background: #FEE2E2; color: #991B1B; }

@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `produit_fini` (
     `prix_tva`          DECIMAL(24,2) DEFAULT 0.00,
     `prix_ht`           DECIMAL(24,2) DEFAULT 0.00,
     `prix_ttc`          DECIMAL(24,2) DEFAULT 0.00,
+    `created_by`        BIGINT UNSIGNED NULL,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     `deleted_at`        TIMESTAMP NULL,

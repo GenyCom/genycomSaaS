@@ -118,9 +118,9 @@
             <tr v-for="(ligne, idx) in form.lignes" :key="idx" class="table-row-input">
               <td>
                 <div class="flex-input-group">
-                  <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="saas-input-table select-compact">
+                  <select v-model="ligne.selected_key" @change="onProduitSelect(ligne)" class="saas-input-table select-compact">
                     <option value="">Libre</option>
-                    <option v-for="p in produits" :key="p.id" :value="p.id">{{ p.nom }}</option>
+                    <option v-for="p in produits" :key="p.key" :value="p.key">{{ p.nom }}</option>
                   </select>
                   <input v-model="ligne.designation" class="saas-input-table" placeholder="Description de l'article..." />
                 </div>
@@ -192,6 +192,7 @@ const form = ref({
 })
 
 const clients = ref([])
+const products = ref([])
 const produits = ref([])
 const factures = ref([])
 const tauxTvaList = ref([])
@@ -217,30 +218,52 @@ async function onClientChange() {
 onMounted(async () => {
   loading.value = true
   try {
-    const [resCl, resPr, resTva] = await Promise.all([
+    const [resCl, resPr, resTva, resPf] = await Promise.all([
       api.get('/clients'),
       api.get('/produits'),
-      api.get('/parametrage/referentiels/taux-tva')
+      api.get('/parametrage/referentiels/taux-tva'),
+      api.get('/produits-finis').catch(() => ({ data: { data: [] } }))
     ])
     clients.value = resCl.data.data || resCl.data
     tauxTvaList.value = resTva.data.data || resTva.data || []
-    produits.value = (resPr.data.data || resPr.data).map(p => ({
+    
+    const activeProducts = (resPr.data.data || resPr.data || []).map(p => ({
+      key: 'std_' + p.id,
       id: p.id,
+      is_fini: false,
       nom: p.designation || p.nom,
-      prix_vente: parseFloat(p.prix_vente) || 0,
+      prix_vente: parseFloat(p.prix_vente || p.prix_ht_vente) || 0,
       tva: (p.taux_tva !== null && p.taux_tva !== undefined) ? p.taux_tva : 20
     }))
+    
+    const rawPFs = resPf.data.data || resPf.data || []
+    const mappedPFs = rawPFs.map(pf => ({
+      key: 'fini_' + pf.id,
+      id: pf.id,
+      is_fini: true,
+      nom: '[COMPOSÉ] ' + (pf.designation || pf.nom),
+      prix_vente: parseFloat(pf.prix_ht) || 0,
+      tva: parseFloat(pf.taux_tva) || 20
+    }))
+    
+    produits.value = [...activeProducts, ...mappedPFs]
+    products.value = produits.value
 
     if (!isNew.value) {
       const { data } = await api.get(`/avoirs-clients/${route.params.id}`)
       form.value = {
         ...data,
-        lignes: data.lignes.map(l => ({
-          ...l,
-          prix_unitaire: parseFloat(l.prix_unitaire),
-          quantite: parseFloat(l.quantite),
-          taux_tva: (l.taux_tva !== null && l.taux_tva !== undefined) ? parseFloat(l.taux_tva) : 20
-        }))
+        lignes: data.lignes.map(l => {
+          const isFini = !!l.is_produit_fini
+          const id = isFini ? l.produit_fini_id : l.produit_id
+          return {
+            ...l,
+            selected_key: id ? (isFini ? 'fini_' + id : 'std_' + id) : '',
+            prix_unitaire: parseFloat(l.prix_unitaire),
+            quantite: parseFloat(l.quantite),
+            taux_tva: (l.taux_tva !== null && l.taux_tva !== undefined) ? parseFloat(l.taux_tva) : 20
+          }
+        })
       }
       if (form.value.client_id) {
         await fetchFactures(form.value.client_id)
@@ -264,20 +287,30 @@ function formatDateDisplay(dateString) {
 function addLine() {
   const defTva = tauxTvaList.value.find(t => t.is_default)
   const tvaRate = defTva ? parseFloat(defTva.taux) : 20
-  form.value.lignes.push({ produit_id: '', designation: '', quantite: 1, prix_unitaire: 0, taux_tva: tvaRate })
+  form.value.lignes.push({ selected_key: '', produit_id: '', designation: '', quantite: 1, prix_unitaire: 0, taux_tva: tvaRate })
 }
 
 function onProduitSelect(ligne) {
-  if (ligne.produit_id) {
-    const prod = produits.value.find(p => p.id === ligne.produit_id)
+  if (ligne.selected_key) {
+    const isFini = ligne.selected_key.startsWith('fini_')
+    const id = parseInt(ligne.selected_key.replace('fini_', '').replace('std_', ''))
+    
+    const prod = produits.value.find(p => p.id === id && p.is_fini === isFini)
     if (prod) {
       const defTva = tauxTvaList.value.find(t => t.is_default)
       const defaultRate = defTva ? parseFloat(defTva.taux) : 20
       
+      ligne.produit_id = isFini ? null : id
+      ligne.produit_fini_id = isFini ? id : null
+      ligne.is_produit_fini = isFini
       ligne.designation = prod.nom
       ligne.prix_unitaire = prod.prix_vente
       ligne.taux_tva = (prod.tva !== null && prod.tva !== undefined) ? parseFloat(prod.tva) : defaultRate
     }
+  } else {
+    ligne.produit_id = null
+    ligne.produit_fini_id = null
+    ligne.is_produit_fini = false
   }
 }
 

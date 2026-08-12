@@ -17,7 +17,7 @@ class LigneFacture extends BaseModel
         'quantite', 'unite', 'prix_unitaire', 'taux_tva',
         'remise_pourcent', 'remise_montant',
         'montant_ht', 'montant_tva', 'montant_ttc',
-        'ordre', 'source_type', 'is_produit_fini',
+        'ordre', 'source_type', 'is_produit_fini', 'produit_fini_id',
     ];
 
     protected $casts = [
@@ -28,8 +28,10 @@ class LigneFacture extends BaseModel
         'montant_tva' => 'decimal:2',
         'montant_ttc' => 'decimal:2',
         'is_produit_fini' => 'boolean',
+        'produit_fini_id' => 'integer',
     ];
 
-    public function facture() { return $this->belongsTo(Facture::class); }
-    public function produit() { return $this->belongsTo(Produit::class); }
+    public function facture()     { return $this->belongsTo(Facture::class); }
+    public function produit()     { return $this->belongsTo(Produit::class); }
+    public function produitFini() { return $this->belongsTo(ProduitFini::class, 'produit_fini_id'); }
 }

@@ -229,4 +229,21 @@ class ProduitController extends Controller
             'barcode' => $this->generateEAN13()
         ]);
     }
+
+    /**
+     * Upload an image and return its storage path.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image_upload' => 'required|image|max:5120',
+        ]);
+
+        if ($request->hasFile('image_upload')) {
+            $path = $request->file('image_upload')->store('produits', 'public');
+            return response()->json(['image_path' => '/storage/' . $path]);
+        }
+
+        return response()->json(['message' => 'Aucun fichier fourni'], 400);
+    }
 }

@@ -210,16 +210,23 @@
                 <tr v-for="(l, idx) in (isNew ? form.lignes : bl.lignes)" :key="idx" class="ligne-row">
                   <td>
                     <template v-if="isNew">
-                       <select v-model="l.produit_id" @change="onProduitSelect(l)" class="select-inline-table">
+                       <select v-model="l.produit_id" @change="onProduitSelect(l)" class="select-inline-table" :disabled="l.is_produit_fini">
                         <option value="">-- Texte libre --</option>
                         <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                       </select>
+                      <span v-if="l.is_produit_fini" class="product-ref-badge" style="margin-top: 4px; display: inline-block; background-color: #ecfeff; border-color: #cffafe; color: #0f766e; font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: inherit;">
+                        Composé : {{ l.produit_fini?.reference || 'PF' }}
+                      </span>
                       <textarea v-model="l.designation" class="input-inline-sub" :class="{ 'input-error': errors[`ligne_${idx}_designation`] }" placeholder="Description..."></textarea>
                       <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">Désignation requise</span>
                     </template>
                     <template v-else>
                       <div class="article-name">{{ l.designation }}</div>
                       <div class="article-sub" v-if="l.produit">Réf : {{ l.produit.reference }}</div>
+                      <div class="article-sub" v-else-if="l.produit_fini">
+                        <span class="product-ref-badge" style="background-color: #ecfeff; border-color: #cffafe; color: #0f766e; font-size: 0.7rem; font-weight: 700; padding: 1px 4px; border-radius: 4px; font-family: inherit; margin-right: 4px;">Composé</span>
+                        Réf : {{ l.produit_fini.reference }}
+                      </div>
                     </template>
                   </td>
                   <td v-if="!isNew" class="text-center text-muted font-medium">{{ l.quantite_prevue }}</td>
@@ -353,6 +360,7 @@ const form = ref({
 })
 
 const clients = ref([])
+const products = ref([])
 const produits = ref([])
 const warehouses = ref([])
 const tauxTvaList = ref([])
@@ -368,7 +376,7 @@ function onSearchInput() {
     searchResults.value = []
     return
   }
-  searchResults.value = produits.value.filter(p => 
+  searchResults.value = products.value.filter(p => 
     (p.designation && p.designation.toLowerCase().includes(q)) || 
     (p.reference && p.reference.toLowerCase().includes(q)) || 
     (p.code_barre && p.code_barre.toLowerCase().includes(q))
@@ -391,7 +399,10 @@ function ajouterProduitAuDocument(produit) {
   const defaultRate = defTva ? parseFloat(defTva.taux) : 20
 
   form.value.lignes.push({
-    produit_id: produit.id,
+    produit_id: produit.is_fini ? null : produit.id,
+    produit_fini_id: produit.is_fini ? produit.id : null,
+    is_produit_fini: !!produit.is_fini,
+    produit_fini: produit.is_fini ? { reference: produit.reference, designation: produit.designation } : null,
     designation: produit.designation,
     quantite_livree: 1,
     prix_unitaire: pu,
@@ -451,6 +462,8 @@ function onProduitSelect(ligne) {
     ligne.designation = p.designation
     ligne.prix_unitaire = p.prix_ht_vente || p.prix_vente_ht || 0
     ligne.taux_tva = (p.taux_tva !== null && p.taux_tva !== undefined) ? parseFloat(p.taux_tva) : defaultRate
+    ligne.is_produit_fini = false
+    ligne.produit_fini_id = null
   }
 }
 
@@ -558,12 +571,28 @@ onMounted(async () => {
       api.get('/clients', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/parametrage/referentiels/entrepots'),
-      api.get('/parametrage/referentiels/taux-tva')
+      api.get('/parametrage/referentiels/taux-tva'),
+      api.get('/produits-finis', { params: { per_page: 500 } }).catch(() => ({ data: { data: [] } }))
     ]
-    const [cRes, pRes, wRes, tvaRes] = await Promise.all(requests)
+    const [cRes, pRes, wRes, tvaRes, pfRes] = await Promise.all(requests)
     
     clients.value = cRes.data.data || cRes.data || []
-    produits.value = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
+    const activeProducts = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
+    produits.value = activeProducts
+    
+    const rawPFs = pfRes.data.data || pfRes.data || []
+    const mappedPFs = rawPFs.map(pf => ({
+      id: pf.id,
+      is_fini: true,
+      reference: pf.reference,
+      designation: pf.designation,
+      prix_ht_vente: parseFloat(pf.prix_ht) || 0,
+      prix_ttc_vente: parseFloat(pf.prix_ttc) || 0,
+      taux_tva: parseFloat(pf.taux_tva) || 20,
+      unite: 'U_Composé'
+    }))
+    products.value = [...activeProducts, ...mappedPFs]
+    
     warehouses.value = wRes.data.data || wRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
 

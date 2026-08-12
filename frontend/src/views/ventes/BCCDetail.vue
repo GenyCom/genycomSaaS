@@ -209,10 +209,13 @@
               <tbody>
                 <tr v-for="(ligne, idx) in form.lignes" :key="idx" class="ligne-row">
                   <td class="td-article">
-                    <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="select-inline-table">
+                    <select v-model="ligne.produit_id" @change="onProduitSelect(ligne)" class="select-inline-table" :disabled="ligne.is_produit_fini">
                       <option value="">-- Sélection manuelle --</option>
                       <option v-for="p in produits" :key="p.id" :value="p.id">[{{ p.reference }}] {{ p.designation }}</option>
                     </select>
+                    <span v-if="ligne.is_produit_fini" class="product-ref-badge" style="margin-top: 4px; display: inline-block; background-color: #ecfeff; border-color: #cffafe; color: #0f766e; font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: inherit;">
+                      Composé : {{ ligne.produit_fini?.reference || 'PF' }}
+                    </span>
                     <textarea v-model="ligne.designation" class="input-inline-sub" placeholder="Description personnalisée..."></textarea>
                   </td>
                   <td class="td-center">
@@ -351,7 +354,7 @@ function onSearchInput() {
     searchResults.value = []
     return
   }
-  searchResults.value = produits.value.filter(p => 
+  searchResults.value = products.value.filter(p => 
     (p.designation && p.designation.toLowerCase().includes(q)) || 
     (p.reference && p.reference.toLowerCase().includes(q)) || 
     (p.code_barre && p.code_barre.toLowerCase().includes(q))
@@ -378,7 +381,10 @@ function ajouterProduitAuDocument(produit) {
   const defaultRemise = clientObj ? parseFloat(clientObj.taux_remise) || 0 : 0
 
   form.value.lignes.push({
-    produit_id: produit.id,
+    produit_id: produit.is_fini ? null : produit.id,
+    produit_fini_id: produit.is_fini ? produit.id : null,
+    is_produit_fini: !!produit.is_fini,
+    produit_fini: produit.is_fini ? { reference: produit.reference, designation: produit.designation } : null,
     designation: produit.designation,
     quantite: 1,
     unite: produit.unite || 'Unité',
@@ -458,6 +464,8 @@ function onProduitSelect(ligne) {
     ligne.remise_pourcent = defaultRemise
     ligne.taux_tva = (p.taux_tva !== null && p.taux_tva !== undefined) ? parseFloat(p.taux_tva) : defaultRate
     ligne.unite = p.unite || 'Unité'
+    ligne.is_produit_fini = false
+    ligne.produit_fini_id = null
   }
   recalculate()
 }
@@ -592,12 +600,13 @@ async function imprimer() { window.open(`/print/bcc/${route.params.id}`, '_blank
 onMounted(async () => {
   loading.value = true
   try {
-    const [cRes, pRes, prRes, tvaRes, wRes] = await Promise.all([
+    const [cRes, pRes, prRes, tvaRes, wRes, pfRes] = await Promise.all([
       api.get('/clients', { params: { per_page: 500 } }),
       api.get('/produits', { params: { per_page: 500 } }),
       api.get('/projets', { params: { per_page: 500 } }),
       api.get('/parametrage/referentiels/taux-tva').catch(() => ({ data: { data: [] } })),
-      api.get('/parametrage/referentiels/entrepots')
+      api.get('/parametrage/referentiels/entrepots'),
+      api.get('/produits-finis', { params: { per_page: 500 } }).catch(() => ({ data: { data: [] } }))
     ])
     
     clients.value = cRes.data.data || cRes.data || []
@@ -610,8 +619,21 @@ onMounted(async () => {
       }
     }
     
-    products.value = pRes.data.data || pRes.data || []
-    produits.value = products.value.filter(p => p.is_actif !== false)
+    const activeProducts = (pRes.data.data || pRes.data || []).filter(p => p.is_actif !== false)
+    produits.value = activeProducts
+    
+    const rawPFs = pfRes.data.data || pfRes.data || []
+    const mappedPFs = rawPFs.map(pf => ({
+      id: pf.id,
+      is_fini: true,
+      reference: pf.reference,
+      designation: pf.designation,
+      prix_ht_vente: parseFloat(pf.prix_ht) || 0,
+      prix_ttc_vente: parseFloat(pf.prix_ttc) || 0,
+      taux_tva: parseFloat(pf.taux_tva) || 20,
+      unite: 'U_Composé'
+    }))
+    products.value = [...activeProducts, ...mappedPFs]
     projects.value = prRes.data.data || prRes.data || []
     tauxTvaList.value = tvaRes.data.data || tvaRes.data || []
     warehouses.value = wRes.data.data || wRes.data || []

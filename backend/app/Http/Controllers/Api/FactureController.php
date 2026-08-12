@@ -51,6 +51,8 @@ class FactureController extends Controller
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
             'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
             'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
+            'lignes.*.is_produit_fini' => 'nullable|boolean',
+            'lignes.*.produit_fini_id' => 'nullable|integer',
             'devise_id'               => 'nullable|integer',
             'taux_change_document'    => 'nullable|numeric',
         ]);
@@ -77,6 +79,9 @@ class FactureController extends Controller
             $ligneData['facture_id'] = $facture->id;
             $ligneData['ordre'] = $index + 1;
             $ligneData['source_type'] = 'saisie_manuelle';
+            if (empty($ligneData['produit_id'])) $ligneData['produit_id'] = null;
+            if (empty($ligneData['produit_fini_id'])) $ligneData['produit_fini_id'] = null;
+            $ligneData['is_produit_fini'] = $ligneData['is_produit_fini'] ?? false;
             LigneFacture::create($ligneData);
         }
 
@@ -88,7 +93,7 @@ class FactureController extends Controller
     public function show(Facture $facture): JsonResponse
     {
         return response()->json(
-            $facture->load(['lignes.produit:id,reference,designation', 'client', 'etat', 'reglements.modeReglement', 'conditionReglement', 'createur:id,nom,prenom'])
+            $facture->load(['lignes.produit:id,reference,designation', 'lignes.produitFini:id,reference,designation', 'client', 'etat', 'reglements.modeReglement', 'conditionReglement', 'createur:id,nom,prenom'])
         );
     }
 
@@ -110,6 +115,8 @@ class FactureController extends Controller
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
             'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
             'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
+            'lignes.*.is_produit_fini' => 'nullable|boolean',
+            'lignes.*.produit_fini_id' => 'nullable|integer',
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($data, $facture, $request) {
@@ -125,6 +132,9 @@ class FactureController extends Controller
                     $ligneData['facture_id'] = $facture->id;
                     $ligneData['tenant_id']  = $tenantId;
                     $ligneData['ordre']      = $index + 1;
+                    if (empty($ligneData['produit_id'])) $ligneData['produit_id'] = null;
+                    if (empty($ligneData['produit_fini_id'])) $ligneData['produit_fini_id'] = null;
+                    $ligneData['is_produit_fini'] = $ligneData['is_produit_fini'] ?? false;
                     LigneFacture::create($ligneData);
                 }
                 $facture->recalculerTotaux();
@@ -157,6 +167,8 @@ class FactureController extends Controller
                             'tenant_id'        => $tenantId,
                             'bon_livraison_id' => $bl->id,
                             'produit_id'       => $ligneData['produit_id'] ?? null,
+                            'produit_fini_id'  => $ligneData['produit_fini_id'] ?? null,
+                            'is_produit_fini'  => $ligneData['is_produit_fini'] ?? false,
                             'designation'      => $ligneData['designation'],
                             'quantite_prevue'  => $ligneData['quantite'],
                             'quantite_livree'  => $ligneData['quantite'],
@@ -169,7 +181,27 @@ class FactureController extends Controller
                         ]);
 
                         // Nouveau mouvement de stock
-                        if ($lbl->produit_id) {
+                        if ($lbl->is_produit_fini && $lbl->produit_fini_id) {
+                            $produitFini = \App\Models\ProduitFini::with('nomenclature.produit')->find($lbl->produit_fini_id);
+                            if ($produitFini) {
+                                foreach ($produitFini->nomenclature as $nomItem) {
+                                    $comp = $nomItem->produit;
+                                    if ($comp && !$comp->is_service) {
+                                        $qtyToMvt = $lbl->quantite_livree * $nomItem->quantite;
+                                        $stockService->enregistrerMouvement(
+                                            $comp->id,
+                                            $qtyToMvt,
+                                            'sortie_vente',
+                                            'BL',
+                                            $bl->id,
+                                            auth()->id(),
+                                            $tenantId,
+                                            $bl->entrepot_id
+                                        );
+                                    }
+                                }
+                            }
+                        } else if ($lbl->produit_id) {
                             $stockService->enregistrerMouvement(
                                 $lbl->produit_id,
                                 $lbl->quantite_livree,

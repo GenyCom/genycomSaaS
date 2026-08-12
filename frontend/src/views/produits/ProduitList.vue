@@ -24,11 +24,11 @@
     <!-- Modal de confirmation élégant -->
     <ConfirmModal 
       :show="showConfirm"
-      title="Supprimer le Produit"
-      message="Êtes-vous sûr de vouloir supprimer ce produit du catalogue ? Cette action est irréversible."
-      confirmText="Supprimer le produit"
+      :title="isDeletingFini ? 'Supprimer le Produit Composé' : 'Supprimer le Produit'"
+      :message="isDeletingFini ? 'Êtes-vous sûr de vouloir supprimer ce produit composé du catalogue ? Cette action est irréversible.' : 'Êtes-vous sûr de vouloir supprimer ce produit du catalogue ? Cette action est irréversible.'"
+      :confirmText="isDeletingFini ? 'Supprimer le composé' : 'Supprimer le produit'"
       @confirm="confirmDelete"
-      @cancel="showConfirm = false"
+      @cancel="cancelDelete"
     />
 
     <div class="topbar">
@@ -46,6 +46,12 @@
           </svg>
           <span>Nouveau Produit</span>
         </router-link>
+        <router-link to="/produits/fini/new" class="btn-primary-custom" style="background: linear-gradient(135deg, #0f766e, #0d9488); box-shadow: 0 4px 12px rgba(13,148,136,0.2); margin-left: 10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>Nouveau Produit Composé</span>
+        </router-link>
       </div>
     </div>
 
@@ -59,7 +65,8 @@
           Gestion des stocks
         </div>
         <h1 class="hero-name">Catalogue Produits</h1>
-        <p class="hero-sub"><strong>{{ produits.length }}</strong> références enregistrées dans votre base.</p>
+        <p class="hero-sub" v-if="currentTab === 'Composés'"><strong>{{ produitsFinis.length }}</strong> produits composés enregistrés.</p>
+        <p class="hero-sub" v-else><strong>{{ produits.length }}</strong> références enregistrées dans votre base.</p>
       </div>
     </div>
 
@@ -67,7 +74,7 @@
     <div class="filters-card">
       <div class="quick-tabs">
         <button 
-          v-for="tab in ['Tous', 'Actifs', 'Inactifs', 'Stock faible']" 
+          v-for="tab in ['Tous', 'Actifs', 'Inactifs', 'Stock faible', 'Composés']" 
           :key="tab"
           class="tab-btn"
           :class="{ active: currentTab === tab }"
@@ -174,63 +181,122 @@
                   </tr>
                   
                   <!-- Product Rows -->
-                  <tr v-for="produit in items" :key="produit.id" class="table-row" :class="{ 'child-product-row': subFamName !== '_direct' }">
-                    <td class="text-center">
-                      <div class="product-thumb" :class="{ 'has-image': produit.image_path }"
-                           @mouseenter="e => handleImageHover(e, getImageUrl(produit.image_path))"
-                           @mouseleave="handleImageLeave"
-                           @mousemove="e => hoveredImage && updateZoomPos(e)"
-                      >
-                        <img v-if="produit.image_path" :src="getImageUrl(produit.image_path)" alt="Image" class="thumb-img" />
-                        <div v-else class="thumb-placeholder" :class="produit.is_service ? 'bg-service' : 'bg-produit'">
-                          {{ produit.is_service ? 'SR' : 'PR' }}
+                  <template v-for="produit in items" :key="produit.id">
+                    <tr class="table-row" :class="{ 'child-product-row': subFamName !== '_direct' }">
+                      <td class="text-center">
+                        <div class="product-thumb" :class="{ 'has-image': produit.image_path }"
+                             @mouseenter="e => handleImageHover(e, getImageUrl(produit.image_path))"
+                             @mouseleave="handleImageLeave"
+                             @mousemove="e => hoveredImage && updateZoomPos(e)"
+                        >
+                          <img v-if="produit.image_path" :src="getImageUrl(produit.image_path)" alt="Image" class="thumb-img" />
+                          <div v-else class="thumb-placeholder" :class="produit.is_composite ? 'bg-composite' : (produit.is_service ? 'bg-service' : 'bg-produit')">
+                            {{ produit.is_composite ? 'PF' : (produit.is_service ? 'SR' : 'PR') }}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="product-ref-badge">{{ produit.reference }}</span>
-                    </td>
-                    <td class="designation-cell">
-                      <div class="product-name">{{ produit.designation }}</div>
-                    </td>
-                    <td>
-                      <span class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
-                        {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
-                      </span>
-                    </td>
-                    <td class="text-right">
-                      <div class="price-cell">
-                        {{ formatMoney(produit.prix_ht_vente) }}
-                        <span class="currency">DH</span>
-                      </div>
-                    </td>
-                    <td class="text-center">
-                      <div v-if="produit.is_service" class="stock-n-a">-</div>
-                      <div v-else class="stock-display" :class="{ 'stock-low': produit.stock_actuel <= (produit.stock_min || produit.seuil_alerte || 0) }">
-                        <span class="stock-actual">{{ formatNumber(produit.stock_actuel) }}</span>
-                        <span class="stock-separator">/</span>
-                        <span class="stock-min" title="Stock Min">{{ formatNumber(produit.stock_min || 0) }}</span>
-                      </div>
-                    </td>
-                    <td class="text-center">
-                      <span class="status-indicator" :class="produit.is_actif ? 'active' : 'inactive'">
-                        {{ produit.is_actif ? 'Actif' : 'Inactif' }}
-                      </span>
-                    </td>
-                    <td class="text-right">
-                      <div class="actions-group">
-                        <router-link :to="`/produits/${produit.id}`" class="action-btn view" title="Consulter">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </router-link>
-                        <router-link :to="`/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </router-link>
-                        <button @click="deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td>
+                        <span class="product-ref-badge">{{ produit.reference }}</span>
+                      </td>
+                      <td class="designation-cell">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <button v-if="produit.is_composite" @click.stop="toggleFiniExpanded(produit.id)" class="btn-expand-components" :class="{ 'expanded': expandedFinis[produit.id] }" title="Voir les composants">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                          </button>
+                          <div class="product-name">
+                            {{ produit.designation }}
+                            <span v-if="produit.is_composite" class="badge-components-count">
+                              {{ produit.nomenclature?.length || 0 }} comp.
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span v-if="produit.is_composite" class="type-pill composite">
+                          COMPOSÉ
+                        </span>
+                        <span v-else class="type-pill" :class="produit.is_service ? 'service' : 'goods'">
+                          {{ produit.is_service ? 'SERVICE' : 'PRODUIT' }}
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <div class="price-cell">
+                          {{ formatMoney(produit.is_composite ? produit.prix_ht : produit.prix_ht_vente) }}
+                          <span class="currency">DH</span>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        <div v-if="produit.is_composite">
+                          <div v-if="getVirtualStock(produit) === null" class="stock-n-a">-</div>
+                          <div v-else class="stock-display" :class="{ 'stock-low': getVirtualStock(produit) <= 0 }">
+                            <span class="stock-actual" title="Stock virtuel calculé à partir des composants">⚙️ {{ formatNumber(getVirtualStock(produit)) }}</span>
+                          </div>
+                        </div>
+                        <div v-else-if="produit.is_service" class="stock-n-a">-</div>
+                        <div v-else class="stock-display" :class="{ 'stock-low': produit.stock_actuel <= (produit.stock_min || produit.seuil_alerte || 0) }">
+                          <span class="stock-actual">{{ formatNumber(produit.stock_actuel) }}</span>
+                          <span class="stock-separator">/</span>
+                          <span class="stock-min" title="Stock Min">{{ formatNumber(produit.stock_min || 0) }}</span>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        <span class="status-indicator active">
+                          Actif
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <div class="actions-group">
+                          <router-link :to="produit.is_composite ? `/produits/fini/${produit.id}` : `/produits/${produit.id}`" class="action-btn view" title="Consulter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </router-link>
+                          <router-link :to="produit.is_composite ? `/produits/fini/${produit.id}/edit` : `/produits/${produit.id}/edit`" class="action-btn edit" title="Modifier">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </router-link>
+                          <button @click="produit.is_composite ? deleteProduitFini(produit.id) : deleteProduit(produit.id)" class="action-btn delete" title="Supprimer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2h2"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    <!-- Nested Accordion row showing components of a finished product -->
+                    <tr v-if="produit.is_composite && expandedFinis[produit.id]" class="components-expanded-row">
+                      <td colspan="8">
+                        <div class="components-panel">
+                          <div class="components-panel-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            <span>Composants de {{ produit.designation }}</span>
+                          </div>
+                          <table class="components-subtable">
+                            <thead>
+                              <tr>
+                                <th>Référence</th>
+                                <th>Désignation</th>
+                                <th>Type</th>
+                                <th class="text-right">Qté</th>
+                                <th class="text-right">P.U HT Vente</th>
+                                <th class="text-right">Total HT</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="n in produit.nomenclature" :key="n.id">
+                                <td><span class="product-ref-badge">{{ n.produit?.reference }}</span></td>
+                                <td>{{ n.produit?.designation }}</td>
+                                <td>
+                                  <span class="type-pill" :class="n.produit?.is_service ? 'service' : 'goods'">
+                                    {{ n.produit?.is_service ? 'SERVICE' : 'PRODUIT' }}
+                                  </span>
+                                </td>
+                                <td class="text-right font-bold">{{ formatNumber(n.quantite) }}</td>
+                                <td class="text-right">{{ formatMoney(n.produit?.prix_ht_vente) }} DH</td>
+                                <td class="text-right font-bold text-accent">{{ formatMoney(n.montant_ht) }} DH</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </template>
               </template>
             </template>
@@ -251,11 +317,14 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../../services/api'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
 
+const route = useRoute()
 const produits = ref([])
 const familles = ref([])
+const produitsFinis = ref([])
 const search = ref('')
 const loading = ref(true)
 
@@ -309,10 +378,16 @@ function handleImageLeave() {
 
 // Group collapse state
 const collapsedGroups = reactive({})
+const expandedFinis = ref({})
+
+function toggleFiniExpanded(id) {
+  expandedFinis.value[id] = !expandedFinis.value[id]
+}
 
 const toast = reactive({ show: false, message: '', type: 'success' })
 const showConfirm = ref(false)
 const itemToDelete = ref(null)
+const isDeletingFini = ref(false)
 
 function showToast(message, type = 'success') {
   toast.show = true
@@ -331,7 +406,20 @@ function formatNumber(val) {
 
 function deleteProduit(id) {
   itemToDelete.value = id
+  isDeletingFini.value = false
   showConfirm.value = true
+}
+
+function deleteProduitFini(id) {
+  itemToDelete.value = id
+  isDeletingFini.value = true
+  showConfirm.value = true
+}
+
+function cancelDelete() {
+  showConfirm.value = false
+  isDeletingFini.value = false
+  itemToDelete.value = null
 }
 
 async function confirmDelete() {
@@ -341,14 +429,21 @@ async function confirmDelete() {
   showConfirm.value = false
   loading.value = true
   try {
-    await api.delete(`/produits/${id}`)
-    produits.value = produits.value.filter(p => p.id !== id)
-    showToast('Produit supprimé avec succès !', 'success')
+    if (isDeletingFini.value) {
+      await api.delete(`/produits-finis/${id}`)
+      produitsFinis.value = produitsFinis.value.filter(p => p.id !== id)
+      showToast('Produit composé supprimé avec succès !', 'success')
+    } else {
+      await api.delete(`/produits/${id}`)
+      produits.value = produits.value.filter(p => p.id !== id)
+      showToast('Produit supprimé avec succès !', 'success')
+    }
   } catch (error) {
     showToast(error.response?.data?.message || 'Erreur lors de la suppression.', 'error')
   } finally {
     loading.value = false
     itemToDelete.value = null
+    isDeletingFini.value = false
   }
 }
 
@@ -365,37 +460,68 @@ function handleSort(col) {
   }
 }
 
+function getVirtualStock(pf) {
+  if (!pf.nomenclature || pf.nomenclature.length === 0) return 0;
+  let minStock = null;
+  let hasPhysical = false;
+  pf.nomenclature.forEach(n => {
+    const prod = n.produit;
+    if (prod && !prod.is_service) {
+      hasPhysical = true;
+      const qtyNeeded = parseFloat(n.quantite) || 1;
+      const currentStock = parseFloat(prod.stock_actuel) || 0;
+      const virtualVal = Math.floor(currentStock / qtyNeeded);
+      if (minStock === null || virtualVal < minStock) {
+        minStock = virtualVal;
+      }
+    }
+  });
+  return hasPhysical ? minStock : null;
+}
+
 const processedProduits = computed(() => {
-  let result = produits.value
+  let result = []
+  if (currentTab.value === 'Composés') {
+    result = produitsFinis.value
+  } else {
+    // Merge standard products and finished products
+    result = [...produits.value, ...produitsFinis.value]
+  }
 
   // Tabs
   if (currentTab.value === 'Actifs') {
-    result = result.filter(p => p.is_actif)
+    result = result.filter(p => p.is_actif !== false)
   } else if (currentTab.value === 'Inactifs') {
-    result = result.filter(p => !p.is_actif)
+    result = result.filter(p => p.is_actif === false)
   } else if (currentTab.value === 'Stock faible') {
-    result = result.filter(p => !p.is_service && p.stock_actuel <= (p.stock_min || p.seuil_alerte || 0))
+    result = result.filter(p => !p.is_composite && !p.is_service && p.stock_actuel <= (p.stock_min || p.seuil_alerte || 0))
   }
 
   // Advanced Filters
   if (filters.famille_id) {
     result = result.filter(p => p.famille_id == filters.famille_id)
   }
-  if (filters.type === 'service') {
-    result = result.filter(p => p.is_service)
-  } else if (filters.type === 'produit') {
-    result = result.filter(p => !p.is_service)
+  
+  if (currentTab.value !== 'Composés') {
+    if (filters.type === 'service') {
+      result = result.filter(p => p.is_service)
+    } else if (filters.type === 'produit') {
+      result = result.filter(p => !p.is_service)
+    }
+    if (filters.etat === 'actif') {
+      result = result.filter(p => p.is_actif)
+    } else if (filters.etat === 'inactif') {
+      result = result.filter(p => !p.is_actif)
+    }
   }
-  if (filters.etat === 'actif') {
-    result = result.filter(p => p.is_actif)
-  } else if (filters.etat === 'inactif') {
-    result = result.filter(p => !p.is_actif)
+
+  const pMin = parseFloat(filters.prixMin)
+  if (!isNaN(pMin)) {
+    result = result.filter(p => parseFloat(currentTab.value === 'Composés' ? p.prix_ht : p.prix_ht_vente) >= pMin)
   }
-  if (filters.prixMin !== null && filters.prixMin !== '') {
-    result = result.filter(p => parseFloat(p.prix_ht_vente) >= parseFloat(filters.prixMin))
-  }
-  if (filters.prixMax !== null && filters.prixMax !== '') {
-    result = result.filter(p => parseFloat(p.prix_ht_vente) <= parseFloat(filters.prixMax))
+  const pMax = parseFloat(filters.prixMax)
+  if (!isNaN(pMax)) {
+    result = result.filter(p => parseFloat(currentTab.value === 'Composés' ? p.prix_ht : p.prix_ht_vente) <= pMax)
   }
 
   // Search
@@ -414,12 +540,19 @@ const processedProduits = computed(() => {
     let valB = b[sortBy.value]
 
     if (sortBy.value === 'stock') {
-      valA = a.is_service ? -9999999 : (parseFloat(a.stock_actuel) || 0)
-      valB = b.is_service ? -9999999 : (parseFloat(b.stock_actuel) || 0)
+      if (currentTab.value === 'Composés') {
+        const vA = getVirtualStock(a)
+        const vB = getVirtualStock(b)
+        valA = vA === null ? -9999999 : vA
+        valB = vB === null ? -9999999 : vB
+      } else {
+        valA = a.is_service ? -9999999 : (parseFloat(a.stock_actuel) || 0)
+        valB = b.is_service ? -9999999 : (parseFloat(b.stock_actuel) || 0)
+      }
     }
     if (sortBy.value === 'prix') {
-      valA = parseFloat(a.prix_ht_vente) || 0
-      valB = parseFloat(b.prix_ht_vente) || 0
+      valA = parseFloat(currentTab.value === 'Composés' ? a.prix_ht : a.prix_ht_vente) || 0
+      valB = parseFloat(currentTab.value === 'Composés' ? b.prix_ht : b.prix_ht_vente) || 0
     }
 
     if (typeof valA === 'string') valA = valA.toLowerCase()
@@ -517,12 +650,18 @@ const getImageUrl = (imagePath) => {
 onMounted(async () => {
   loading.value = true
   try {
-    const [prodRes, famRes] = await Promise.all([
+    const [prodRes, famRes, pfRes] = await Promise.all([
       api.get('/produits'),
-      api.get('/parametrage/referentiels/familles-produit')
+      api.get('/parametrage/referentiels/familles-produit'),
+      api.get('/produits-finis')
     ])
     produits.value = prodRes.data.data || prodRes.data || []
     familles.value = famRes.data.data || famRes.data || []
+    produitsFinis.value = (pfRes.data.data || pfRes.data || []).map(p => ({ ...p, is_composite: true }))
+    
+    if (route.query.tab) {
+      currentTab.value = route.query.tab
+    }
   } catch (error) {
     console.error('Erreur de chargement:', error)
   } finally {
@@ -875,4 +1014,109 @@ onMounted(async () => {
 .slide-fade-enter-from, .slide-fade-leave-to { transform: translateX(20px); opacity: 0; }
  
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ─── Styles Produits Composés ─── */
+.thumb-placeholder.bg-composite {
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+}
+.type-pill.composite {
+  background: #ecfeff;
+  color: #0f766e;
+  border: 1px solid #cffafe;
+}
+.btn-expand-components {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border-mid);
+  background: #fff;
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.btn-expand-components:hover {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+.btn-expand-components.expanded {
+  transform: rotate(180deg);
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+.badge-components-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0f766e;
+  background-color: #f0fdf4;
+  border: 1px solid #dcfce7;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.components-expanded-row {
+  background-color: #f8fafc;
+}
+.components-expanded-row td {
+  padding: 0 !important;
+}
+.components-panel {
+  padding: 20px 24px 24px 48px;
+  border-left: 4px solid #0d9488;
+  animation: slideDown 0.25s ease-out;
+}
+.components-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 12px;
+}
+.components-panel-header svg {
+  color: #0d9488;
+}
+.components-subtable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.components-subtable th {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.components-subtable td {
+  padding: 10px 16px !important;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.components-subtable tr:last-child td {
+  border-bottom: none;
+}
+.text-accent {
+  color: #0d9488;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>

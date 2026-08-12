@@ -13,6 +13,8 @@ class LigneBonLivraison extends BaseModel
         'tenant_id',
         'bon_livraison_id',
         'produit_id',
+        'produit_fini_id',
+        'is_produit_fini',
         'designation',
         'quantite_prevue',
         'quantite_livree',
@@ -25,6 +27,7 @@ class LigneBonLivraison extends BaseModel
     ];
 
     protected $casts = [
+        'is_produit_fini' => 'boolean',
         'quantite_prevue' => 'decimal:2',
         'quantite_livree' => 'decimal:2',
         'prix_unitaire' => 'decimal:4',
@@ -36,4 +39,5 @@ class LigneBonLivraison extends BaseModel
 
     public function bonLivraison() { return $this->belongsTo(BonLivraison::class, 'bon_livraison_id'); }
     public function produit()      { return $this->belongsTo(Produit::class); }
+    public function produitFini()  { return $this->belongsTo(ProduitFini::class, 'produit_fini_id'); }
 }

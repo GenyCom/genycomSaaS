@@ -55,7 +55,15 @@
                     </div>
                   </td>
                   <td>
-                    <span class="doc-tag">{{ m.document_type }} #{{ m.document_id || '—' }}</span>
+                    <router-link 
+                      v-if="getDocumentRoute(m.document_type, m.document_id)" 
+                      :to="getDocumentRoute(m.document_type, m.document_id)" 
+                      class="doc-tag clickable-doc-tag"
+                      @click="close"
+                    >
+                      {{ m.document_type }} #{{ m.document_id }}
+                    </router-link>
+                    <span v-else class="doc-tag">{{ m.document_type }} #{{ m.document_id || '—' }}</span>
                   </td>
                   <td class="text-right font-bold" :class="isPositive(m.type_mouvement) ? 'text-green' : 'text-red'">
                     {{ isPositive(m.type_mouvement) ? '+' : '-' }}{{ m.quantite }}
@@ -134,6 +142,20 @@ const formatDate = (dateString, format) => {
   return date.toLocaleString('fr-FR')
 }
 
+const getDocumentRoute = (type, id) => {
+  if (!id) return null
+  const cleanType = String(type).toUpperCase().trim()
+  if (cleanType === 'BL' || cleanType === 'BON_LIVRAISON') return `/bons-livraison/${id}`
+  if (cleanType === 'BR' || cleanType === 'BON_RECEPTION' || cleanType === 'BONRECEPTION') return `/bons-reception/${id}`
+  if (cleanType === 'AVOIR_CLIENT' || cleanType === 'AVOIRCLIENT') return `/avoirs-clients/${id}`
+  if (cleanType === 'AVOIR_FOURNISSEUR' || cleanType === 'AVOIRFOURNISSEUR') return `/avoirs-fournisseurs/${id}`
+  if (cleanType === 'DEVIS') return `/devis/${id}`
+  if (cleanType === 'FACTURE') return `/factures/${id}`
+  if (cleanType === 'BCC' || cleanType === 'BON_COMMANDE_CLIENT') return `/bons-commande-client/${id}`
+  if (cleanType === 'COMMANDE' || cleanType === 'BON_COMMANDE_FOURNISSEUR') return `/commandes/${id}`
+  return null
+}
+
 const isPositive = (type) => {
   return ['entree_achat', 'entree_retour', 'ajustement_positif', 'transfert_in'].includes(type)
 }
@@ -207,6 +229,21 @@ const getTypeClass = (type) => {
 .badge-red { background: #FEE2E2; color: #B91C1C; }
 
 .doc-tag { font-family: monospace; color: #64748B; background: #F1F5F9; padding: 2px 6px; border-radius: 4px; }
+.clickable-doc-tag {
+  color: #4F46E5 !important;
+  background: #EEF2FF !important;
+  border: 1px solid #C7D2FE !important;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+.clickable-doc-tag:hover {
+  background: #4F46E5 !important;
+  color: #FFFFFF !important;
+  border-color: #4F46E5 !important;
+}
 
 .text-green { color: #10B981; }
 .text-red { color: #EF4444; }

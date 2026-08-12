@@ -131,10 +131,12 @@ class WorkflowVenteController extends Controller
             ]);
 
             foreach ($bcc->lignes as $ligne) {
-                LigneBonLivraison::create([
+                $lbl = LigneBonLivraison::create([
                     'tenant_id'        => $tenantId,
                     'bon_livraison_id' => $bl->id,
                     'produit_id'       => $ligne->produit_id,
+                    'produit_fini_id'  => $ligne->produit_fini_id ?? null,
+                    'is_produit_fini'  => $ligne->is_produit_fini ?? false,
                     'designation'      => $ligne->designation,
                     'quantite_prevue'  => $ligne->quantite,
                     'quantite_livree'  => $ligne->quantite,
@@ -146,14 +148,34 @@ class WorkflowVenteController extends Controller
                     'ordre'            => $ligne->ordre,
                 ]);
 
-                // Sortie de stock si c'est un produit (pas un service)
-                if ($ligne->produit_id) {
+                if ($lbl->is_produit_fini && $lbl->produit_fini_id) {
+                    $finalEntrepotId = $entrepotId ?: $this->stockService->getDefaultEntrepotId($tenantId);
+                    $produitFini = \App\Models\ProduitFini::with('nomenclature.produit')->find($lbl->produit_fini_id);
+                    if ($produitFini) {
+                        foreach ($produitFini->nomenclature as $nomItem) {
+                            $comp = $nomItem->produit;
+                            if ($comp && !$comp->is_service) {
+                                $qtyToMvt = $lbl->quantite_livree * $nomItem->quantite;
+                                $this->stockService->enregistrerMouvement(
+                                    $comp->id,
+                                    $qtyToMvt,
+                                    'sortie_vente',
+                                    'BL',
+                                    $bl->id,
+                                    auth()->id() ?: $bcc->created_by,
+                                    $tenantId,
+                                    $finalEntrepotId
+                                );
+                            }
+                        }
+                    }
+                } else if ($lbl->produit_id) {
                     $finalEntrepotId = $entrepotId ?: $this->stockService->getDefaultEntrepotId($tenantId);
                     
-                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $ligne->produit_id]);
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $lbl->produit_id]);
                     $this->stockService->enregistrerMouvement(
-                        $ligne->produit_id,
-                        $ligne->quantite,
+                        $lbl->produit_id,
+                        $lbl->quantite_livree,
                         'sortie_vente',
                         'BL',
                         $bl->id,
@@ -292,10 +314,12 @@ class WorkflowVenteController extends Controller
 
             // 2. Copier les lignes + mouvement de stock
             foreach ($facture->lignes as $ligne) {
-                LigneBonLivraison::create([
+                $lbl = LigneBonLivraison::create([
                     'tenant_id'        => $tenantId,
                     'bon_livraison_id' => $bl->id,
                     'produit_id'       => $ligne->produit_id,
+                    'produit_fini_id'  => $ligne->produit_fini_id,
+                    'is_produit_fini'  => $ligne->is_produit_fini ?? false,
                     'designation'      => $ligne->designation,
                     'quantite_prevue'  => $ligne->quantite,
                     'quantite_livree'  => $ligne->quantite,
@@ -307,14 +331,34 @@ class WorkflowVenteController extends Controller
                     'ordre'            => $ligne->ordre,
                 ]);
 
-                // Sortie de stock si c'est un produit physique
-                if ($ligne->produit_id) {
+                if ($lbl->is_produit_fini && $lbl->produit_fini_id) {
+                    $finalEntrepotId = $request->input('entrepot_id') ?: $this->stockService->getDefaultEntrepotId($tenantId);
+                    $produitFini = \App\Models\ProduitFini::with('nomenclature.produit')->find($lbl->produit_fini_id);
+                    if ($produitFini) {
+                        foreach ($produitFini->nomenclature as $nomItem) {
+                            $comp = $nomItem->produit;
+                            if ($comp && !$comp->is_service) {
+                                $qtyToMvt = $lbl->quantite_livree * $nomItem->quantite;
+                                $this->stockService->enregistrerMouvement(
+                                    $comp->id,
+                                    $qtyToMvt,
+                                    'sortie_vente',
+                                    'BL',
+                                    $bl->id,
+                                    auth()->id() ?: $facture->created_by,
+                                    $tenantId,
+                                    $finalEntrepotId
+                                );
+                            }
+                        }
+                    }
+                } else if ($lbl->produit_id) {
                     $finalEntrepotId = $request->input('entrepot_id') ?: $this->stockService->getDefaultEntrepotId($tenantId);
                     
-                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $ligne->produit_id]);
+                    \Log::info("WFV: bcToBL movement", ['entrepot' => $finalEntrepotId, 'produit' => $lbl->produit_id]);
                     $this->stockService->enregistrerMouvement(
-                        $ligne->produit_id,
-                        $ligne->quantite,
+                        $lbl->produit_id,
+                        $lbl->quantite_livree,
                         'sortie_vente',
                         'BL',
                         $bl->id,

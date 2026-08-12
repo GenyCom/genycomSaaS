@@ -49,6 +49,8 @@ class BonLivraisonController extends Controller
             'observations'           => 'nullable|string',
             'lignes'                 => 'required|array|min:1',
             'lignes.*.produit_id'    => 'nullable|integer',
+            'lignes.*.produit_fini_id' => 'nullable|integer',
+            'lignes.*.is_produit_fini' => 'nullable|boolean',
             'lignes.*.designation'   => 'required|string|max:255',
             'lignes.*.quantite_livree' => 'required|numeric|min:0.01',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
@@ -62,6 +64,8 @@ class BonLivraisonController extends Controller
             if (!$request->boolean('force')) {
                 $lignesStock = collect($data['lignes'])->map(fn($l) => [
                     'produit_id' => $l['produit_id'] ?? null,
+                    'is_produit_fini' => $l['is_produit_fini'] ?? false,
+                    'produit_fini_id' => $l['produit_fini_id'] ?? null,
                     'quantite' => $l['quantite_livree']
                 ])->toArray();
 
@@ -100,10 +104,12 @@ class BonLivraisonController extends Controller
                 $ht = $pu * $qty;
                 $tva = $ht * 0.20; // Défaut 20% si direct
 
-                \App\Models\LigneBonLivraison::create([
+                $lbl = \App\Models\LigneBonLivraison::create([
                     'tenant_id'        => $tenantId,
                     'bon_livraison_id' => $bl->id,
                     'produit_id'       => $ligne['produit_id'] ?? null,
+                    'produit_fini_id'  => $ligne['produit_fini_id'] ?? null,
+                    'is_produit_fini'  => $ligne['is_produit_fini'] ?? false,
                     'designation'      => $ligne['designation'],
                     'quantite_prevue'  => $qty,
                     'quantite_livree'  => $qty,
@@ -118,7 +124,27 @@ class BonLivraisonController extends Controller
                 $totalHt += $ht;
                 $totalTva += $tva;
 
-                if (!empty($ligne['produit_id'])) {
+                if ($lbl->is_produit_fini && $lbl->produit_fini_id) {
+                    $produitFini = \App\Models\ProduitFini::with('nomenclature.produit')->find($lbl->produit_fini_id);
+                    if ($produitFini) {
+                        foreach ($produitFini->nomenclature as $nomItem) {
+                            $comp = $nomItem->produit;
+                            if ($comp && !$comp->is_service) {
+                                $qtyToMvt = $qty * $nomItem->quantite;
+                                app(\App\Services\StockService::class)->enregistrerMouvement(
+                                    $comp->id,
+                                    $qtyToMvt,
+                                    'sortie_vente',
+                                    'BL',
+                                    $bl->id,
+                                    $userId,
+                                    $tenantId,
+                                    $data['entrepot_id']
+                                );
+                            }
+                        }
+                    }
+                } else if (!empty($ligne['produit_id'])) {
                     app(\App\Services\StockService::class)->enregistrerMouvement(
                         $ligne['produit_id'],
                         $qty,

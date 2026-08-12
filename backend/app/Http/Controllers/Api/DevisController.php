@@ -45,6 +45,8 @@ class DevisController extends Controller
             'lignes.*.taux_tva'      => 'required|numeric',
             'lignes.*.remise_pourcent' => 'nullable|numeric',
             'lignes.*.remise_montant'  => 'nullable|numeric',
+            'lignes.*.is_produit_fini' => 'nullable|boolean',
+            'lignes.*.produit_fini_id' => 'nullable|integer',
         ]);
 
         $tenantId = $request->get('current_tenant')->id;
@@ -82,6 +84,8 @@ class DevisController extends Controller
             $ligneData['tenant_id'] = $tenantId;
 
             if (empty($ligneData['produit_id'])) $ligneData['produit_id'] = null;
+            if (empty($ligneData['produit_fini_id'])) $ligneData['produit_fini_id'] = null;
+            $ligneData['is_produit_fini'] = $ligneData['is_produit_fini'] ?? false;
 
             // Calculer les montants de la ligne
             $qty = (float)($ligneData['quantite'] ?? 0);
@@ -111,7 +115,7 @@ class DevisController extends Controller
     {
         // Parameter automatically resolved via route-model binding. Due to plural 'devis', it binds to $devi or we explicit setup
         return response()->json(
-            $devi->load(['lignes.produit:id,reference,designation', 'client', 'etat', 'createur:id,nom,prenom'])
+            $devi->load(['lignes.produit:id,reference,designation', 'lignes.produitFini:id,reference,designation', 'client', 'etat', 'createur:id,nom,prenom'])
         );
     }
 
@@ -134,6 +138,8 @@ class DevisController extends Controller
             'lignes.*.taux_tva'      => 'required|numeric',
             'lignes.*.remise_pourcent' => 'nullable|numeric',
             'lignes.*.remise_montant'  => 'nullable|numeric',
+            'lignes.*.is_produit_fini' => 'nullable|boolean',
+            'lignes.*.produit_fini_id' => 'nullable|integer',
         ]);
 
         // Nettoyage des IDs vides...
@@ -155,6 +161,8 @@ class DevisController extends Controller
             $ligneData['tenant_id'] = $devi->tenant_id;
             
             if (empty($ligneData['produit_id'])) $ligneData['produit_id'] = null;
+            if (empty($ligneData['produit_fini_id'])) $ligneData['produit_fini_id'] = null;
+            $ligneData['is_produit_fini'] = $ligneData['is_produit_fini'] ?? false;
             
             // Calculer les montants de la ligne
             $qty = (float)($ligneData['quantite'] ?? 0);
