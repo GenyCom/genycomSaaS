@@ -44,6 +44,7 @@
       <button class="tab-btn" :class="{ active: activeTab === 'produits' }" @click="activeTab = 'produits'">Familles de Produits</button>
       <button class="tab-btn" :class="{ active: activeTab === 'etats' }" @click="activeTab = 'etats'">États des Documents</button>
       <button class="tab-btn" :class="{ active: activeTab === 'categories-depense' }" @click="activeTab = 'categories-depense'">Catégories de Dépenses</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">Utilisateurs & Habilitations</button>
     </div>
 
     <div v-if="activeTab === 'general'" class="content-grid-single">
@@ -232,6 +233,9 @@
     <div v-if="activeTab === 'categories-depense'" class="content-grid-single">
       <ParamDepenseCategories />
     </div>
+    <div v-if="activeTab === 'users'" class="content-grid-single">
+      <ParamUsersRoles />
+    </div>
   </div>
 </template>
 
@@ -246,6 +250,8 @@ import ParamReglements from './ParamReglements.vue'
 import ParamFamilles from './ParamFamilles.vue'
 import ParamEtats from './ParamEtats.vue'
 import ParamDepenseCategories from './ParamDepenseCategories.vue'
+import ParamUsersRoles from './ParamUsersRoles.vue'
+
 
 const authStore = useAuthStore()
 

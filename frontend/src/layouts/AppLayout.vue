@@ -15,7 +15,7 @@
 
       <nav class="sidebar-nav">
         <!-- Principal -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('dashboard.view')" class="nav-section">
           <div class="nav-section-label">Principal</div>
           <router-link to="/dashboard" class="nav-item" active-class="active" exact>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -24,86 +24,86 @@
         </div>
 
         <!-- Gestion Commerciale -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('clients.view') || auth.hasPermission('fournisseurs.view') || auth.hasPermission('produits.view') || auth.hasPermission('projets.view')" class="nav-section">
           <div class="nav-section-label">Gestion Commerciale</div>
-          <router-link to="/clients" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('clients.view')" to="/clients" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <span>Clients</span>
           </router-link>
-          <router-link to="/fournisseurs" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('fournisseurs.view')" to="/fournisseurs" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
             <span>Fournisseurs</span>
           </router-link>
-          <router-link to="/produits" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('produits.view')" to="/produits" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             <span>Produits</span>
           </router-link>
-          <router-link to="/projets" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('projets.view')" to="/projets" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span>Projets Clients</span>
           </router-link>
         </div>
 
         <!-- Ventes -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('devis.view') || auth.hasPermission('bons-commande-client.view') || auth.hasPermission('bons-livraison.view') || auth.hasPermission('factures.view') || auth.hasPermission('contrats.view') || auth.hasPermission('avoirs-clients.view')" class="nav-section">
           <div class="nav-section-label">Ventes</div>
-          <router-link to="/devis" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('devis.view')" to="/devis" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span>Devis</span>
           </router-link>
-          <router-link to="/bons-commande-client" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('bons-commande-client.view')" to="/bons-commande-client" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
             <span>Commandes Client</span>
           </router-link>
-          <router-link to="/bons-livraison" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('bons-livraison.view')" to="/bons-livraison" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polyline points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             <span>Bons de Livraison</span>
           </router-link>
-          <router-link to="/factures" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('factures.view')" to="/factures" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             <span>Factures de Vente</span>
           </router-link>
-          <router-link to="/contrats" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('contrats.view')" to="/contrats" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/></svg>
             <span>Abonnements</span>
           </router-link>
-          <router-link to="/avoirs-clients" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('avoirs-clients.view')" to="/avoirs-clients" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21-4-4 4-4"/><path d="M15 9h-2a2 2 0 1 0 0 4h3c.6 0 1.1-.2 1.4-.6L21 7"/><path d="m17 3 4 4-4 4"/></svg>
             <span>Avoirs Clients</span>
           </router-link>
         </div>
 
         <!-- Achats -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('commandes.view') || auth.hasPermission('bons-reception.view') || auth.hasPermission('factures-achats.view') || auth.hasPermission('dettes.view') || auth.hasPermission('depenses.view') || auth.hasPermission('avoirs-fournisseurs.view')" class="nav-section">
           <div class="nav-section-label">Achats</div>
-          <router-link to="/commandes" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('commandes.view')" to="/commandes" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
             <span>Commandes</span>
           </router-link>
-          <router-link to="/bons-reception" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('bons-reception.view')" to="/bons-reception" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
             <span>Bons de Réception</span>
           </router-link>
-          <router-link to="/factures-achats" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('factures-achats.view')" to="/factures-achats" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             <span>Factures d'Achat</span>
           </router-link>
-          <router-link to="/dettes" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('dettes.view')" to="/dettes" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span>Dettes Fournisseur</span>
           </router-link>
-          <router-link to="/depenses" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('depenses.view')" to="/depenses" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
             <span>Dépenses</span>
           </router-link>
-          <router-link to="/avoirs-fournisseurs" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('avoirs-fournisseurs.view')" to="/avoirs-fournisseurs" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21-4-4 4-4"/><path d="M15 9h-2a2 2 0 1 0 0 4h3c.6 0 1.1-.2 1.4-.6L21 7"/><path d="m17 3 4 4-4 4"/></svg>
             <span>Avoirs Fournisseurs</span>
           </router-link>
         </div>
 
         <!-- Stock -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('stock.view')" class="nav-section">
           <div class="nav-section-label">Stock</div>
           <router-link to="/stock" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
@@ -112,26 +112,27 @@
         </div>
 
         <!-- Analyses -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('reporting.view') || auth.hasPermission('caisse.view')" class="nav-section">
           <div class="nav-section-label">Analyses</div>
-          <router-link to="/reporting" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('reporting.view')" to="/reporting" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
             <span>Reporting</span>
           </router-link>
-          <router-link to="/caisse" class="nav-item" active-class="active">
+          <router-link v-if="auth.hasPermission('caisse.view')" to="/caisse" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
             <span>Trésorerie</span>
           </router-link>
         </div>
 
         <!-- Paramétrage -->
-        <div class="nav-section">
+        <div v-if="auth.hasPermission('parametrage.view')" class="nav-section">
           <div class="nav-section-label">Système</div>
           <router-link to="/parametrage" class="nav-item" active-class="active">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span>Paramétrage</span>
           </router-link>
         </div>
+
       </nav>
 
       <!-- User info bottom -->

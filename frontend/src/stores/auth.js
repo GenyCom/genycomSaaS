@@ -15,8 +15,9 @@ export const useAuthStore = defineStore('auth', {
     tenant: (state) => state.user?.tenant || {},
     entreprise: (state) => state.user?.entreprise || {},
     permissions: (state) => state.user?.permissions || [],
-    hasPermission: (state) => (perm) => state.user?.is_owner || state.permissions.includes(perm),
+    hasPermission: (state) => (perm) => !perm || !!state.user?.is_superadmin || !!state.user?.is_owner || (Array.isArray(state.permissions) && state.permissions.includes(perm)),
   },
+
 
   actions: {
     async login(email, password) {

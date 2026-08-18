@@ -169,15 +169,30 @@ class AuthController extends Controller
         
         $tenant = $user->tenant; // Accessor: premier tenant
         
-        // Récupérer le rôle depuis la table pivot si tenant existe
+        // Récupérer le rôle et les permissions depuis la table pivot si tenant existe
         $roleName = null;
         $isOwner = false;
+        $permissions = [];
 
-        if ($tenant && $tenant->pivot->role_id) {
+        if ($user->is_superadmin) {
+            $roleName = 'superadmin';
+            $isOwner = true;
+            $permissions = DB::connection('central')->table('permissions')->pluck('name')->toArray();
+        } else if ($tenant && $tenant->pivot->role_id) {
             // Force l'usage de la connexion 'central' pour les rôles
             $role = DB::connection('central')->table('roles')->where('id', $tenant->pivot->role_id)->first();
             $roleName = $role?->name;
             $isOwner = (bool) $tenant->pivot->is_owner;
+
+            if ($isOwner || strtolower((string)$roleName) === 'admin') {
+                $permissions = DB::connection('central')->table('permissions')->pluck('name')->toArray();
+            } else {
+                $permissions = DB::connection('central')->table('permission_role')
+                    ->join('permissions', 'permissions.id', '=', 'permission_role.permission_id')
+                    ->where('permission_role.role_id', $tenant->pivot->role_id)
+                    ->pluck('permissions.name')
+                    ->toArray();
+            }
         }
 
         // Data related to the company
@@ -198,7 +213,7 @@ class AuthController extends Controller
                         'telephone' => $entreprise->telephone,
                         'email' => $entreprise->email,
                         'site_web' => $entreprise->site_web,
-                        'logo_path' => $entreprise->logo_path, // CORRECTION ICI
+                        'logo_path' => $entreprise->logo_path,
                     ];
                 }
             } catch (\Exception $e) {
@@ -216,8 +231,8 @@ class AuthController extends Controller
             'avatar_path'   => $user->avatar_path ?? null,
             'is_owner'      => $isOwner,
             'is_superadmin' => (bool) $user->is_superadmin,
-            'roles'         => $roleName ? [$roleName] : ($user->is_superadmin ? ['superadmin'] : []),
-            'permissions'   => [],
+            'roles'         => $roleName ? [$roleName] : [],
+            'permissions'   => array_values(array_unique($permissions)),
             'tenant'        => $tenant ? [
                 'id'    => $tenant->id,
                 'nom'   => $tenant->nom,

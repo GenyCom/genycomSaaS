@@ -43,6 +43,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { getFirstAccessiblePath } from '../router'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -66,14 +67,12 @@ async function handleLogin() {
   try {
     await auth.login(form.email, form.password)
     localStorage.setItem('genycom_last_email', form.email)
-    if (auth.user?.is_superadmin) {
-      router.push('/superadmin')
-    } else {
-      router.push('/dashboard')
-    }
+    const targetPath = getFirstAccessiblePath(auth)
+    router.push(targetPath)
   } catch {}
 }
 </script>
+
 
 <style scoped>
 .password-wrapper {

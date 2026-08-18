@@ -10,7 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+<<<<<<< Updated upstream
       
+=======
+
+>>>>>>> Stashed changes
     steps:
       # 1. Récupération du code source
       - name: 📂 1. Checkout du code

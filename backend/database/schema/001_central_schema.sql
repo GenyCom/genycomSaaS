@@ -180,6 +180,30 @@ INSERT IGNORE INTO `permissions` (`name`, `display_name`, `module`) VALUES
 ('parametrage.view', 'Voir les paramètres', 'parametrage'),
 ('parametrage.edit', 'Modifier les paramètres', 'parametrage'),
 ('users.manage', 'Gérer les utilisateurs', 'parametrage'),
-('roles.manage', 'Gérer les rôles', 'parametrage');
+('roles.manage', 'Gérer les rôles', 'parametrage'),
+('bons-commande-client.view', 'Voir les bons de commande client', 'ventes'),
+('bons-commande-client.create', 'Créer un bon de commande client', 'ventes'),
+('bons-commande-client.edit', 'Modifier un bon de commande client', 'ventes'),
+('bons-commande-client.delete', 'Supprimer un bon de commande client', 'ventes'),
+('bons-livraison.view', 'Voir les bons de livraison', 'ventes'),
+('bons-livraison.create', 'Créer un bon de livraison', 'ventes'),
+('bons-livraison.edit', 'Modifier un bon de livraison', 'ventes'),
+('bons-livraison.delete', 'Supprimer un bon de livraison', 'ventes'),
+('avoirs-clients.view', 'Voir les avoirs clients', 'ventes'),
+('avoirs-clients.create', 'Créer un avoir client', 'ventes'),
+('contrats.view', 'Voir les contrats & abonnements', 'ventes'),
+('contrats.create', 'Créer un contrat', 'ventes'),
+('contrats.edit', 'Modifier un contrat', 'ventes'),
+('bons-reception.view', 'Voir les bons de réception', 'achats'),
+('bons-reception.create', 'Créer un bon de réception', 'achats'),
+('bons-reception.edit', 'Modifier un bon de réception', 'achats'),
+('factures-achats.view', 'Voir les factures d\'\'achat', 'achats'),
+('factures-achats.create', 'Créer une facture d\'\'achat', 'achats'),
+('factures-achats.edit', 'Modifier une facture d\'\'achat', 'achats'),
+('avoirs-fournisseurs.view', 'Voir les avoirs fournisseurs', 'achats'),
+('avoirs-fournisseurs.create', 'Créer un avoir fournisseur', 'achats'),
+('reporting.view', 'Voir les rapports et analyses', 'reporting'),
+('caisse.view', 'Voir la trésorerie et la caisse', 'finances');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
