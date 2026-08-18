@@ -76,11 +76,12 @@
                 <th>Nom</th>
                 <th>Email</th>
                 <th>Rôle</th>
+                <th style="text-align:right;">Action</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="users.length === 0">
-                <td colspan="3" style="text-align:center;" class="text-muted">Aucun utilisateur rattaché.</td>
+                <td colspan="4" style="text-align:center;" class="text-muted">Aucun utilisateur rattaché.</td>
               </tr>
               <tr v-for="u in users" :key="u.id">
                 <td>{{ u.prenom }} {{ u.nom }}</td>
@@ -88,6 +89,11 @@
                 <td>
                   <span v-if="u.is_owner" class="badge badge-success">Gérant (Owner)</span>
                   <span v-else class="badge badge-default">{{ u.role_name }}</span>
+                </td>
+                <td style="text-align:right;">
+                  <button class="btn btn-primary btn-sm" style="background:#4F46E5; color:#fff;" @click="impersonateUser(u)" title="Se connecter directement en tant que cet utilisateur">
+                    🔑 Connexion
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -107,6 +113,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
+
 
 const route = useRoute()
 const router = useRouter()
@@ -171,7 +181,18 @@ async function destroyTenant() {
   }
 }
 
+async function impersonateUser(user) {
+  try {
+    await authStore.impersonate(user.id)
+    toast.success(`Prise de contrôle réussie pour ${user.prenom} ${user.nom}`)
+    router.push('/dashboard')
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Erreur lors de la prise de contrôle.')
+  }
+}
+
 function formatDate(d) {
+
   if (!d) return '—'
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 }

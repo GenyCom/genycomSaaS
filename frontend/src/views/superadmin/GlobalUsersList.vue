@@ -58,6 +58,9 @@
             <td class="text-muted">{{ formatDate(user.created_at) }}</td>
             <td>
               <div class="flex items-center gap-2">
+                <button v-if="!user.is_superadmin" class="btn btn-primary btn-sm" style="background:#4F46E5; color:#fff;" @click="impersonate(user)" title="Se connecter directement sous l'identité de cet utilisateur">
+                  🔑 Connexion
+                </button>
                 <router-link :to="`/superadmin/users/${user.id}/edit`" class="btn btn-secondary btn-sm">Editer</router-link>
                 <button v-if="!user.is_superadmin" class="btn btn-sm" style="background:var(--danger-bg); color:var(--danger);" @click="deleteUser(user)">Suppr.</button>
               </div>
@@ -80,15 +83,31 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
+import { useAuthStore } from '../../stores/auth'
 import ConfirmModal from '../../components/shared/ConfirmModal.vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const users = ref([])
 const loading = ref(false)
 const error = ref(null)
 const showConfirm = ref(false)
 const userToDelete = ref(null)
+
+async function impersonate(user) {
+  try {
+    await authStore.impersonate(user.id)
+    toast.success(`Prise de contrôle réussie pour ${user.prenom} ${user.nom}`)
+    router.push('/dashboard')
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Erreur lors de la prise de contrôle.')
+  }
+}
+
 
 onMounted(() => {
   fetchUsers()

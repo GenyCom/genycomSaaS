@@ -157,6 +157,18 @@
 
     <!-- Main -->
     <div class="main-content">
+      <!-- Banner de prise de contrôle (Impersonation) -->
+      <div v-if="isImpersonating" class="impersonation-banner">
+        <div class="impersonation-text">
+          <span class="impersonation-badge">⚠️ Mode Prise de Contrôle</span>
+          <span>Vous êtes connecté sous l'identité de <strong>{{ auth.fullName }}</strong> ({{ auth.tenant?.nom }}).</span>
+        </div>
+        <button class="btn-stop-impersonate" @click="quitImpersonation">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Quitter la prise de contrôle</span>
+        </button>
+      </div>
+
       <header class="main-header">
         <div style="display: flex; align-items: center;">
           <button class="mobile-toggle-btn" @click="sidebarOpen = true">
@@ -191,6 +203,15 @@ const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
 const theme = ref(localStorage.getItem('genycom_theme') || 'light')
+
+const isImpersonating = computed(() => {
+  return sessionStorage.getItem('genycom_is_impersonating') === 'true'
+})
+
+function quitImpersonation() {
+  auth.stopImpersonating()
+  router.push('/superadmin')
+}
 
 // Fermer le sidebar lors du changement de route (mobile)
 watch(() => route.path, () => {
@@ -239,3 +260,54 @@ async function handleLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.impersonation-banner {
+  background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+  border-bottom: 1.5px solid #FCD34D;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.12);
+  z-index: 100;
+}
+.impersonation-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #92400E;
+}
+.impersonation-badge {
+  background: #F59E0B;
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+.btn-stop-impersonate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #DC2626;
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+  transition: all 0.2s ease;
+}
+.btn-stop-impersonate:hover {
+  background: #B91C1C;
+  transform: translateY(-1px);
+}
+</style>
+

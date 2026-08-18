@@ -91,6 +91,44 @@ export const useAuthStore = defineStore('auth', {
         this.user.entreprise = entrepriseData
         sessionStorage.setItem('genycom_user', JSON.stringify(this.user))
       }
+    },
+
+    async impersonate(userId) {
+      this.loading = true
+      try {
+        // Sauvegarder la session SuperAdmin d'origine
+        sessionStorage.setItem('genycom_superadmin_token', this.token)
+        sessionStorage.setItem('genycom_superadmin_user', JSON.stringify(this.user))
+
+        const { data } = await api.post(`/superadmin/users/${userId}/impersonate`)
+        this.token = data.token
+        this.user = data.user
+        sessionStorage.setItem('genycom_token', data.token)
+        sessionStorage.setItem('genycom_user', JSON.stringify(data.user))
+        sessionStorage.setItem('genycom_is_impersonating', 'true')
+        return data
+      } catch (err) {
+        throw err
+      } finally {
+        this.loading = false
+      }
+    },
+
+    stopImpersonating() {
+      const superadminToken = sessionStorage.getItem('genycom_superadmin_token')
+      const superadminUser = sessionStorage.getItem('genycom_superadmin_user')
+
+      if (superadminToken && superadminUser) {
+        this.token = superadminToken
+        this.user = JSON.parse(superadminUser)
+        sessionStorage.setItem('genycom_token', superadminToken)
+        sessionStorage.setItem('genycom_user', superadminUser)
+
+        sessionStorage.removeItem('genycom_superadmin_token')
+        sessionStorage.removeItem('genycom_superadmin_user')
+        sessionStorage.removeItem('genycom_is_impersonating')
+      }
     }
   },
 })
+

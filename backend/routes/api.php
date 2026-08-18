@@ -52,9 +52,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     // SuperAdmin Routes
     Route::prefix('superadmin')->group(function() {
         Route::get('dashboard', SuperAdminDashboardController::class);
+        Route::post('users/{user}/impersonate', [SuperAdminUserController::class, 'impersonate']);
         Route::apiResource('users', SuperAdminUserController::class);
         Route::apiResource('tenants', SuperAdminTenantController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     });
+
 
     // Dashboard
     // Dashboard

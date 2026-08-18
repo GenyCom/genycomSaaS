@@ -160,8 +160,9 @@ class AuthController extends Controller
         return response()->json(['message' => 'Mot de passe modifié avec succès.']);
     }
 
-    private function formatUser(User $user): array
+    public static function formatUser(User $user): array
     {
+
         // Charger les tenants (avec pivot role_id, is_owner)
         $user->load(['tenants' => function($query) {
             $query->withPivot('role_id', 'is_owner');

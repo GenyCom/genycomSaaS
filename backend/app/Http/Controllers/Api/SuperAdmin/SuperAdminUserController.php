@@ -107,4 +107,24 @@ class SuperAdminUserController extends Controller
 
         return response()->json(['message' => 'Utilisateur supprimé de la base centrale.']);
     }
-}
+
+    /**
+     * POST /api/superadmin/users/{user}/impersonate — Prise de contrôle (Impersonation).
+     */
+    public function impersonate(Request $request, User $user): JsonResponse
+    {
+        $current = $request->user();
+        if (!$current || !$current->is_superadmin) {
+            return response()->json(['message' => 'Action réservée au SuperAdmin.'], 403);
+        }
+
+        $token = $user->createToken('impersonate-token')->plainTextToken;
+
+        return response()->json([
+            'message'     => "Prise de contrôle réussie pour l'utilisateur {$user->full_name}",
+            'token'       => $token,
+            'user'        => \App\Http\Controllers\Api\AuthController::formatUser($user),
+            'impersonated' => true,
+        ]);
+    }
+}
