@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `ligne_devis` (
     `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `devis_id`          BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NULL,
+    `produit_fini_id`   BIGINT UNSIGNED NULL,
     `designation` TEXT NOT NULL,
     `description`       TEXT NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
@@ -84,13 +85,15 @@ CREATE TABLE IF NOT EXISTS `ligne_devis` (
     `montant_tva`       DECIMAL(24,2) DEFAULT 0.00,
     `montant_ttc`       DECIMAL(24,2) DEFAULT 0.00,
     `ordre`             SMALLINT DEFAULT 0,
-    `is_produit_fini`   TINYINT(1) DEFAULT 0,
+    `is_produit_fini`   TINYINT(1) NOT NULL DEFAULT 0,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     PRIMARY KEY (`id`),
     FOREIGN KEY (`devis_id`) REFERENCES `devis`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `ligne_devis` ADD CONSTRAINT `fk_ligne_devis_produit_fini` FOREIGN KEY (`produit_fini_id`) REFERENCES `produit_fini`(`id`) ON DELETE SET NULL;
 
 -- Factures Client
 CREATE TABLE IF NOT EXISTS `factures` (
@@ -138,6 +141,7 @@ CREATE TABLE IF NOT EXISTS `ligne_facture` (
     `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `facture_id`        BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NULL,
+    `produit_fini_id`        BIGINT UNSIGNED NULL,
     `designation` TEXT NOT NULL,
     `description`       TEXT NULL,
     `quantite`          DECIMAL(24,2) DEFAULT 1.00,
@@ -152,7 +156,7 @@ CREATE TABLE IF NOT EXISTS `ligne_facture` (
     `montant_ttc`       DECIMAL(24,2) DEFAULT 0.00,
     `ordre`             SMALLINT DEFAULT 0,
     `source_type`       VARCHAR(50) DEFAULT 'saisie_manuelle',
-    `is_produit_fini`   TINYINT(1) DEFAULT 0,
+    `is_produit_fini`   TINYINT(1) NOT NULL DEFAULT 0,
     `created_at`        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        TIMESTAMP NULL,
     `deleted_at`        TIMESTAMP NULL,
@@ -160,6 +164,8 @@ CREATE TABLE IF NOT EXISTS `ligne_facture` (
     FOREIGN KEY (`facture_id`) REFERENCES `factures`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `ligne_facture` ADD CONSTRAINT `fk_ligne_facture_produit_fini` FOREIGN KEY (`produit_fini_id`) REFERENCES `produit_fini`(`id`) ON DELETE SET NULL;
 
 -- Bons de livraison
 CREATE TABLE IF NOT EXISTS `bons_livraison` (
@@ -192,6 +198,8 @@ CREATE TABLE IF NOT EXISTS `ligne_bon_livraison` (
     `tenant_id`         BIGINT UNSIGNED NOT NULL DEFAULT 1,
     `bon_livraison_id`  BIGINT UNSIGNED NOT NULL,
     `produit_id`        BIGINT UNSIGNED NOT NULL,
+    `produit_fini_id`   BIGINT UNSIGNED NOT NULL,
+    `is_produit_fini`   TINYINT(1) NOT NULL DEFAULT 0,
     `designation` TEXT NOT NULL,
     `quantite_prevue`   DECIMAL(24,2) DEFAULT 0.00,
     `quantite_livree`   DECIMAL(24,2) DEFAULT 0.00,
@@ -202,6 +210,8 @@ CREATE TABLE IF NOT EXISTS `ligne_bon_livraison` (
     FOREIGN KEY (`bon_livraison_id`) REFERENCES `bons_livraison`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`produit_id`) REFERENCES `produits`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `ligne_bon_livraison` ADD CONSTRAINT `fk_ligne_bon_livraison_produit_fini` FOREIGN KEY (`produit_fini_id`) REFERENCES `produit_fini`(`id`) ON DELETE SET NULL;
 
 -- Avoirs Client
 CREATE TABLE IF NOT EXISTS `avoirs_client` (
