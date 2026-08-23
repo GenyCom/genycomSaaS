@@ -72,7 +72,7 @@ class ProduitController extends Controller
     }
 
     /**
-     * Generate a unique EAN13 barcode: 20 [8-digit sequential] [checksum]
+     * Generate a unique EAN13 barcode: 20 [10-digit sequential] [checksum]
      */
     private function generateEAN13(): string
     {
@@ -91,18 +91,29 @@ class ProduitController extends Controller
             $nextNum = (int)$base + 1;
         }
 
-        // 12 digits total before checksum
-        $code12 = $prefix . str_pad($nextNum, 10, '0', STR_PAD_LEFT);
-        
-        // Calculate EAN13 checksum
-        $sum = 0;
-        for ($i = 0; $i < 12; $i++) {
-            $digit = (int)$code12[$i];
-            $sum += ($i % 2 === 0) ? $digit : $digit * 3;
-        }
-        $checksum = (10 - ($sum % 10)) % 10;
+        do {
+            // 12 digits total before checksum
+            $code12 = $prefix . str_pad($nextNum, 10, '0', STR_PAD_LEFT);
+            
+            // Calculate EAN13 checksum
+            $sum = 0;
+            for ($i = 0; $i < 12; $i++) {
+                $digit = (int)$code12[$i];
+                $sum += ($i % 2 === 0) ? $digit : $digit * 3;
+            }
+            $checksum = (10 - ($sum % 10)) % 10;
+            $barcode = $code12 . $checksum;
 
-        return $code12 . $checksum;
+            $exists = Produit::withoutGlobalScopes()
+                ->where('code_barre', $barcode)
+                ->exists();
+
+            if ($exists) {
+                $nextNum++;
+            }
+        } while ($exists);
+
+        return $barcode;
     }
 
     /**

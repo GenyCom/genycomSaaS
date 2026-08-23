@@ -33,7 +33,7 @@ class UpdateProduitRequest extends FormRequest
             'prix_ttc_vente'        => 'nullable|numeric|min:0',
             'prix_revient'          => 'nullable|numeric|min:0',
             'marge_pourcentage'     => 'nullable|numeric',
-            'code_barre'            => 'nullable|string|max:50',
+            'code_barre'            => 'nullable|string|max:50|unique:tenant.produits,code_barre,' . $produitId,
             'marque'                => 'nullable|string|max:100',
             'unite'                 => 'nullable|string|max:50',
             'image_path'            => 'nullable|string|max:500',
@@ -60,6 +60,7 @@ class UpdateProduitRequest extends FormRequest
             'prix_ht_vente.required' => 'Le prix de vente HT est obligatoire.',
             'stock_actuel.numeric' => 'Le stock actuel doit être un nombre.',
             'reference.unique' => 'Cette référence est déjà utilisée par un autre produit.',
+            'code_barre.unique' => 'Ce code-barres est déjà utilisé par un autre produit.',
             'taux_tva.max' => 'Le taux de TVA ne peut pas dépasser 100%.',
             'taux_tva.min' => 'Le taux de TVA ne peut pas être négatif.',
         ];
