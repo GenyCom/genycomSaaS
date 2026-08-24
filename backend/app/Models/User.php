@@ -19,6 +19,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nom', 'prenom', 'email', 'password', 'is_superadmin', 'is_active',
+        'last_login_at', 'last_login_ip', 'last_seen_at', 'last_seen_ip',
     ];
 
     protected $hidden = [
@@ -28,6 +29,8 @@ class User extends Authenticatable
     protected $casts = [
         'is_superadmin' => 'boolean',
         'is_active' => 'boolean',
+        'last_login_at' => 'datetime',
+        'last_seen_at'  => 'datetime',
     ];
 
     /**

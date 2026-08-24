@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     domain VARCHAR(255) NULL UNIQUE,            -- ex: client.genycom.ma
     logo VARCHAR(255) NULL,
     statut ENUM('actif', 'suspendu', 'demo') DEFAULT 'actif',
+    plan VARCHAR(50) DEFAULT 'Business',
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL DEFAULT NULL
@@ -40,9 +41,12 @@ CREATE TABLE IF NOT EXISTS users (
     remember_token VARCHAR(100) NULL,
     last_login_at TIMESTAMP NULL,
     last_login_ip VARCHAR(45) NULL,
+    last_seen_at TIMESTAMP NULL,
+    last_seen_ip VARCHAR(45) NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL DEFAULT NULL
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_users_last_seen_at (last_seen_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
@@ -204,6 +208,29 @@ INSERT IGNORE INTO `permissions` (`name`, `display_name`, `module`) VALUES
 ('avoirs-fournisseurs.create', 'Créer un avoir fournisseur', 'achats'),
 ('reporting.view', 'Voir les rapports et analyses', 'reporting'),
 ('caisse.view', 'Voir la trésorerie et la caisse', 'finances');
+
+-- ------------------------------------------------------------------------------
+-- 7. TELEMETRY & LOGS D'ERREURS (SuperAdmin Telemetry)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS telemetry_error_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT UNSIGNED NULL,
+    user_id BIGINT UNSIGNED NULL,
+    status_code INT DEFAULT 500,
+    message TEXT NOT NULL,
+    file VARCHAR(255) NULL,
+    line INT NULL,
+    url VARCHAR(500) NULL,
+    method VARCHAR(10) NULL,
+    ip VARCHAR(45) NULL,
+    trace LONGTEXT NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_telemetry_tenant_id (tenant_id),
+    KEY idx_telemetry_user_id (user_id),
+    KEY idx_telemetry_status_code (status_code),
+    KEY idx_telemetry_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
 

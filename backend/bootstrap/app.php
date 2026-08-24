@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', \App\Http\Middleware\DecodeIdsMiddleware::class);
 
 		$middleware->appendToGroup('api', \App\Http\Middleware\TenantMiddleware::class);
+		$middleware->appendToGroup('api', \App\Http\Middleware\UpdateUserLastSeen::class);
         $middleware->priority([
             \Illuminate\Foundation\Http\Middleware\HandlePreflightRequests::class,
             \Illuminate\Session\Middleware\StartSession::class,

@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->string('db_username')->nullable()->after('database_name');
-            $table->string('db_password')->nullable()->after('db_username');
+            if (!Schema::hasColumn('tenants', 'db_username')) {
+                $table->string('db_username')->nullable()->after('database_name');
+            }
+            if (!Schema::hasColumn('tenants', 'db_password')) {
+                $table->string('db_password')->nullable()->after('db_username');
+            }
         });
     }
 
@@ -23,7 +27,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->dropColumn(['db_username', 'db_password']);
+            if (Schema::hasColumn('tenants', 'db_username')) {
+                $table->dropColumn('db_username');
+            }
+            if (Schema::hasColumn('tenants', 'db_password')) {
+                $table->dropColumn('db_password');
+            }
         });
     }
 };

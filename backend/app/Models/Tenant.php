@@ -15,7 +15,7 @@ class Tenant extends Model
     protected $connection = 'central';
 
     protected $fillable = [
-        'nom', 'database_name', 'db_username', 'db_password', 'domain', 'logo', 'statut'
+        'nom', 'database_name', 'db_username', 'db_password', 'domain', 'logo', 'statut', 'plan'
     ];
 
     /**

@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('tenant')->table('clients', function (Blueprint $table) {
-            $table->decimal('solde_initial', 15, 2)->default(0)->after('delai_paiement')->comment('Solde dû à l\'ouverture du compte (migration)');
-        });
+        if (config('database.connections.tenant.database')) {
+            Schema::connection('tenant')->table('clients', function (Blueprint $table) {
+                if (!Schema::connection('tenant')->hasColumn('clients', 'solde_initial')) {
+                    $table->decimal('solde_initial', 15, 2)->default(0)->after('delai_paiement')->comment('Solde dû à l\'ouverture du compte (migration)');
+                }
+            });
+        }
     }
 
     /**
@@ -21,8 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('tenant')->table('clients', function (Blueprint $table) {
-            $table->dropColumn('solde_initial');
-        });
+        if (config('database.connections.tenant.database')) {
+            Schema::connection('tenant')->table('clients', function (Blueprint $table) {
+                if (Schema::connection('tenant')->hasColumn('clients', 'solde_initial')) {
+                    $table->dropColumn('solde_initial');
+                }
+            });
+        }
     }
 };

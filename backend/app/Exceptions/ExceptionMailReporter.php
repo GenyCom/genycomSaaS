@@ -68,6 +68,25 @@ class ExceptionMailReporter
             // 4. Collecter le contexte complet
             $errorData = static::buildErrorData($e);
 
+            // 4.5. Enregistrer dans la table telemetry_error_logs pour le Dashboard SuperAdmin
+            try {
+                \App\Models\TelemetryErrorLog::create([
+                    'tenant_id'   => $errorData['tenant_id'] ?? null,
+                    'user_id'     => $errorData['user_id'] ?? null,
+                    'status_code' => 500,
+                    'message'     => substr($errorData['message'] ?? 'Erreur serveur non gérée', 0, 1000),
+                    'file'        => $errorData['file'] ?? null,
+                    'line'        => $errorData['line'] ?? null,
+                    'url'         => $errorData['url'] ?? null,
+                    'method'      => $errorData['method'] ?? null,
+                    'ip'          => $errorData['ip'] ?? null,
+                    'trace'       => $errorData['trace'] ?? null,
+                    'created_at'  => now(),
+                ]);
+            } catch (\Throwable) {
+                // Silencieux pour ne jamais impacter l'application
+            }
+
             // 5. Dispatcher le job sur la queue
             SendExceptionMailJob::dispatch($errorData)
                 ->onQueue(config('genycom.monitoring.queue_name', 'monitoring'));

@@ -10,6 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!config('database.connections.tenant.database')) {
+            return;
+        }
+
         // 1. Trigger BEFORE pour synchroniser stock_actuel avec stock_initial
         DB::connection('tenant')->unprepared("
             CREATE TRIGGER trg_produit_stock_initial_before 
@@ -65,6 +69,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!config('database.connections.tenant.database')) {
+            return;
+        }
+
         DB::connection('tenant')->unprepared("DROP TRIGGER IF EXISTS trg_produit_stock_initial_before");
         DB::connection('tenant')->unprepared("DROP TRIGGER IF EXISTS trg_produit_stock_initial_after");
     }
