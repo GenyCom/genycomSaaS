@@ -70,6 +70,8 @@ const routes = [
       
       { path: 'bons-reception',     name: 'BRList',    component: () => import('../views/achats/BRList.vue'), meta: { permission: 'bons-reception.view' } },
       { path: 'bons-reception/:id', name: 'BRDetail',  component: () => import('../views/achats/BRDetail.vue'), props: true, meta: { permission: 'bons-reception.view' } },
+      { path: 'achats/bons-reception', redirect: '/bons-reception' },
+      { path: 'achats/bons-reception/:id', redirect: to => `/bons-reception/${to.params.id}` },
       
       { path: 'factures-achats',     name: 'FactureAchatList',    component: () => import('../views/achats/FactureAchatList.vue'), meta: { permission: 'factures-achats.view' } },
       { path: 'factures-achats/:id', name: 'FactureAchatDetail',  component: () => import('../views/achats/FactureAchatDetail.vue'), props: true, meta: { permission: 'factures-achats.view' } },
@@ -201,6 +203,5 @@ router.beforeEach((to, from, next) => {
   
   next()
 })
-
 
 export default router

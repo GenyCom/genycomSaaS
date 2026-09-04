@@ -27,6 +27,7 @@ class ProduitController extends Controller
                    ->orWhere('reference_oem', 'like', "%{$v}%");
             }))
             ->when($request->famille_id, fn($q, $v) => $q->where('famille_id', $v))
+            ->when($request->has('is_service'), fn($q) => $q->where('is_service', filter_var($request->is_service, FILTER_VALIDATE_BOOLEAN)))
             ->orderBy($sortBy, $sortDir);
 
         $produits = $request->per_page 

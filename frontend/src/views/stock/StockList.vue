@@ -23,6 +23,24 @@
       </div>
     </div>
 
+    <!-- Bannière Produits Non Initialisés -->
+    <div v-if="uninitializedCount > 0" class="uninitialized-alert-banner">
+      <div class="banner-left">
+        <span class="banner-badge">💡 Nouveaux Produits</span>
+        <div class="banner-text">
+          Vous avez <strong>{{ uninitializedCount }} nouveau(x) produit(s)</strong> qui n'ont pas encore d'entrée en stock.
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button class="btn-banner-primary" @click="isInitModalOpen = true">
+          Initialiser Manuellement
+        </button>
+        <button class="btn-banner-secondary" @click="router.push('/bons-reception')">
+          Via Bon de Réception
+        </button>
+      </div>
+    </div>
+
     <div class="hero-header">
       <div class="hero-avatar stock-theme">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
@@ -141,17 +159,29 @@
       :stock-id="selectedStockId"
       @close="isHistoryOpen = false"
     />
+
+    <StockInitModal
+      :is-open="isInitModalOpen"
+      :entrepots="entrepots"
+      @close="isInitModalOpen = false"
+      @success="fetchData"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../../services/api'
 import StockActionModal from './StockActionModal.vue'
 import StockHistoryModal from './StockHistoryModal.vue'
+import StockInitModal from './StockInitModal.vue'
+
+const router = useRouter()
 
 const stock = ref([])
 const entrepots = ref([])
+const uninitializedCount = ref(0)
 const loading = ref(true)
 const searchQuery = ref('')
 const selectedWarehouse = ref('')
@@ -159,6 +189,7 @@ const selectedWarehouse = ref('')
 // Modal state
 const isModalOpen = ref(false)
 const isHistoryOpen = ref(false)
+const isInitModalOpen = ref(false)
 const modalMode = ref('adjust')
 const selectedStock = ref(null)
 const selectedStockId = ref(null)
@@ -193,12 +224,14 @@ const totals = computed(() => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const [stockRes, entrepotsRes] = await Promise.all([
+    const [stockRes, entrepotsRes, uninitRes] = await Promise.all([
       api.get('/stock'),
-      api.get('/parametrage/referentiels/entrepots')
+      api.get('/parametrage/referentiels/entrepots'),
+      api.get('/stock/uninitialized-products').catch(() => ({ data: { total: 0 } }))
     ])
     stock.value = stockRes.data.data || stockRes.data || []
     entrepots.value = entrepotsRes.data || []
+    uninitializedCount.value = uninitRes.data?.total || 0
   } catch (error) {
     console.error('Erreur inventaire:', error)
   } finally {
@@ -379,4 +412,25 @@ onMounted(fetchData)
 .loader-ring { width: 40px; height: 40px; position: relative; }
 .loader-ring div { position: absolute; width: 32px; height: 32px; border: 3px solid transparent; border-top-color: var(--c-accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Uninitialized Alert Banner ─── */
+.uninitialized-alert-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: #F0FDFA; border: 1.5px solid #99F6E4; border-radius: 14px;
+  padding: 14px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.08);
+}
+.banner-left { display: flex; align-items: center; gap: 12px; }
+.banner-badge { font-size: 0.72rem; font-weight: 800; color: #0F766E; background: #CCFBF1; padding: 4px 10px; border-radius: 100px; text-transform: uppercase; }
+.banner-text { font-size: 0.88rem; color: #134E4A; }
+.banner-actions { display: flex; gap: 10px; }
+.btn-banner-primary {
+  background: #0D9488; color: #fff; border: none; padding: 8px 16px; border-radius: 8px;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s;
+}
+.btn-banner-primary:hover { background: #0F766E; }
+.btn-banner-secondary {
+  background: #fff; color: #0F766E; border: 1.5px solid #99F6E4; padding: 8px 14px;
+  border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s;
+}
+.btn-banner-secondary:hover { background: #E6FFFA; }
 </style>

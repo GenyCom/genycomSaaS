@@ -141,9 +141,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
 
     // Stock
     Route::get('stock', [StockController::class, 'index'])->middleware('permission:stock.view');
+    Route::get('stock/uninitialized-products', [StockController::class, 'getUninitializedProducts'])->middleware('permission:stock.view');
     Route::get('stock/{id}', [StockController::class, 'show'])->middleware('permission:stock.view');
     Route::post('stock/adjust', [StockController::class, 'adjust'])->middleware('permission:stock.mouvement');
     Route::post('stock/transfer', [StockController::class, 'transfer'])->middleware('permission:stock.mouvement');
+    Route::post('stock/initialize', [StockController::class, 'initialize'])->middleware('permission:stock.mouvement');
 
     // Projets & Dépenses
     Route::get('projets', [ProjetController::class, 'index'])->middleware('permission:projets.view');

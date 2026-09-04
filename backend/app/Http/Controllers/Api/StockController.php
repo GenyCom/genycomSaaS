@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use App\Models\MouvementStock;
+use App\Models\Produit;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class StockController extends Controller
 {
@@ -95,6 +97,103 @@ class StockController extends Controller
         return response()->json([
             'stock' => $stock,
             'mouvements' => $mouvements
+        ]);
+    }
+
+    public function getUninitializedProducts(Request $request): JsonResponse
+    {
+        $produits = Produit::where('is_service', false)
+            ->whereDoesntHave('stocks')
+            ->orderBy('designation', 'asc')
+            ->get(['id', 'reference', 'designation', 'seuil_alerte', 'emplacement_stock', 'stock_actuel', 'created_at']);
+
+        return response()->json([
+            'total' => $produits->count(),
+            'data'  => $produits
+        ]);
+    }
+
+    public function initialize(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'entrepot_id' => 'required|exists:tenant.entrepots,id',
+            'items' => 'required|array|min:1',
+            'items.*.produit_id' => 'required|exists:tenant.produits,id',
+            'items.*.quantite' => 'required|numeric|min:0',
+            'items.*.seuil_alerte' => 'nullable|numeric|min:0',
+            'items.*.stock_min' => 'nullable|numeric|min:0',
+            'items.*.stock_max' => 'nullable|numeric|min:0',
+            'items.*.emplacement_stock' => 'nullable|string|max:100',
+            'motif' => 'nullable|string|max:255',
+        ]);
+
+        $tenantId = $request->get('current_tenant')->id;
+        $entrepotId = $data['entrepot_id'];
+        $userId = auth()->id();
+
+        $count = 0;
+
+        DB::transaction(function () use ($data, $tenantId, $entrepotId, $userId, &$count) {
+            foreach ($data['items'] as $item) {
+                $produit = Produit::where('id', $item['produit_id'])
+                    ->where('tenant_id', $tenantId)
+                    ->firstOrFail();
+
+                // Ignorer les services
+                if ($produit->is_service) {
+                    continue;
+                }
+
+                // 1. Mettre à jour métadonnées du produit si spécifiées
+                $updateMeta = [];
+                if (isset($item['seuil_alerte']) && $item['seuil_alerte'] !== null) {
+                    $updateMeta['seuil_alerte'] = $item['seuil_alerte'];
+                }
+                if (isset($item['stock_min']) && $item['stock_min'] !== null) {
+                    $updateMeta['stock_min'] = $item['stock_min'];
+                }
+                if (isset($item['stock_max']) && $item['stock_max'] !== null) {
+                    $updateMeta['stock_max'] = $item['stock_max'];
+                }
+                if (isset($item['emplacement_stock']) && $item['emplacement_stock'] !== null) {
+                    $updateMeta['emplacement_stock'] = $item['emplacement_stock'];
+                }
+                if (!empty($updateMeta)) {
+                    $produit->update($updateMeta);
+                }
+
+                // 2. Traiter le niveau de stock pour l'entrepôt sélectionné
+                $stockLine = Stock::firstOrCreate(
+                    ['produit_id' => $produit->id, 'entrepot_id' => $entrepotId, 'tenant_id' => $tenantId],
+                    ['quantite' => 0]
+                );
+
+                $currentQty = (float) $stockLine->quantite;
+                $targetQty = (float) $item['quantite'];
+                $delta = $targetQty - $currentQty;
+
+                if ($delta != 0) {
+                    $typeMouvement = $delta > 0 ? 'ajustement_positif' : 'ajustement_negatif';
+                    $qtyToRecord = abs($delta);
+
+                    $this->stockService->enregistrerMouvement(
+                        $produit->id,
+                        $qtyToRecord,
+                        $typeMouvement,
+                        'INITIALISATION',
+                        null,
+                        $userId,
+                        $tenantId,
+                        $entrepotId
+                    );
+                }
+
+                $count++;
+            }
+        });
+
+        return response()->json([
+            'message' => "Stock initialisé avec succès pour {$count} produit(s)."
         ]);
     }
 }
