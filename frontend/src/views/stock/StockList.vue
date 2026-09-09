@@ -16,6 +16,15 @@
         </div>
       </div>
       <div class="topbar-actions">
+        <button 
+          v-if="auth.hasPermission('stock.initialisation_complete')" 
+          class="btn-danger-custom" 
+          @click="isFullInitModalOpen = true" 
+          title="Initialisation complète du stock"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+          <span>Initialisation complète du stock</span>
+        </button>
         <button class="btn-primary-custom" @click="exportCSV" title="Exporter en CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Exporter CSV</span>
@@ -166,18 +175,28 @@
       @close="isInitModalOpen = false"
       @success="fetchData"
     />
+
+    <StockFullInitModal
+      :is-open="isFullInitModalOpen"
+      :entrepots="entrepots"
+      @close="isFullInitModalOpen = false"
+      @success="fetchData"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import api from '../../services/api'
 import StockActionModal from './StockActionModal.vue'
 import StockHistoryModal from './StockHistoryModal.vue'
 import StockInitModal from './StockInitModal.vue'
+import StockFullInitModal from './StockFullInitModal.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const stock = ref([])
 const entrepots = ref([])
@@ -190,6 +209,7 @@ const selectedWarehouse = ref('')
 const isModalOpen = ref(false)
 const isHistoryOpen = ref(false)
 const isInitModalOpen = ref(false)
+const isFullInitModalOpen = ref(false)
 const modalMode = ref('adjust')
 const selectedStock = ref(null)
 const selectedStockId = ref(null)
@@ -325,11 +345,13 @@ onMounted(fetchData)
 .breadcrumb-current { color: var(--c-text); font-weight: 700; }
 
 .topbar-actions { display: flex; gap: 12px; }
-.btn-primary-custom, .btn-secondary-custom {
+.btn-primary-custom, .btn-secondary-custom, .btn-danger-custom {
   display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
   border-radius: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; cursor: pointer;
   transition: all .2s; outline: none; border: 1.5px solid transparent;
 }
+.btn-danger-custom { background: #DC2626; color: #fff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); }
+.btn-danger-custom:hover { background: #B91C1C; transform: translateY(-1px); }
 .btn-primary-custom { background: var(--c-accent); color: #fff; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2); }
 .btn-primary-custom:hover { background: #0F766E; transform: translateY(-1px); }
 .btn-secondary-custom { background: #fff; color: var(--c-text); border-color: var(--c-border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }

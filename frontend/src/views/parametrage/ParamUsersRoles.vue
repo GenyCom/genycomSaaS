@@ -63,8 +63,8 @@
               <td>{{ user.email }}</td>
               <td>{{ user.telephone || '—' }}</td>
               <td>
-                <span class="role-badge" :class="getRoleBadgeClass(user.role_name)">
-                  {{ user.role_name || 'Utilisateur' }}
+                <span class="role-badge" :class="getRoleBadgeClass(user.role_name || (user.is_owner ? 'Gérant Principal' : ''))">
+                  {{ user.role_name || (user.is_owner ? 'Gérant Principal' : 'Aucun rôle') }}
                 </span>
               </td>
               <td>
@@ -101,13 +101,26 @@
         </button>
       </div>
 
-      <div class="roles-grid">
+      <div v-if="roles.length === 0" class="empty-roles-card">
+        <div class="empty-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3 class="empty-title">Aucun rôle configuré pour votre entreprise</h3>
+        <p class="empty-desc">Par défaut, votre entreprise ne contient aucun rôle. Le Gérant Principal dispose de toutes les habilitations système sans nécessiter de rôle. Créez des rôles personnalisés pour vos sous-comptes employés (ex: Commercial, Magasinier, Comptable...).</p>
+        <button class="btn-primary" @click="openAddRoleModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Créer votre premier rôle</span>
+        </button>
+      </div>
+
+      <div v-else class="roles-grid">
         <div v-for="role in roles" :key="role.id" class="role-card">
           <div class="role-header">
             <div>
               <h4 class="role-title">
                 {{ role.name }}
                 <span v-if="role.is_system" class="system-badge">Système</span>
+                <span v-else class="tenant-badge">Sur-mesure</span>
               </h4>
               <p class="role-desc">{{ role.description || 'Aucune description' }}</p>
             </div>
@@ -125,7 +138,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               <span>Éditer les habilitations</span>
             </button>
-            <button v-if="!role.is_system" class="btn-danger-sm" title="Supprimer" @click="confirmDeleteRole(role)">
+            <button v-if="!role.is_system" class="btn-danger-sm" title="Supprimer" @click="openDeleteRoleModal(role)">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
@@ -172,8 +185,11 @@
             </div>
             <div class="form-group">
               <label>Rôle Attribué *</label>
-              <select v-model="userForm.role_id" required>
-                <option value="" disabled>Sélectionnez un rôle</option>
+              <div v-if="userForm.is_owner" class="owner-role-badge">
+                <span>⭐ Accès Total Gérant (Sans rôle requis)</span>
+              </div>
+              <select v-else v-model="userForm.role_id" required>
+                <option value="" disabled>{{ roles.length === 0 ? 'Aucun rôle disponible' : 'Sélectionnez un rôle' }}</option>
                 <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
               </select>
             </div>
@@ -278,6 +294,80 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ───────────── MODALE AVERTISSEMENT SUPPRESSION RÔLE ───────────── -->
+    <div v-if="deleteRoleModal.show" class="modal-overlay" @click.self="deleteRoleModal.show = false">
+      <div class="modal-card modal-sm delete-role-modal">
+        <div class="modal-header modal-header-danger">
+          <div class="modal-header-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <h3>Avertissement de suppression</h3>
+          </div>
+          <button class="close-btn" @click="deleteRoleModal.show = false">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="warning-banner">
+            <div class="warning-banner-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="warning-banner-content">
+              <h4>Attention : Action irréversible</h4>
+              <p>Vous êtes sur le point de supprimer le rôle <strong>« {{ deleteRoleModal.role?.name }} »</strong>. Cette action retirera définitivement ce rôle ainsi que l'ensemble de ses habilitations associées.</p>
+            </div>
+          </div>
+
+          <!-- Si le rôle est attribué à des sous-comptes -->
+          <div v-if="roleUsersCount > 0" class="role-in-use-alert">
+            <div class="alert-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="alert-text">
+              <strong>Suppression impossible : Rôle en cours d'utilisation</strong>
+              <p>Ce rôle est actuellement attribué à <strong>{{ roleUsersCount }} sous-compte(s)</strong>. Veuillez réattribuer un autre rôle à ces utilisateurs avant de pouvoir le supprimer :</p>
+              <ul class="users-list-badge">
+                <li v-for="u in roleUsersList" :key="u.id">
+                  • <strong>{{ u.prenom }} {{ u.nom }}</strong> ({{ u.email }})
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Si aucun utilisateur n'est attribué -->
+          <div v-else class="role-summary-box">
+            <div class="summary-item">
+              <span class="summary-label">Nom du rôle :</span>
+              <span class="summary-value">{{ deleteRoleModal.role?.name }}</span>
+            </div>
+            <div class="summary-item" v-if="deleteRoleModal.role?.description">
+              <span class="summary-label">Description :</span>
+              <span class="summary-value">{{ deleteRoleModal.role?.description }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Habilitations :</span>
+              <span class="summary-value">{{ deleteRoleModal.role?.permission_ids?.length || 0 }} permission(s)</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Statut sous-comptes :</span>
+              <span class="summary-value success-text">✓ Aucun utilisateur n'est rattaché à ce rôle</span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" @click="deleteRoleModal.show = false">Annuler</button>
+            <button 
+              type="button" 
+              class="btn-danger-submit" 
+              :disabled="deleteRoleModal.loading || roleUsersCount > 0"
+              @click="executeDeleteRole"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>{{ deleteRoleModal.loading ? 'Suppression...' : 'Confirmer la suppression' }}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -394,6 +484,11 @@ function getModuleLabel(moduleName) {
 
 // Users Handlers
 function openAddUserModal() {
+  if (roles.value.length === 0) {
+    showToast('Aucun rôle disponible. Veuillez d\'abord créer au moins un rôle dans l\'onglet "Rôles & Habilitations".', 'error')
+    subTab.value = 'roles'
+    return
+  }
   userForm.value = { id: null, nom: '', prenom: '', email: '', password: '', telephone: '', role_id: roles.value[0]?.id || '', is_active: true, is_owner: false }
   showUserPassword.value = false
   userModal.value = { show: true, isEdit: false }
@@ -510,15 +605,39 @@ async function saveRole() {
   }
 }
 
-async function confirmDeleteRole(role) {
-  if (confirm(`Voulez-vous vraiment supprimer le rôle "${role.name}" ?`)) {
-    try {
-      await api.delete(`/parametrage/roles/${role.id}`)
-      showToast('Rôle supprimé avec succès.')
-      await loadRoles()
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Impossible de supprimer ce rôle.', 'error')
-    }
+const deleteRoleModal = ref({ show: false, role: null, loading: false })
+
+const roleUsersCount = computed(() => {
+  if (!deleteRoleModal.value.role) return 0
+  return users.value.filter(u => String(u.role_id) === String(deleteRoleModal.value.role.id)).length
+})
+
+const roleUsersList = computed(() => {
+  if (!deleteRoleModal.value.role) return []
+  return users.value.filter(u => String(u.role_id) === String(deleteRoleModal.value.role.id))
+})
+
+function openDeleteRoleModal(role) {
+  deleteRoleModal.value = { show: true, role, loading: false }
+}
+
+async function executeDeleteRole() {
+  if (!deleteRoleModal.value.role) return
+  if (roleUsersCount.value > 0) {
+    showToast('Impossible de supprimer un rôle actuellement attribué.', 'error')
+    return
+  }
+
+  deleteRoleModal.value.loading = true
+  try {
+    await api.delete(`/parametrage/roles/${deleteRoleModal.value.role.id}`)
+    showToast('Rôle supprimé avec succès.')
+    deleteRoleModal.value.show = false
+    await loadRoles()
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Impossible de supprimer ce rôle.', 'error')
+  } finally {
+    deleteRoleModal.value.loading = false
   }
 }
 </script>
@@ -590,6 +709,7 @@ async function confirmDeleteRole(role) {
 .role-card { background: #fff; border: 1px solid #E8EAEE; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .role-title { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; color: #1A1D23; display: flex; align-items: center; justify-content: space-between; }
 .system-badge { font-size: 0.65rem; background: #E5E7EB; color: #4B5563; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+.tenant-badge { font-size: 0.65rem; background: #EEF2FF; color: #4F46E5; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; border: 1px solid #C7D2FE; }
 .role-desc { font-size: 0.8rem; color: #6B7280; margin: 0; }
 .permissions-count { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: #4F46E5; }
 .role-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; pt: 10px; border-top: 1px solid #F3F4F6; }
@@ -850,4 +970,176 @@ async function confirmDeleteRole(role) {
 .toast-notification { position: fixed; top: 1.5rem; right: 1.5rem; padding: 1rem 1.5rem; border-radius: 10px; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.15); font-weight: 600; font-size: 0.9rem; }
 .toast-notification.success { background: #10B981; color: #fff; }
 .toast-notification.error { background: #EF4444; color: #fff; }
+
+/* Empty Roles Card & Owner Badge */
+.empty-roles-card {
+  background: #fff;
+  border: 2px dashed #CBD5E1;
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #EEF2FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.empty-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1E293B;
+}
+.empty-desc {
+  max-width: 540px;
+  margin: 0;
+  font-size: 0.88rem;
+  color: #64748B;
+  line-height: 1.5;
+}
+.owner-role-badge {
+  background: #FEF3C7;
+  color: #92400E;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid #FDE68A;
+}
+
+/* Modale Avertissement Suppression Rôle */
+.modal-header-danger {
+  background: linear-gradient(135deg, #FEF2F2, #FEE2E2) !important;
+  border-bottom: 1px solid #FCA5A5 !important;
+}
+.modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-header-title h3 {
+  color: #991B1B !important;
+}
+
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.warning-banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.warning-banner-content h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #B45309;
+}
+.warning-banner-content p {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #92400E;
+  line-height: 1.45;
+}
+
+.role-in-use-alert {
+  display: flex;
+  gap: 12px;
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.role-in-use-alert .alert-icon { flex-shrink: 0; margin-top: 2px; }
+.role-in-use-alert .alert-text strong {
+  color: #991B1B;
+  font-size: 0.88rem;
+  display: block;
+  margin-bottom: 4px;
+}
+.role-in-use-alert .alert-text p {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #B91C1C;
+}
+.users-list-badge {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #7F1D1D;
+}
+
+.role-summary-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.83rem;
+}
+.summary-label {
+  color: #64748B;
+  font-weight: 500;
+}
+.summary-value {
+  color: #0F172A;
+  font-weight: 600;
+}
+.summary-value.success-text {
+  color: #059669;
+}
+
+.btn-danger-submit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #DC2626, #EF4444);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  transition: all 0.2s ease;
+}
+.btn-danger-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
+}
+.btn-danger-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 </style>

@@ -179,15 +179,20 @@ class AuthController extends Controller
             $roleName = 'superadmin';
             $isOwner = true;
             $permissions = DB::connection('central')->table('permissions')->pluck('name')->toArray();
-        } else if ($tenant && $tenant->pivot->role_id) {
-            // Force l'usage de la connexion 'central' pour les rôles
-            $role = DB::connection('central')->table('roles')->where('id', $tenant->pivot->role_id)->first();
-            $roleName = $role?->name;
+        } else if ($tenant) {
             $isOwner = (bool) $tenant->pivot->is_owner;
+
+            if ($tenant->pivot->role_id) {
+                // Force l'usage de la connexion 'central' pour les rôles
+                $role = DB::connection('central')->table('roles')->where('id', $tenant->pivot->role_id)->first();
+                $roleName = $role?->name;
+            } else if ($isOwner) {
+                $roleName = 'Gérant Principal';
+            }
 
             if ($isOwner || strtolower((string)$roleName) === 'admin') {
                 $permissions = DB::connection('central')->table('permissions')->pluck('name')->toArray();
-            } else {
+            } else if ($tenant->pivot->role_id) {
                 $permissions = DB::connection('central')->table('permission_role')
                     ->join('permissions', 'permissions.id', '=', 'permission_role.permission_id')
                     ->where('permission_role.role_id', $tenant->pivot->role_id)

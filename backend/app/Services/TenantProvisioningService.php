@@ -254,26 +254,16 @@ class TenantProvisioningService
                     'has_own_user' => !empty($tenant->db_username),
                 ]);
 
-                // Assignation du rôle admin
-                $this->log('debug', "🔑 Recherche du rôle 'admin'.");
-
-                $adminRole = Role::where('name', 'admin')->first();
-
-                if (!$adminRole) {
-                    $this->log('warning', "⚠️  Rôle 'admin' introuvable en base. Utilisation du role_id=1 par défaut.");
-                } else {
-                    $this->log('debug', "✅ Rôle 'admin' trouvé.", ['role_id' => $adminRole->id]);
-                }
-
+                // Rattachement du gérant (owner = true, role_id = null)
+                // Aucun rôle par défaut n'est généré : le gérant créera lui-même les rôles sur-mesure pour ses sous-comptes.
                 $user->tenants()->attach($tenant->id, [
-                    'role_id'  => $adminRole ? $adminRole->id : 1,
+                    'role_id'  => null,
                     'is_owner' => true,
                 ]);
 
-                $this->log('info', "✅ User attaché au Tenant avec le rôle admin (owner=true).", [
+                $this->log('info', "✅ User attaché au Tenant comme Gérant principal (owner=true, role_id=null).", [
                     'user_id'   => $user->id,
                     'tenant_id' => $tenant->id,
-                    'role_id'   => $adminRole ? $adminRole->id : 1,
                 ]);
 
                 return ['user' => $user, 'tenant' => $tenant];

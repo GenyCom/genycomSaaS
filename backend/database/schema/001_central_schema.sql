@@ -64,11 +64,13 @@ CREATE TABLE IF NOT EXISTS permissions (
 
 CREATE TABLE IF NOT EXISTS roles (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,     -- ex: 'admin', 'commercial'
+    tenant_id BIGINT UNSIGNED NULL,        -- NULL pour les rôles modèles système, tenant_id pour les rôles sur-mesure
+    name VARCHAR(255) NOT NULL,            -- ex: 'admin', 'commercial'
     description VARCHAR(255) NULL,
     is_system TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS permission_role (
@@ -86,7 +88,7 @@ CREATE TABLE IF NOT EXISTS tenant_user (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
-    role_id BIGINT UNSIGNED NOT NULL, -- Le rôle du user spécifique à ce SaaS
+    role_id BIGINT UNSIGNED NULL, -- Le rôle du user spécifique à ce SaaS (NULL pour les gérants/owners)
     is_owner TINYINT(1) DEFAULT 0,    -- Si c'est le gérant du SaaS
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY tenant_user_unique (tenant_id, user_id),
@@ -133,13 +135,6 @@ VALUES ('Com', 'Geny', 'genycomc@gmail.com', '$2y$12$te5iCmRwTmrGf6u/jOuI4.P8xGG
 -- Mdp: password (hashé avec bcrypt, vérifié OK)
 
 -- ------------------------------------------------------------------------------
--- INSERTION DES RÔLES SYSTÈME PAR DÉFAUT
--- ------------------------------------------------------------------------------
-INSERT IGNORE INTO roles (id, name, description, is_system) VALUES 
-(1, 'admin', 'Administrateur complet du tenant', 1),
-(2, 'utilisateur', 'Utilisateur standard', 1);
-
--- ------------------------------------------------------------------------------
 -- INSERTION DES PERMISSIONS (Dictionnaire Central)
 -- ------------------------------------------------------------------------------
 INSERT IGNORE INTO `permissions` (`name`, `display_name`, `module`) VALUES
@@ -173,6 +168,7 @@ INSERT IGNORE INTO `permissions` (`name`, `display_name`, `module`) VALUES
 ('stock.view', 'Voir le stock', 'stock'),
 ('stock.mouvement', 'Effectuer un mouvement de stock', 'stock'),
 ('stock.inventaire', 'Gérer les inventaires', 'stock'),
+('stock.initialisation_complete', 'Initialisation complète du stock', 'stock'),
 ('reglements.view', 'Voir les règlements', 'finances'),
 ('reglements.create', 'Enregistrer un règlement', 'finances'),
 ('depenses.view', 'Voir les dépenses', 'finances'),

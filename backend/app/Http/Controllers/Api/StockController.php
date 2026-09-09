@@ -196,4 +196,138 @@ class StockController extends Controller
             'message' => "Stock initialisé avec succès pour {$count} produit(s)."
         ]);
     }
+
+    public function getFullInitData(Request $request): JsonResponse
+    {
+        $tenantId = $request->get('current_tenant')->id;
+        $defaultEntrepotId = $this->stockService->getDefaultEntrepotId($tenantId);
+        $defaultEntrepot = \App\Models\Entrepot::find($defaultEntrepotId);
+        $defaultEntrepotNom = $defaultEntrepot ? $defaultEntrepot->nom : 'Dépôt Principal';
+
+        $produits = Produit::where('is_service', false)
+            ->with(['stocks.entrepot'])
+            ->orderBy('designation', 'asc')
+            ->get();
+
+        $items = [];
+
+        foreach ($produits as $produit) {
+            if ($produit->stocks && $produit->stocks->count() > 0) {
+                foreach ($produit->stocks as $stock) {
+                    $items[] = [
+                        'produit_id'        => $produit->id,
+                        'entrepot_id'       => $stock->entrepot_id,
+                        'reference'         => $produit->reference,
+                        'designation'       => $produit->designation,
+                        'entrepot_nom'      => $stock->entrepot ? $stock->entrepot->nom : 'Dépôt Inconnu',
+                        'quantite_actuelle' => (float) $stock->quantite,
+                        'quantite'          => 0, // Défaut à 0 comme demandé
+                        'seuil_alerte'      => $produit->seuil_alerte ?? 5,
+                        'emplacement_stock' => $produit->emplacement_stock ?? '',
+                        'selected'          => true,
+                    ];
+                }
+            } else {
+                // Aucun stock encore créé pour ce produit -> Associer au dépôt principal par défaut
+                $items[] = [
+                    'produit_id'        => $produit->id,
+                    'entrepot_id'       => $defaultEntrepotId,
+                    'reference'         => $produit->reference,
+                    'designation'       => $produit->designation,
+                    'entrepot_nom'      => $defaultEntrepotNom,
+                    'quantite_actuelle' => 0,
+                    'quantite'          => 0, // Défaut à 0 comme demandé
+                    'seuil_alerte'      => $produit->seuil_alerte ?? 5,
+                    'emplacement_stock' => $produit->emplacement_stock ?? '',
+                    'selected'          => true,
+                ];
+            }
+        }
+
+        return response()->json([
+            'total' => count($items),
+            'data'  => $items
+        ]);
+    }
+
+    public function fullInitialize(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'items'                     => 'required|array|min:1',
+            'items.*.produit_id'        => 'required|exists:tenant.produits,id',
+            'items.*.entrepot_id'       => 'required|exists:tenant.entrepots,id',
+            'items.*.quantite'          => 'required|numeric|min:0',
+            'items.*.seuil_alerte'      => 'nullable|numeric|min:0',
+            'items.*.emplacement_stock' => 'nullable|string|max:100',
+            'motif'                     => 'nullable|string|max:255',
+        ]);
+
+        $tenantId = $request->get('current_tenant')->id;
+        $userId = auth()->id();
+
+        $updatedLinesCount = 0;
+        $productsSet = [];
+
+        DB::transaction(function () use ($data, $tenantId, $userId, &$updatedLinesCount, &$productsSet) {
+            foreach ($data['items'] as $item) {
+                $entrepotId = $item['entrepot_id'];
+                $produit = Produit::where('id', $item['produit_id'])
+                    ->where('tenant_id', $tenantId)
+                    ->first();
+
+                if (!$produit || $produit->is_service) {
+                    continue;
+                }
+
+                // Métadonnées du produit
+                $updateMeta = [];
+                if (isset($item['seuil_alerte']) && $item['seuil_alerte'] !== null) {
+                    $updateMeta['seuil_alerte'] = $item['seuil_alerte'];
+                }
+                if (isset($item['emplacement_stock']) && $item['emplacement_stock'] !== null) {
+                    $updateMeta['emplacement_stock'] = $item['emplacement_stock'];
+                }
+                if (!empty($updateMeta)) {
+                    $produit->update($updateMeta);
+                }
+
+                // Ligne de stock
+                $stockLine = Stock::firstOrCreate(
+                    ['produit_id' => $produit->id, 'entrepot_id' => $entrepotId, 'tenant_id' => $tenantId],
+                    ['quantite' => 0]
+                );
+
+                $currentQty = (float) $stockLine->quantite;
+                $targetQty = (float) $item['quantite'];
+                $delta = $targetQty - $currentQty;
+
+                if ($delta != 0) {
+                    $typeMouvement = $delta > 0 ? 'ajustement_positif' : 'ajustement_negatif';
+                    $qtyToRecord = abs($delta);
+
+                    $this->stockService->enregistrerMouvement(
+                        $produit->id,
+                        $qtyToRecord,
+                        $typeMouvement,
+                        'INITIALISATION_COMPLETE',
+                        null,
+                        $userId,
+                        $tenantId,
+                        $entrepotId
+                    );
+                }
+
+                $updatedLinesCount++;
+                $productsSet[$produit->id] = true;
+            }
+        });
+
+        $distinctProductsCount = count($productsSet);
+
+        return response()->json([
+            'message' => "Initialisation complète du stock réalisée avec succès pour {$updatedLinesCount} ligne(s) dans {$distinctProductsCount} produit(s).",
+            'lines_count' => $updatedLinesCount,
+            'products_count' => $distinctProductsCount
+        ]);
+    }
 }

@@ -42,6 +42,13 @@ class TenantUserController extends Controller
             )
             ->get();
 
+        $users->transform(function ($u) {
+            if ($u->is_owner && !$u->role_name) {
+                $u->role_name = 'Gérant Principal';
+            }
+            return $u;
+        });
+
         return response()->json($users);
     }
 
@@ -65,6 +72,14 @@ class TenantUserController extends Controller
         ]);
 
         $email = strtolower(trim($validated['email']));
+
+        // Vérifier que le rôle sélectionné appartient au tenant en cours
+        $role = DB::connection('central')->table('roles')->where('id', $validated['role_id'])->first();
+        if (!$role || ($role->tenant_id !== null && (string)$role->tenant_id !== (string)$tenant->id)) {
+            throw ValidationException::withMessages([
+                'role_id' => ['Le rôle sélectionné n\'appartient pas à votre entreprise.'],
+            ]);
+        }
 
         // Vérifier si l'utilisateur existe déjà en central
         $user = User::where('email', $email)->first();
@@ -138,6 +153,10 @@ class TenantUserController extends Controller
             return response()->json(['message' => 'Utilisateur introuvable.'], 404);
         }
 
+        if ($user->is_owner && !$user->role_name) {
+            $user->role_name = 'Gérant Principal';
+        }
+
         return response()->json($user);
     }
 
@@ -161,11 +180,20 @@ class TenantUserController extends Controller
             'nom'       => 'required|string|max:100',
             'prenom'    => 'required|string|max:100',
             'telephone' => 'nullable|string|max:30',
-            'role_id'   => 'required|integer|exists:central.roles,id',
+            'role_id'   => $pivot->is_owner ? 'nullable|integer' : 'required|integer|exists:central.roles,id',
             'is_active' => 'boolean',
         ]);
 
-        // Empêcher la désactivation ou le changement de rôle de l'Owner principal
+        if (!empty($validated['role_id'])) {
+            $role = DB::connection('central')->table('roles')->where('id', $validated['role_id'])->first();
+            if (!$role || ($role->tenant_id !== null && (string)$role->tenant_id !== (string)$tenant->id)) {
+                throw ValidationException::withMessages([
+                    'role_id' => ['Le rôle sélectionné n\'appartient pas à votre entreprise.'],
+                ]);
+            }
+        }
+
+        // Empêcher la désactivation du gérant principal
         if ($pivot->is_owner) {
             $validated['is_active'] = true;
         }
@@ -184,7 +212,7 @@ class TenantUserController extends Controller
             ->where('tenant_id', $tenant->id)
             ->where('user_id', $id)
             ->update([
-                'role_id' => $validated['role_id'],
+                'role_id' => $pivot->is_owner ? ($validated['role_id'] ?? null) : $validated['role_id'],
             ]);
 
         return response()->json(['message' => 'Sous-compte mis à jour avec succès.']);

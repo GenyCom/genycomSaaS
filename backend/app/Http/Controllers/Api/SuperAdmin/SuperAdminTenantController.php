@@ -33,13 +33,19 @@ class SuperAdminTenantController extends Controller
      */
     public function show(Tenant $tenant)
     {
-        // Récupérer les utilisateurs liés au tenant avec leurs rôles respectifs depuis la base centrale
+        // Récupérer les utilisateurs (y compris les gérants/owners) liés au tenant depuis la base centrale
         $users = \Illuminate\Support\Facades\DB::connection('central')->table('tenant_user')
             ->join('users', 'tenant_user.user_id', '=', 'users.id')
-            ->join('roles', 'tenant_user.role_id', '=', 'roles.id')
+            ->leftJoin('roles', 'tenant_user.role_id', '=', 'roles.id')
             ->where('tenant_user.tenant_id', $tenant->id)
             ->select('users.id', 'users.nom', 'users.prenom', 'users.email', 'roles.name as role_name', 'tenant_user.is_owner')
-            ->get();
+            ->get()
+            ->map(function ($u) {
+                if ($u->is_owner && !$u->role_name) {
+                    $u->role_name = 'Gérant (Owner)';
+                }
+                return $u;
+            });
 
         // Calculer dynamiquement la taille de la base de données du tenant
         $dbSize = 0.0;
