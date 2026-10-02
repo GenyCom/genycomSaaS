@@ -257,6 +257,23 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
         Route::put('/cheques/{id}/statut', [ReportingController::class, 'updateChequeStatus']);
     });
 
+    // POS — Point de Vente (Voie Rapide)
+    Route::prefix('pos')->middleware('permission:pos.view')->group(function () {
+        Route::get('/config', [\App\Http\Controllers\Api\PosController::class, 'config']);
+        Route::get('/products', [\App\Http\Controllers\Api\PosController::class, 'products']);
+        Route::get('/product-by-barcode/{barcode}', [\App\Http\Controllers\Api\PosController::class, 'productByBarcode']);
+        Route::get('/payment-modes', [\App\Http\Controllers\Api\PosController::class, 'paymentModes']);
+        Route::get('/history', [\App\Http\Controllers\Api\PosController::class, 'history']);
+        Route::post('/checkout', [\App\Http\Controllers\Api\PosController::class, 'checkout']);
+        Route::get('/sales/{id}', [\App\Http\Controllers\Api\PosController::class, 'saleDetail']);
+        Route::post('/sales/{id}/cancel', [\App\Http\Controllers\Api\PosController::class, 'cancelSale']);
+        Route::put('/sales/{id}/rectify', [\App\Http\Controllers\Api\PosController::class, 'rectifySale']);
+        Route::get('/cloture/current', [\App\Http\Controllers\Api\PosController::class, 'currentClotureSession']);
+        Route::post('/cloture', [\App\Http\Controllers\Api\PosController::class, 'cloturerCaisse']);
+        Route::get('/cloture/history', [\App\Http\Controllers\Api\PosController::class, 'clotureHistory']);
+        Route::get('/cloture/{id}', [\App\Http\Controllers\Api\PosController::class, 'clotureDetail']);
+    });
+
 });
 
 // Debug route – temporary

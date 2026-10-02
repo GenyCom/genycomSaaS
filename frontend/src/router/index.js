@@ -9,6 +9,19 @@ const routes = [
     meta: { guest: true },
   },
   {
+    path: '/pos',
+    component: () => import('../layouts/PosLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'PointDeVente',
+        component: () => import('../views/pos/PointDeVente.vue'),
+        meta: { permission: 'pos.view' }
+      },
+    ],
+  },
+  {
     path: '/print/ticket/:id',
     name: 'FactureTicket',
     component: () => import('../views/factures/FactureTicket.vue'),
@@ -134,6 +147,7 @@ export function getFirstAccessiblePath(auth) {
   
   const priorityRoutes = [
     { perm: 'dashboard.view', path: '/dashboard' },
+    { perm: 'pos.view', path: '/pos' },
     { perm: 'clients.view', path: '/clients' },
     { perm: 'devis.view', path: '/devis' },
     { perm: 'factures.view', path: '/factures' },
@@ -176,7 +190,7 @@ router.beforeEach((to, from, next) => {
       return next({ name: 'Login' })
     }
     // Sécurité de cloisonnement des périmètres :
-    if (auth.user?.is_superadmin && !to.path.startsWith('/superadmin')) {
+    if (auth.user?.is_superadmin && !to.path.startsWith('/superadmin') && !to.path.startsWith('/pos') && !to.path.startsWith('/print')) {
       return next({ name: 'SuperAdminHome' })
     }
     if (!auth.user?.is_superadmin && to.path.startsWith('/superadmin')) {
