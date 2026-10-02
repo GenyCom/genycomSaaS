@@ -43,7 +43,7 @@
         <input
           ref="barcodeInput"
           v-model="searchQuery"
-          @keydown.enter="handleBarcodeOrSearch"
+          @keydown.enter.prevent="handleBarcodeOrSearch"
           type="text"
           placeholder="Scanner ou rechercher un produit..."
           class="pos-search-input"
@@ -998,117 +998,168 @@
       <Transition name="modal">
         <div v-if="showDetailModal" class="pos-modal-overlay" @click.self="showDetailModal = false">
           <div class="pos-detail-modal">
+            <!-- Header -->
             <div class="pos-detail-header">
               <div class="pos-detail-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <span>Détail de la Vente #{{ selectedSaleDetail?.numero || '...' }}</span>
-                <span v-if="selectedSaleDetail?.est_annulee" class="pos-detail-status-pill danger">ANNULÉE</span>
-                <span v-else class="pos-detail-status-pill success">PAYÉE</span>
+                <div class="pos-detail-title-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div class="pos-detail-header-text">
+                  <div class="pos-detail-main-heading">Détail de la Vente</div>
+                  <div class="pos-detail-sub-heading">#{{ selectedSaleDetail?.numero || '...' }}</div>
+                </div>
+                <span v-if="selectedSaleDetail?.est_annulee" class="pos-detail-status-pill danger">
+                  <span class="status-dot"></span>ANNULÉE
+                </span>
+                <span v-else class="pos-detail-status-pill success">
+                  <span class="status-dot"></span>PAYÉE
+                </span>
               </div>
-              <button class="pos-modal-close" @click="showDetailModal = false">✕</button>
+              <button class="pos-modal-close" @click="showDetailModal = false" title="Fermer">✕</button>
             </div>
 
+            <!-- Body -->
             <div class="pos-detail-body">
               <div v-if="loadingSaleDetail" class="pos-history-loading">
                 <div class="pos-spinner"></div>
                 <span>Chargement des détails...</span>
               </div>
               <div v-else-if="selectedSaleDetail" class="pos-detail-content">
-                <!-- Meta Info Strip -->
+                <!-- Meta Info Cards Grid -->
                 <div class="pos-detail-meta-grid">
                   <div class="pos-detail-meta-item">
-                    <span class="lbl">Date & Heure</span>
-                    <span class="val">{{ selectedSaleDetail.datetime || selectedSaleDetail.date_facture }} {{ selectedSaleDetail.heure }}</span>
+                    <div class="pos-detail-meta-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div class="pos-detail-meta-info">
+                      <span class="pos-detail-meta-label">Date & Heure</span>
+                      <span class="pos-detail-meta-value">{{ formatSaleDateTime(selectedSaleDetail) }}</span>
+                    </div>
                   </div>
+
                   <div class="pos-detail-meta-item">
-                    <span class="lbl">Caissier</span>
-                    <span class="val">{{ selectedSaleDetail.caissier || 'Caissier' }}</span>
+                    <div class="pos-detail-meta-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="pos-detail-meta-info">
+                      <span class="pos-detail-meta-label">Caissier</span>
+                      <span class="pos-detail-meta-value">{{ selectedSaleDetail.caissier || 'Caissier' }}</span>
+                    </div>
                   </div>
+
                   <div class="pos-detail-meta-item">
-                    <span class="lbl">Mode de Paiement</span>
-                    <span class="val accent">{{ selectedSaleDetail.mode_paiement }}</span>
+                    <div class="pos-detail-meta-icon accent">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <div class="pos-detail-meta-info">
+                      <span class="pos-detail-meta-label">Mode de Paiement</span>
+                      <span class="pos-detail-meta-value accent">{{ selectedSaleDetail.mode_paiement }}</span>
+                    </div>
                   </div>
+
                   <div class="pos-detail-meta-item">
-                    <span class="lbl">Client</span>
-                    <span class="val">{{ selectedSaleDetail.client?.societe || selectedSaleDetail.client?.nom || 'Client Comptoir' }}</span>
+                    <div class="pos-detail-meta-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-3-3.87"/><path d="M9 21v-2a4 4 0 0 1 3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="pos-detail-meta-info">
+                      <span class="pos-detail-meta-label">Client</span>
+                      <span class="pos-detail-meta-value">{{ selectedSaleDetail.client?.societe || selectedSaleDetail.client?.nom || 'Client Comptoir' }}</span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Articles Table -->
-                <div class="pos-detail-table-wrapper">
-                  <table class="pos-detail-table">
-                    <thead>
-                      <tr>
-                        <th>Désignation</th>
-                        <th class="text-right">P.U TTC</th>
-                        <th class="text-center">Qté</th>
-                        <th class="text-right">TVA</th>
-                        <th class="text-right">Total TTC</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="l in selectedSaleDetail.lignes" :key="l.id">
-                        <td>
-                          <div class="pos-detail-line-name">{{ l.designation }}</div>
-                          <div v-if="l.reference" class="pos-detail-line-ref">Réf: {{ l.reference }}</div>
-                        </td>
-                        <td class="text-right">{{ formatPrice(l.prix_unitaire) }}</td>
-                        <td class="text-center font-bold">{{ l.quantite }}</td>
-                        <td class="text-right">{{ l.taux_tva }}%</td>
-                        <td class="text-right font-bold">{{ formatPrice(l.total_ttc) }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Totals Summary -->
-                <div class="pos-detail-totals-box">
-                  <div class="pos-detail-total-row">
-                    <span>Total HT</span>
-                    <span>{{ formatPrice(selectedSaleDetail.total_ht) }}</span>
+                <!-- Articles Section -->
+                <div class="pos-detail-section">
+                  <div class="pos-detail-section-head">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                    <span>Articles Vendus ({{ selectedSaleDetail.lignes?.length || 0 }})</span>
                   </div>
-                  <div class="pos-detail-total-row">
-                    <span>Total TVA</span>
-                    <span>{{ formatPrice(selectedSaleDetail.total_tva) }}</span>
-                  </div>
-                  <div class="pos-detail-total-row grand-total">
-                    <span>TOTAL TTC</span>
-                    <span>{{ formatPrice(selectedSaleDetail.total_ttc) }}</span>
+                  <div class="pos-detail-table-wrap">
+                    <table class="pos-detail-table">
+                      <thead>
+                        <tr>
+                          <th class="col-product">Désignation</th>
+                          <th class="col-price">P.U TTC</th>
+                          <th class="col-qty">Qté</th>
+                          <th class="col-tva">TVA</th>
+                          <th class="col-total">Total TTC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(l, idx) in selectedSaleDetail.lignes" :key="l.id || idx" :class="{ 'row-alt': idx % 2 === 1 }">
+                          <td class="col-product">
+                            <div class="pos-detail-prod-name">{{ l.designation }}</div>
+                            <div v-if="l.reference" class="pos-detail-prod-ref">Réf: {{ l.reference }}</div>
+                          </td>
+                          <td class="col-price">{{ formatPrice(l.prix_unitaire) }}</td>
+                          <td class="col-qty">
+                            <span class="pos-detail-qty-badge">{{ l.quantite }}</span>
+                          </td>
+                          <td class="col-tva">{{ l.taux_tva }}%</td>
+                          <td class="col-total">{{ formatPrice(l.total_ttc) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                <!-- Observations / Audit trail -->
-                <div v-if="selectedSaleDetail.observations" class="pos-detail-obs-box">
-                  <label class="pos-obs-title">Historique / Observations</label>
-                  <pre class="pos-obs-text">{{ selectedSaleDetail.observations }}</pre>
+                <!-- Totals Grid -->
+                <div class="pos-detail-totals">
+                  <div class="pos-detail-totals-grid">
+                    <div class="pos-detail-total-line">
+                      <span class="pos-detail-total-label">Total HT</span>
+                      <span class="pos-detail-total-amount">{{ formatPrice(selectedSaleDetail.total_ht) }}</span>
+                    </div>
+                    <div class="pos-detail-total-line">
+                      <span class="pos-detail-total-label">Total TVA</span>
+                      <span class="pos-detail-total-amount">{{ formatPrice(selectedSaleDetail.total_tva) }}</span>
+                    </div>
+                    <div class="pos-detail-total-line grand">
+                      <span class="pos-detail-total-label">TOTAL TTC</span>
+                      <span class="pos-detail-total-amount">{{ formatPrice(selectedSaleDetail.total_ttc) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Observations -->
+                <div v-if="selectedSaleDetail.observations" class="pos-detail-observations">
+                  <div class="pos-detail-obs-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Historique / Observations</span>
+                  </div>
+                  <div class="pos-detail-obs-content">{{ selectedSaleDetail.observations }}</div>
                 </div>
               </div>
             </div>
 
+            <!-- Footer -->
             <div class="pos-detail-footer">
-              <button class="pos-detail-btn secondary" @click="showDetailModal = false">
+              <button class="pos-detail-action close" @click="showDetailModal = false">
                 Fermer
               </button>
-              <button v-if="selectedSaleDetail" class="pos-detail-btn primary" @click="printHistorySale(selectedSaleDetail.id)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                <span>Imprimer Ticket</span>
-              </button>
-              <button
-                v-if="selectedSaleDetail && !selectedSaleDetail.est_annulee"
-                class="pos-detail-btn warning"
-                @click="startRectifySale(selectedSaleDetail)"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                <span>Rectifier la vente</span>
-              </button>
-              <button
-                v-if="selectedSaleDetail && !selectedSaleDetail.est_annulee"
-                class="pos-detail-btn danger"
-                @click="openCancelModal(selectedSaleDetail)"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                <span>Annuler la vente</span>
-              </button>
+
+              <div class="pos-detail-footer-actions">
+                <button v-if="selectedSaleDetail" class="pos-detail-action print" @click="printHistorySale(selectedSaleDetail.id)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  <span>Imprimer Ticket</span>
+                </button>
+                <button
+                  v-if="selectedSaleDetail && !selectedSaleDetail.est_annulee"
+                  class="pos-detail-action rectify"
+                  @click="startRectifySale(selectedSaleDetail)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <span>Rectifier la vente</span>
+                </button>
+                <button
+                  v-if="selectedSaleDetail && !selectedSaleDetail.est_annulee"
+                  class="pos-detail-action cancel"
+                  @click="openCancelModal(selectedSaleDetail)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span>Annuler la vente</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1340,8 +1391,9 @@ const monnaie = computed(() => {
 
 const resteAPayer = computed(() => {
   if (paymentMode.value !== 'especes') return 0
-  if (!montantRecu.value || montantRecu.value.trim() === '') return 0
-  const recu = parseFloat(montantRecu.value)
+  const str = String(montantRecu.value ?? '').trim()
+  if (!str) return 0
+  const recu = parseFloat(str)
   if (isNaN(recu)) return totalTTC.value
   return Math.max(0, Math.round((totalTTC.value - recu) * 100) / 100)
 })
@@ -1350,8 +1402,9 @@ const canCheckout = computed(() => {
   if (cart.value.length === 0) return false
   if (paymentMode.value === 'especes') {
     // Si vide ou non renseigné, le montant exact est pris en compte par défaut
-    if (!montantRecu.value || montantRecu.value.trim() === '') return true
-    const recu = parseFloat(montantRecu.value)
+    const str = String(montantRecu.value ?? '').trim()
+    if (!str) return true
+    const recu = parseFloat(str)
     return !isNaN(recu) && recu >= (totalTTC.value - 0.009)
   }
   return true // carte, cheque, virement = toujours valide
@@ -1468,6 +1521,30 @@ function formatPrice(n) {
   }).format(n || 0) + (deviseSymbole.value ? ' ' + deviseSymbole.value : '')
 }
 
+function formatSaleDateTime(sale) {
+  if (!sale) return ''
+  let dateStr = sale.datetime || sale.date_facture || sale.created_at || ''
+  if (!dateStr) return ''
+
+  if (dateStr.includes('T')) {
+    const d = new Date(dateStr)
+    if (!isNaN(d)) {
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const year = d.getFullYear()
+      const hours = String(d.getHours()).padStart(2, '0')
+      const mins = String(d.getMinutes()).padStart(2, '0')
+      return `${day}/${month}/${year} à ${hours}:${mins}`
+    }
+  }
+
+  const timeStr = sale.heure ? String(sale.heure).trim() : ''
+  if (timeStr && !dateStr.includes(timeStr)) {
+    return `${dateStr} à ${timeStr}`
+  }
+  return dateStr
+}
+
 function getProductImageUrl(path) {
   if (!path) return null
   if (path.startsWith('blob:') || path.startsWith('http://') || path.startsWith('https://')) {
@@ -1496,20 +1573,54 @@ async function loadProducts() {
   }
 }
 
-async function handleBarcodeOrSearch() {
+async function handleBarcodeOrSearch(e) {
+  if (e && e.preventDefault) e.preventDefault()
   const query = searchQuery.value.trim()
   if (!query) return
 
-  // Try barcode lookup first
-  try {
-    const { data } = await api.get(`/pos/product-by-barcode/${encodeURIComponent(query)}`)
-    if (data && data.id) {
-      addToCart(data)
-      searchQuery.value = ''
-      return
+  const queryLower = query.toLowerCase()
+
+  // 1. Try local exact match on code_barre, reference, or ID
+  let match = products.value.find(p =>
+    (p.code_barre && p.code_barre.trim().toLowerCase() === queryLower) ||
+    (p.reference && p.reference.trim().toLowerCase() === queryLower) ||
+    (String(p.id) === query)
+  )
+
+  // 2. If not found locally, query backend API
+  if (!match) {
+    try {
+      const { data } = await api.get(`/pos/product-by-barcode/${encodeURIComponent(query)}`)
+      if (data && data.id) {
+        match = data
+        if (!products.value.some(p => p.id === data.id)) {
+          products.value.push(data)
+        }
+      }
+    } catch {
+      // API call returned 404 or failed
     }
-  } catch {
-    // Not a barcode — it's a text search, already handled by filteredProducts
+  }
+
+  // 3. Fallback: if filtered list has exactly 1 matching item, use that!
+  if (!match && filteredProducts.value.length === 1) {
+    match = filteredProducts.value[0]
+  }
+
+  // 4. If a product was matched, add it to cart and clear search input
+  if (match) {
+    addToCart(match)
+    searchQuery.value = ''
+    nextTick(() => {
+      barcodeInput.value?.focus()
+    })
+  } else {
+    // If no match found at all, warn user and clear search query to prevent barcode concatenation
+    toast.warning(`Aucun produit trouvé pour "${query}"`)
+    searchQuery.value = ''
+    nextTick(() => {
+      barcodeInput.value?.focus()
+    })
   }
 }
 
@@ -1599,12 +1710,13 @@ function handleEnterKey() {
 }
 
 function handleNumpad(key) {
-  if (key === '⌫' || key === '⌫') {
-    montantRecu.value = (montantRecu.value || '').slice(0, -1)
-  } else if (key === '.' && (montantRecu.value || '').includes('.')) {
+  const current = String(montantRecu.value ?? '')
+  if (key === '⌫') {
+    montantRecu.value = current.slice(0, -1)
+  } else if (key === '.' && current.includes('.')) {
     return
   } else {
-    montantRecu.value = (montantRecu.value || '') + key
+    montantRecu.value = current + key
   }
 }
 
@@ -2063,6 +2175,8 @@ onUnmounted(() => {
    ═══════════════════════════════════════════════════════════════ */
 
 .pos-screen {
+  position: relative;
+  box-sizing: border-box;
   display: flex;
   height: 100vh;
   width: 100vw;
@@ -2070,6 +2184,7 @@ onUnmounted(() => {
   font-family: 'Inter', -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+  transition: padding-top 0.2s ease;
 }
 
 /* ─── LEFT PANEL — CART ─────────────────────────────────────── */
@@ -4243,19 +4358,26 @@ onUnmounted(() => {
 }
 
 /* ─── Rectification Mode Styles ─── */
+/* ─── Rectification Mode Styles ─── */
 .pos-screen.is-rectifying-mode {
-  border-top: 3px solid #f59e0b;
+  padding-top: 48px;
 }
 
 .pos-rectify-top-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 0 20px;
   background: linear-gradient(90deg, #92400e 0%, #b45309 50%, #d97706 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25);
-  z-index: 50;
+  box-shadow: 0 4px 14px rgba(180, 83, 9, 0.35);
+  z-index: 100;
+  box-sizing: border-box;
   animation: slideDown 0.2s ease-out;
 }
 
@@ -4268,27 +4390,33 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .pos-rectify-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   background: #fef3c7;
   color: #78350f;
   font-size: 0.75rem;
   font-weight: 900;
   border-radius: 20px;
   letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pos-rectify-text {
+  font-weight: 500;
 }
 
 .pos-rectify-diff-pill {
-  padding: 3px 10px;
+  padding: 3px 12px;
   border-radius: 12px;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 .pos-rectify-diff-pill.positive {
   background: #dcfce7;
@@ -4299,37 +4427,44 @@ onUnmounted(() => {
   color: #b91c1c;
 }
 .pos-rectify-diff-pill.neutral {
-  background: #e2e8f0;
+  background: #f1f5f9;
   color: #334155;
 }
 
 .pos-rectify-abort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 14px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.25);
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .pos-rectify-abort-btn:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   border-color: #ffffff;
+  transform: translateY(-1px);
+}
+.pos-rectify-abort-btn:active {
+  transform: translateY(0);
 }
 
 .pos-rectify-summary-box {
-  margin: 12px 0;
-  padding: 14px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  margin: 14px 0;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.04) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 12px;
   color: #92400e;
 }
 .dark .pos-rectify-summary-box {
-  background: rgba(180, 83, 9, 0.15);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.2) 0%, rgba(120, 53, 15, 0.1) 100%);
+  border-color: rgba(245, 158, 11, 0.35);
   color: #fef3c7;
 }
 
@@ -4339,23 +4474,33 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 0.88rem;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  color: #d97706;
+}
+.dark .pos-rectify-box-header {
+  color: #fbbf24;
 }
 
 .pos-rectify-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.84rem;
+  background: var(--bg-card);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .pos-rectify-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 .pos-rectify-row.highlight {
-  padding-top: 6px;
-  border-top: 1px stroke #fcd34d;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--border-color);
   font-weight: 700;
 }
 
@@ -4485,197 +4630,414 @@ onUnmounted(() => {
 /* ─── SALE DETAIL MODAL ─── */
 .pos-detail-modal {
   background: var(--bg-card);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  width: 650px;
+  border-radius: 20px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+  width: 680px;
   max-width: 95vw;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
 }
 
 .pos-detail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 18px 24px;
   border-bottom: 1px solid var(--border-color);
+  background: var(--subtle);
 }
 
 .pos-detail-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+.pos-detail-title-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
+}
+.pos-detail-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pos-detail-main-heading {
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-primary);
+  line-height: 1.2;
+}
+.pos-detail-sub-heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-family: monospace;
 }
 
 .pos-detail-status-pill {
-  padding: 3px 10px;
-  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
   font-size: 0.72rem;
   font-weight: 900;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+.pos-detail-status-pill .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
 }
 .pos-detail-status-pill.success {
   background: #dcfce7;
   color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.pos-detail-status-pill.success .status-dot {
+  background: #16a34a;
+  box-shadow: 0 0 6px #16a34a;
 }
 .pos-detail-status-pill.danger {
   background: #fee2e2;
   color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+.pos-detail-status-pill.danger .status-dot {
+  background: #dc2626;
 }
 
 .pos-detail-body {
-  padding: 20px;
+  padding: 22px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
+.pos-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Meta Cards Grid ── */
 .pos-detail-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--subtle);
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
+  gap: 10px;
 }
 
 .pos-detail-meta-item {
   display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--subtle);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+.pos-detail-meta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.pos-detail-meta-icon.accent {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border-color));
+}
+
+.pos-detail-meta-info {
+  display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
-.pos-detail-meta-item .lbl {
-  font-size: 0.72rem;
+.pos-detail-meta-label {
+  font-size: 0.68rem;
+  font-weight: 700;
   color: var(--text-muted);
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.pos-detail-meta-item .val {
-  font-size: 0.88rem;
+.pos-detail-meta-value {
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.pos-detail-table-wrapper {
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.pos-detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
-}
-.pos-detail-table th {
-  background: var(--subtle);
-  padding: 10px 14px;
-  font-weight: 800;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
-}
-.pos-detail-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-.pos-detail-line-name {
-  font-weight: 700;
-}
-.pos-detail-line-ref {
-  font-size: 0.74rem;
-  color: var(--text-muted);
-}
-
-.pos-detail-totals-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-self: flex-end;
-  width: 260px;
-  padding: 12px 16px;
-  background: var(--subtle);
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  font-size: 0.85rem;
-}
-
-.pos-detail-total-row {
-  display: flex;
-  justify-content: space-between;
-}
-.pos-detail-total-row.grand-total {
-  padding-top: 6px;
-  border-top: 1px solid var(--border-color);
-  font-weight: 900;
-  font-size: 0.98rem;
+.pos-detail-meta-value.accent {
   color: var(--accent);
 }
 
-.pos-detail-obs-box {
+/* ── Section Header (Articles) ── */
+.pos-detail-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 10px;
+  gap: 8px;
 }
-.pos-obs-title {
-  font-size: 0.74rem;
-  font-weight: 800;
-  color: #d97706;
-}
-.pos-obs-text {
-  font-family: monospace;
-  font-size: 0.8rem;
-  margin: 0;
-  white-space: pre-wrap;
-  color: var(--text-primary);
+.pos-detail-section-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 2px;
 }
 
-.pos-detail-footer {
+/* ── Articles Table ── */
+.pos-detail-table-wrap {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.pos-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  table-layout: fixed;
+}
+.pos-detail-table th {
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+.pos-detail-table td {
+  padding: 11px 14px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.pos-detail-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.1s;
+}
+.pos-detail-table tbody tr:last-child {
+  border-bottom: none;
+}
+.pos-detail-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+.pos-detail-table tbody tr.row-alt {
+  background: color-mix(in srgb, var(--subtle) 50%, transparent);
+}
+.pos-detail-table tbody tr.row-alt:hover {
+  background: color-mix(in srgb, var(--accent) 5%, var(--subtle));
+}
+
+/* Column widths */
+.pos-detail-table .col-product { width: auto; text-align: left; }
+.pos-detail-table .col-price { width: 110px; text-align: right; }
+.pos-detail-table .col-qty { width: 60px; text-align: center; }
+.pos-detail-table .col-tva { width: 65px; text-align: right; }
+.pos-detail-table .col-total { width: 120px; text-align: right; font-weight: 700; }
+
+.pos-detail-prod-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.pos-detail-prod-ref {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 1px;
+}
+.pos-detail-qty-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--subtle));
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+/* ── Totals ── */
+.pos-detail-totals {
   display: flex;
-  gap: 10px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
   justify-content: flex-end;
 }
+.pos-detail-totals-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 260px;
+  padding: 14px 18px;
+  background: var(--subtle);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+.pos-detail-total-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pos-detail-total-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.pos-detail-total-amount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.pos-detail-total-line.grand {
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 2px solid var(--border-color);
+}
+.pos-detail-total-line.grand .pos-detail-total-label {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+.pos-detail-total-line.grand .pos-detail-total-amount {
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
 
-.pos-detail-btn {
+/* ── Observations ── */
+.pos-detail-observations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(245, 158, 11, 0.03));
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 12px;
+}
+.pos-detail-obs-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #d97706;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pos-detail-obs-content {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Footer ── */
+.pos-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--subtle);
+}
+.pos-detail-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pos-detail-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 0.84rem;
-  font-weight: 800;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  border: none;
-  transition: all 0.15s;
+  border: 1px solid transparent;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
-.pos-detail-btn.secondary {
-  background: var(--subtle);
+.pos-detail-action:active {
+  transform: scale(0.97);
+}
+
+.pos-detail-action.close {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+.pos-detail-action.close:hover {
+  background: var(--border-color);
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
 }
-.pos-detail-btn.primary {
-  background: var(--accent);
+
+.pos-detail-action.print {
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.18);
+}
+.pos-detail-action.print:hover {
+  background: #2563eb;
   color: white;
+  border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
-.pos-detail-btn.warning {
+
+.pos-detail-action.rectify {
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.18);
+}
+.pos-detail-action.rectify:hover {
   background: #d97706;
   color: white;
+  border-color: #d97706;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
 }
-.pos-detail-btn.danger {
+
+.pos-detail-action.cancel {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.18);
+}
+.pos-detail-action.cancel:hover {
   background: #dc2626;
   color: white;
+  border-color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
 }
 
 /* ─── CANCELLATION MODAL ─── */

@@ -54,15 +54,20 @@ class PosController extends Controller
      * GET /api/pos/product-by-barcode/{barcode}
      * Find a product by barcode for scanner input.
      */
-    public function productByBarcode(string $barcode): JsonResponse
+    public function productByBarcode(Request $request, string $barcode): JsonResponse
     {
+        $barcodeClean = trim($barcode);
+
         $product = Produit::select([
                 'id', 'reference', 'code_barre', 'designation', 'prix_ttc_vente',
                 'prix_ht_vente', 'taux_tva', 'stock_actuel', 'is_service',
                 'famille_id', 'image_path', 'unite',
             ])
             ->where('is_actif', true)
-            ->where('code_barre', $barcode)
+            ->where(function ($q) use ($barcodeClean) {
+                $q->where('code_barre', $barcodeClean)
+                  ->orWhere('reference', $barcodeClean);
+            })
             ->with('famille:id,libelle')
             ->first();
 
