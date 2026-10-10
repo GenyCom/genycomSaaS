@@ -71,11 +71,41 @@ class PosController extends Controller
             ->with('famille:id,libelle')
             ->first();
 
-        if (!$product) {
-            return response()->json(['message' => 'Produit non trouvé pour ce code-barres.'], 404);
+        if ($product) {
+            return response()->json($product);
         }
 
-        return response()->json($product);
+        // Support code-barres poids variable balances de pesée (EAN-13 commençant par 20 à 29)
+        // Format GS1 interne : Préfixe (2 chiffres) + Code article (4 à 5 chiffres) + Poids en grammes (5 chiffres) + Clé
+        if (strlen($barcodeClean) === 13 && in_array(substr($barcodeClean, 0, 2), ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29'])) {
+            $prefix = substr($barcodeClean, 0, 2);
+            $articleCode5 = substr($barcodeClean, 2, 5);
+            $weightInGrams5 = (int) substr($barcodeClean, 7, 5);
+            $articleCode4 = substr($barcodeClean, 2, 4);
+
+            $productWeighed = Produit::select([
+                    'id', 'reference', 'code_barre', 'designation', 'prix_ttc_vente',
+                    'prix_ht_vente', 'taux_tva', 'stock_actuel', 'is_service',
+                    'famille_id', 'image_path', 'unite',
+                ])
+                ->where('is_actif', true)
+                ->where(function ($q) use ($articleCode5, $articleCode4, $prefix) {
+                    $q->where('code_barre', 'like', $prefix . $articleCode5 . '%')
+                      ->orWhere('code_barre', 'like', $prefix . $articleCode4 . '%')
+                      ->orWhere('reference', $articleCode5)
+                      ->orWhere('reference', $articleCode4);
+                })
+                ->with('famille:id,libelle')
+                ->first();
+
+            if ($productWeighed) {
+                $weightKg = round($weightInGrams5 / 1000, 3);
+                $productWeighed->weighed_quantity = $weightKg > 0 ? $weightKg : 1.000;
+                return response()->json($productWeighed);
+            }
+        }
+
+        return response()->json(['message' => 'Produit non trouvé pour ce code-barres.'], 404);
     }
 
     /**
@@ -122,16 +152,26 @@ class PosController extends Controller
                   });
             });
 
-        if ($startDate && $endDate) {
-            $from = Carbon::parse($startDate)->startOfDay();
-            $to = Carbon::parse($endDate)->endOfDay();
-            $query->where(function ($q) use ($from, $to) {
-                $q->whereBetween('created_at', [$from, $to])
-                  ->orWhere(function ($sub) use ($from, $to) {
-                      $sub->whereNull('created_at')
-                          ->whereBetween('date_facture', [$from->toDateString(), $to->toDateString()]);
-                  });
-            });
+        if (!empty($startDate) || !empty($endDate)) {
+            try {
+                $startStr = !empty($startDate) ? $startDate : $endDate;
+                $endStr   = !empty($endDate) ? $endDate : $startDate;
+                $from = Carbon::parse($startStr)->startOfDay();
+                $to   = Carbon::parse($endStr)->endOfDay();
+                if ($from > $to) {
+                    [$from, $to] = [$to, $from];
+                }
+                $query->where(function ($q) use ($from, $to) {
+                    $q->whereBetween('created_at', [$from, $to])
+                      ->orWhere(function ($sub) use ($from, $to) {
+                          $sub->whereNull('created_at')
+                              ->whereBetween('date_facture', [$from->toDateString(), $to->toDateString()]);
+                      });
+                });
+            } catch (\Throwable $e) {
+                $today = Carbon::today();
+                $query->whereDate('created_at', $today);
+            }
         } elseif ($period === 'today') {
             $today = Carbon::today();
             $query->where(function ($q) use ($today) {
@@ -210,7 +250,7 @@ class PosController extends Controller
                     'total_ttc'      => (float) $f->total_ttc,
                     'total_ht'       => (float) $f->total_ht,
                     'total_tva'      => (float) $f->total_tva,
-                    'nb_articles'    => (int) $f->lignes->sum('quantite'),
+                    'nb_articles'    => (float) round($f->lignes->sum('quantite'), 3),
                     'mode_paiement'  => ucfirst($mode),
                     'est_reglee'     => (bool) $f->est_reglee,
                     'est_annulee'    => $estAnnulee,
@@ -245,11 +285,14 @@ class PosController extends Controller
             'lignes.*.produit_fini_id' => 'nullable|integer',
             'lignes.*.is_produit_fini' => 'nullable|boolean',
             'lignes.*.designation'   => 'required|string|max:255',
-            'lignes.*.quantite'      => 'required|numeric|min:0.01',
+            'lignes.*.quantite'      => 'required|numeric|min:0.001',
+            'lignes.*.unite'         => 'nullable|string|max:50',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            'lignes.*.prix_ttc'      => 'nullable|numeric|min:0',
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
             'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
             'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
+            'prix_is_ttc'            => 'nullable|boolean',
             'mode_paiement'          => 'required|string|in:especes,carte,cheque,virement,mixte',
             'mode_reglement_id'      => 'nullable|integer',
             'montant_recu'           => 'nullable|numeric|min:0',
@@ -307,7 +350,10 @@ class PosController extends Controller
                 ]);
 
                 // 5. Create Line Items
+                $globalIsTtc = !empty($data['prix_is_ttc']);
                 foreach ($data['lignes'] as $index => $ligneData) {
+                    $puHt = $this->resolvePrixUnitaireHt($ligneData, $globalIsTtc);
+
                     LigneFacture::create([
                         'tenant_id'       => $tenantId,
                         'facture_id'      => $facture->id,
@@ -316,7 +362,8 @@ class PosController extends Controller
                         'is_produit_fini' => $ligneData['is_produit_fini'] ?? false,
                         'designation'     => $ligneData['designation'],
                         'quantite'        => $ligneData['quantite'],
-                        'prix_unitaire'   => $ligneData['prix_unitaire'],
+                        'unite'           => $ligneData['unite'] ?? null,
+                        'prix_unitaire'   => $puHt,
                         'taux_tva'        => $ligneData['taux_tva'],
                         'remise_pourcent' => $ligneData['remise_pourcent'] ?? 0,
                         'remise_montant'  => $ligneData['remise_montant'] ?? 0,
@@ -471,21 +518,29 @@ class PosController extends Controller
             'client'             => $facture->client,
             'caissier'           => $facture->createur ? trim(($facture->createur->prenom ?? '') . ' ' . ($facture->createur->nom ?? '')) : 'Caissier',
             'lignes'             => $facture->lignes->map(function ($l) {
+                $puHt  = (float) $l->prix_unitaire;
+                $taux  = (float) $l->taux_tva;
+                $qty   = (float) $l->quantite;
+                $puTtc = $qty > 0 ? round(((float)$l->montant_ttc) / $qty, 2) : round($puHt * (1 + ($taux / 100)), 2);
+
                 return [
-                    'id'              => $l->id,
-                    'produit_id'      => $l->produit_id,
-                    'produit_fini_id' => $l->produit_fini_id,
-                    'is_produit_fini' => (bool) $l->is_produit_fini,
-                    'designation'     => $l->designation,
-                    'reference'       => $l->produit?->reference ?? '',
-                    'code_barre'      => $l->produit?->code_barre ?? '',
-                    'quantite'        => (float) $l->quantite,
-                    'prix_unitaire'   => (float) $l->prix_unitaire,
-                    'taux_tva'        => (float) $l->taux_tva,
-                    'remise_pourcent' => (float) $l->remise_pourcent,
-                    'remise_montant'  => (float) $l->remise_montant,
-                    'total_ht'        => (float) $l->montant_ht,
-                    'total_ttc'       => (float) $l->montant_ttc,
+                    'id'                => $l->id,
+                    'produit_id'        => $l->produit_id,
+                    'produit_fini_id'   => $l->produit_fini_id,
+                    'is_produit_fini'   => (bool) $l->is_produit_fini,
+                    'designation'       => $l->designation,
+                    'reference'         => $l->produit?->reference ?? '',
+                    'code_barre'        => $l->produit?->code_barre ?? '',
+                    'quantite'          => $qty,
+                    'unite'             => $l->unite,
+                    'prix_unitaire'     => $puHt,
+                    'prix_unitaire_ht'  => $puHt,
+                    'prix_unitaire_ttc' => $puTtc,
+                    'taux_tva'          => $taux,
+                    'remise_pourcent'   => (float) $l->remise_pourcent,
+                    'remise_montant'    => (float) $l->remise_montant,
+                    'total_ht'          => (float) $l->montant_ht,
+                    'total_ttc'         => (float) $l->montant_ttc,
                 ];
             }),
         ]);
@@ -619,11 +674,14 @@ class PosController extends Controller
             'lignes.*.produit_fini_id' => 'nullable|integer',
             'lignes.*.is_produit_fini' => 'nullable|boolean',
             'lignes.*.designation'     => 'required|string|max:255',
-            'lignes.*.quantite'        => 'required|numeric|min:0.01',
+            'lignes.*.quantite'        => 'required|numeric|min:0.001',
+            'lignes.*.unite'           => 'nullable|string|max:50',
             'lignes.*.prix_unitaire'   => 'required|numeric|min:0',
+            'lignes.*.prix_ttc'        => 'nullable|numeric|min:0',
             'lignes.*.taux_tva'        => 'required|numeric|min:0',
             'lignes.*.remise_pourcent' => 'nullable|numeric|min:0|max:100',
             'lignes.*.remise_montant'  => 'nullable|numeric|min:0',
+            'prix_is_ttc'              => 'nullable|boolean',
             'mode_paiement'            => 'required|string|in:especes,carte,cheque,virement,mixte',
             'mode_reglement_id'        => 'nullable|integer',
             'montant_recu'             => 'nullable|numeric|min:0',
@@ -693,7 +751,10 @@ class PosController extends Controller
             $facture->lignes()->delete();
 
             // 3. Insérer les nouvelles lignes
+            $globalIsTtc = !empty($data['prix_is_ttc']);
             foreach ($data['lignes'] as $index => $ligneData) {
+                $puHt = $this->resolvePrixUnitaireHt($ligneData, $globalIsTtc);
+
                 LigneFacture::create([
                     'tenant_id'       => $tenantId,
                     'facture_id'      => $facture->id,
@@ -702,7 +763,8 @@ class PosController extends Controller
                     'is_produit_fini' => $ligneData['is_produit_fini'] ?? false,
                     'designation'     => $ligneData['designation'],
                     'quantite'        => $ligneData['quantite'],
-                    'prix_unitaire'   => $ligneData['prix_unitaire'],
+                    'unite'           => $ligneData['unite'] ?? null,
+                    'prix_unitaire'   => $puHt,
                     'taux_tva'        => $ligneData['taux_tva'],
                     'remise_pourcent' => $ligneData['remise_pourcent'] ?? 0,
                     'remise_montant'  => $ligneData['remise_montant'] ?? 0,
@@ -911,5 +973,47 @@ class PosController extends Controller
         }
 
         return response()->json($cloture);
+    }
+
+    /**
+     * Resolves the HT unit price for a POS line.
+     * In POS retail, cashiers and shelf tags work with TTC prices.
+     * If the incoming unit price is TTC, converts it to HT with high precision (4 decimals).
+     */
+    private function resolvePrixUnitaireHt(array $ligneData, bool $globalIsTtc = false): float
+    {
+        $tauxTva = (float)($ligneData['taux_tva'] ?? 0);
+        $rawPu   = (float)($ligneData['prix_unitaire'] ?? 0);
+
+        // 1. Explicit global or per-line flag indicating TTC
+        if ($globalIsTtc || !empty($ligneData['prix_is_ttc'])) {
+            return $tauxTva > 0 ? round($rawPu / (1 + ($tauxTva / 100)), 4) : $rawPu;
+        }
+
+        // 2. If prix_ttc is explicitly supplied alongside prix_unitaire
+        if (isset($ligneData['prix_ttc'])) {
+            $prixTtc = (float)$ligneData['prix_ttc'];
+            // If raw prix_unitaire equals prix_ttc and TVA > 0, then prix_unitaire was passed as TTC!
+            if ($tauxTva > 0 && abs($rawPu - $prixTtc) < 0.001) {
+                return round($prixTtc / (1 + ($tauxTva / 100)), 4);
+            }
+            // Otherwise rawPu is already the converted HT price
+            return $rawPu;
+        }
+
+        // 3. Fallback: check catalog prices
+        if (!empty($ligneData['produit_id'])) {
+            $prod = Produit::find($ligneData['produit_id']);
+            if ($prod && $tauxTva > 0) {
+                $prodTtc = (float)$prod->prix_ttc_vente;
+                $prodHt  = (float)$prod->prix_ht_vente;
+                // If rawPu matches catalog TTC and differs from catalog HT, it was sent as TTC
+                if (abs($rawPu - $prodTtc) < 0.01 && abs($rawPu - $prodHt) > 0.01) {
+                    return $prodHt > 0 ? $prodHt : round($prodTtc / (1 + ($tauxTva / 100)), 4);
+                }
+            }
+        }
+
+        return $rawPu;
     }
 }

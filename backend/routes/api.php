@@ -148,6 +148,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
     Route::post('stock/transfer', [StockController::class, 'transfer'])->middleware('permission:stock.mouvement');
     Route::post('stock/initialize', [StockController::class, 'initialize'])->middleware('permission:stock.mouvement');
     Route::post('stock/full-initialize', [StockController::class, 'fullInitialize'])->middleware('permission:stock.initialisation_complete');
+    Route::post('stock/deconditionner', [StockController::class, 'deconditionner'])->middleware('permission:stock.mouvement');
 
     // Projets & Dépenses
     Route::get('projets', [ProjetController::class, 'index'])->middleware('permission:projets.view');

@@ -222,45 +222,74 @@ const cashFlow = ref({ encaissements: 0, decaissements: 0, solde_caisse: 0 })
 const profitability = ref({ chiffre_affaires_ttc: 0 })
 const ledgerMovements = ref([])
 
+function toLocalDateString(d) {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function onPeriodChange() {
   setPeriodDates()
   fetchData()
 }
 
 function setPeriodDates() {
-  const todayStr = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const todayStr = toLocalDateString(now)
   
   if (selectedPeriod.value === 'today') {
     customStart.value = todayStr
     customEnd.value = todayStr
   } else if (selectedPeriod.value === 'yesterday') {
-    const yesterday = new Date()
+    const yesterday = new Date(now)
     yesterday.setDate(yesterday.getDate() - 1)
-    const yestStr = yesterday.toISOString().split('T')[0]
-    customStart.value = yestStr
-    customEnd.value = yestStr
+    customStart.value = toLocalDateString(yesterday)
+    customEnd.value = toLocalDateString(yesterday)
   } else if (selectedPeriod.value === 'last_7_days') {
-    const start = new Date()
+    const start = new Date(now)
     start.setDate(start.getDate() - 6)
-    customStart.value = start.toISOString().split('T')[0]
+    customStart.value = toLocalDateString(start)
     customEnd.value = todayStr
   } else if (selectedPeriod.value === 'this_month') {
-    const start = new Date()
-    customStart.value = new Date(start.getFullYear(), start.getMonth(), 1).toISOString().split('T')[0]
+    customStart.value = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1))
     customEnd.value = todayStr
   } else if (selectedPeriod.value === 'last_month') {
-    const start = new Date()
-    const firstDay = new Date(start.getFullYear(), start.getMonth() - 1, 1)
-    const lastDay = new Date(start.getFullYear(), start.getMonth(), 0)
-    customStart.value = firstDay.toISOString().split('T')[0]
-    customEnd.value = lastDay.toISOString().split('T')[0]
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+    customStart.value = toLocalDateString(firstDay)
+    customEnd.value = toLocalDateString(lastDay)
+  } else if (selectedPeriod.value === 'custom') {
+    // Si l'utilisateur active "Personnalisé...", pré-remplir les dates si non définies
+    if (!customStart.value) {
+      customStart.value = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1))
+    }
+    if (!customEnd.value) {
+      customEnd.value = todayStr
+    }
   }
 }
 
 async function fetchData() {
+  const now = new Date()
+  const todayStr = toLocalDateString(now)
+  const defaultMonthStart = toLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1))
+
+  let start = customStart.value || defaultMonthStart
+  let end = customEnd.value || todayStr
+
+  // Si l'utilisateur met une date de début supérieure à la fin, inverser automatiquement
+  if (start > end) {
+    const tmp = start
+    start = end
+    end = tmp
+    customStart.value = start
+    customEnd.value = end
+  }
+
   loading.value = true
   try {
-    const params = { start: customStart.value, end: customEnd.value }
+    const params = { start, end }
     
     // Fetch summary stats
     const summaryRes = await api.get('/reporting/cash-flow', { params })

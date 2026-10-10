@@ -35,8 +35,16 @@
         </thead>
         <tbody>
           <tr v-for="l in facture.lignes" :key="l.id">
-            <td class="qty">{{ l.quantite }}</td>
-            <td class="desc">{{ l.designation }}</td>
+            <td class="qty">
+              <span>{{ formatQty(l.quantite) }}</span>
+              <span v-if="l.unite" class="qty-unit"> {{ l.unite }}</span>
+            </td>
+            <td class="desc">
+              <div class="desc-name">{{ l.designation }}</div>
+              <div v-if="parseFloat(l.quantite) !== 1 && l.montant_ttc" class="desc-unit-calc">
+                {{ formatQty(l.quantite) }} {{ l.unite || '' }} × {{ formatMoney(l.montant_ttc / l.quantite) }}
+              </div>
+            </td>
             <td class="price">{{ formatMoney(l.montant_ttc) }}</td>
           </tr>
         </tbody>
@@ -80,6 +88,12 @@ const entreprise = ref({})
 
 function formatMoney(val) {
   return (parseFloat(val) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatQty(val) {
+  const num = parseFloat(val)
+  if (isNaN(num)) return '0'
+  return num % 1 === 0 ? num.toString() : num.toFixed(3).replace(/\.?0+$/, '')
 }
 
 function formatDate(d) {
@@ -168,13 +182,19 @@ onMounted(async () => {
 }
 
 .items-table td {
-  padding: 5px 0;
+  padding: 4px 2px;
   vertical-align: top;
 }
 
-.qty { width: 15%; text-align: center; }
-.desc { width: 55%; }
-.price { width: 30%; text-align: right; }
+.qty { width: 22%; text-align: left; padding-right: 4px; white-space: nowrap; }
+.desc { width: 50%; padding-right: 4px; word-break: break-word; }
+.price { width: 28%; text-align: right; white-space: nowrap; font-weight: bold; }
+
+.desc-unit-calc {
+  font-size: 10px;
+  color: #555;
+  margin-top: 1px;
+}
 
 .totals {
   margin-top: 10px;

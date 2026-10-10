@@ -215,7 +215,7 @@
                     <span v-if="errors[`ligne_${idx}_designation`]" class="error-text">La désignation est requise</span>
                   </td>
                   <td class="td-center">
-                     <input v-model="ligne.quantite" type="number" step="0.01" @input="recalculate" class="input-inline-table text-center" />
+                     <input v-model="ligne.quantite" type="number" step="0.001" @input="recalculate" class="input-inline-table text-center" />
                    </td>
                    <td class="td-center">
                      <input

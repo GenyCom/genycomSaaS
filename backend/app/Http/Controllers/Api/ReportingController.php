@@ -10,10 +10,41 @@ class ReportingController extends Controller
 {
     public function __construct(private ReportingService $reporting) {}
 
+    private function resolveDateRange(Request $request): array
+    {
+        $rawStart = $request->get('start');
+        $rawEnd = $request->get('end');
+
+        $startStr = !empty($rawStart) && is_string($rawStart) && trim($rawStart) !== '' && $rawStart !== 'null' && $rawStart !== 'undefined'
+            ? trim($rawStart)
+            : now()->startOfMonth()->toDateString();
+
+        $endStr = !empty($rawEnd) && is_string($rawEnd) && trim($rawEnd) !== '' && $rawEnd !== 'null' && $rawEnd !== 'undefined'
+            ? trim($rawEnd)
+            : now()->toDateString();
+
+        try {
+            $startDate = \Carbon\Carbon::parse($startStr)->toDateString();
+        } catch (\Throwable $e) {
+            $startDate = now()->startOfMonth()->toDateString();
+        }
+
+        try {
+            $endDate = \Carbon\Carbon::parse($endStr)->toDateString();
+        } catch (\Throwable $e) {
+            $endDate = now()->toDateString();
+        }
+
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        return [$startDate, $endDate];
+    }
+
     public function all(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         $clientId = $request->get('client_id');
         $supplierId = $request->get('fournisseur_id');
         $status = $request->get('status');
@@ -38,8 +69,7 @@ class ReportingController extends Controller
 
     public function sales(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         $clientId = $request->get('client_id');
         
         return response()->json([
@@ -50,8 +80,7 @@ class ReportingController extends Controller
 
     public function purchases(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         $supplierId = $request->get('fournisseur_id');
         
         return response()->json($this->reporting->purchaseJournal($start, $end, $supplierId));
@@ -59,8 +88,7 @@ class ReportingController extends Controller
 
     public function finance(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         
         return response()->json([
             'vat' => $this->reporting->vatReport($start, $end),
@@ -75,8 +103,7 @@ class ReportingController extends Controller
 
     public function payments(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         return response()->json($this->reporting->paymentsJournal($start, $end));
     }
 
@@ -97,8 +124,7 @@ class ReportingController extends Controller
 
     public function cashFlow(Request $request): JsonResponse
     {
-        $start = $request->get('start', now()->startOfMonth()->toDateString());
-        $end = $request->get('end', now()->toDateString());
+        [$start, $end] = $this->resolveDateRange($request);
         return response()->json($this->reporting->cashAndProfitReport($start, $end));
     }
 

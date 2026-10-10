@@ -37,7 +37,7 @@ class StockController extends Controller
         $data = $request->validate([
             'produit_id' => 'required|exists:tenant.produits,id',
             'entrepot_id' => 'nullable|exists:tenant.entrepots,id',
-            'quantite' => 'required|numeric|min:0.01',
+            'quantite' => 'required|numeric|min:0.001',
             'type' => 'required|in:ajustement_positif,ajustement_negatif',
             'motif' => 'nullable|string|max:255'
         ]);
@@ -62,7 +62,7 @@ class StockController extends Controller
             'produit_id' => 'required|exists:tenant.produits,id',
             'entrepot_source_id' => 'required|exists:tenant.entrepots,id',
             'entrepot_dest_id' => 'required|exists:tenant.entrepots,id|different:entrepot_source_id',
-            'quantite' => 'required|numeric|min:0.01',
+            'quantite' => 'required|numeric|min:0.001',
             'motif' => 'nullable|string|max:255'
         ]);
 
@@ -329,5 +329,71 @@ class StockController extends Controller
             'lines_count' => $updatedLinesCount,
             'products_count' => $distinctProductsCount
         ]);
+    }
+
+    /**
+     * Déconditionnement / Fractionnement de produit pour vente au détail / vrac.
+     * Exemple : Sac de 25 kg déconditionné en 25 kg de Vrac, ou Carton de 12 pièces déballé en 12 unités.
+     */
+    public function deconditionner(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'produit_source_id' => 'required|exists:tenant.produits,id|different:produit_dest_id',
+            'produit_dest_id'   => 'required|exists:tenant.produits,id',
+            'entrepot_id'       => 'nullable|exists:tenant.entrepots,id',
+            'quantite_source'   => 'required|numeric|min:0.001',
+            'quantite_dest'     => 'required|numeric|min:0.001',
+            'motif'             => 'nullable|string|max:255',
+        ]);
+
+        $tenantId = $request->get('current_tenant')->id;
+        $userId   = auth()->id();
+        $entrepotId = $data['entrepot_id'] ?? $this->stockService->getDefaultEntrepotId($tenantId);
+
+        return \Illuminate\Support\Facades\DB::connection('tenant')->transaction(function () use ($data, $tenantId, $userId, $entrepotId) {
+            $pSource = \App\Models\Produit::find($data['produit_source_id']);
+            $pDest   = \App\Models\Produit::find($data['produit_dest_id']);
+
+            // 1. Sortie du produit source (conditionné)
+            $this->stockService->enregistrerMouvement(
+                $pSource->id,
+                (float) $data['quantite_source'],
+                'ajustement_negatif',
+                'DECONDITIONNEMENT',
+                $pDest->id,
+                $userId,
+                $tenantId,
+                $entrepotId
+            );
+
+            // 2. Entrée du produit destination (vrac / détail)
+            $this->stockService->enregistrerMouvement(
+                $pDest->id,
+                (float) $data['quantite_dest'],
+                'ajustement_positif',
+                'DECONDITIONNEMENT',
+                $pSource->id,
+                $userId,
+                $tenantId,
+                $entrepotId
+            );
+
+            // 3. Recalculer les stocks actuels
+            $stockSourceTotal = (float) \App\Models\Stock::where('tenant_id', $tenantId)->where('produit_id', $pSource->id)->sum('quantite');
+            $pSource->update(['stock_actuel' => $stockSourceTotal]);
+
+            $stockDestTotal = (float) \App\Models\Stock::where('tenant_id', $tenantId)->where('produit_id', $pDest->id)->sum('quantite');
+            $pDest->update(['stock_actuel' => $stockDestTotal]);
+
+            $uSource = $pSource->unite ?: 'unité';
+            $uDest   = $pDest->unite ?: 'unité';
+
+            return response()->json([
+                'success' => true,
+                'message' => "Déconditionnement effectué avec succès : {$data['quantite_source']} {$uSource} de \"{$pSource->designation}\" transformé(s) en {$data['quantite_dest']} {$uDest} de \"{$pDest->designation}\".",
+                'stock_source' => $stockSourceTotal,
+                'stock_dest'   => $stockDestTotal,
+            ]);
+        });
     }
 }

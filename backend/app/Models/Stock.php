@@ -21,7 +21,7 @@ class Stock extends BaseModel
     ];
 
     protected $casts = [
-        'quantite' => 'decimal:2'
+        'quantite' => 'decimal:3'
     ];
 
     protected $appends = [

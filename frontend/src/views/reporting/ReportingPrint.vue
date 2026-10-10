@@ -137,8 +137,8 @@ import { useRoute } from 'vue-router'
 import api from '../../services/api'
 
 const route = useRoute()
-const start = route.query.start
-const end = route.query.end
+const start = route.query.start || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+const end = route.query.end || new Date().toISOString().split('T')[0]
 
 const loading = ref(true)
 const data = ref(null)

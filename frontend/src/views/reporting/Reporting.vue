@@ -949,6 +949,11 @@ async function fetchFilterData() {
 }
 
 async function fetchData() {
+  if (dateRange.start && dateRange.end && dateRange.start > dateRange.end) {
+    const tmp = dateRange.start
+    dateRange.start = dateRange.end
+    dateRange.end = tmp
+  }
   loading.value = true
   const params = { 
     start: dateRange.start, 

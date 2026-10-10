@@ -27,6 +27,15 @@ class LigneAvoirClient extends BaseModel
         'ordre'
     ];
 
+    protected $casts = [
+        'quantite' => 'decimal:3',
+        'prix_unitaire' => 'decimal:4',
+        'taux_tva' => 'decimal:3',
+        'montant_ht' => 'decimal:2',
+        'montant_tva' => 'decimal:2',
+        'montant_ttc' => 'decimal:2',
+    ];
+
     public function avoir()   { return $this->belongsTo(AvoirClient::class, 'avoir_id'); }
     public function produit() { return $this->belongsTo(Produit::class); }
 }

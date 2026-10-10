@@ -19,7 +19,7 @@ class LigneDevis extends BaseModel
     ];
 
     protected $casts = [
-        'quantite' => 'decimal:2', 'prix_unitaire' => 'decimal:4',
+        'quantite' => 'decimal:3', 'prix_unitaire' => 'decimal:4',
         'taux_tva' => 'decimal:3', 'montant_ht' => 'decimal:2',
         'montant_ttc' => 'decimal:2',
         'is_produit_fini' => 'boolean',

@@ -11,11 +11,41 @@ class ReportingService
         return request()->get('current_tenant')->id ?? auth()->user()->tenant_id ?? 1;
     }
 
+    private function normalizeDates(?string $start, ?string $end): array
+    {
+        $startStr = !empty($start) && is_string($start) && trim($start) !== '' && $start !== 'null' && $start !== 'undefined'
+            ? trim($start)
+            : now()->startOfMonth()->toDateString();
+
+        $endStr = !empty($end) && is_string($end) && trim($end) !== '' && $end !== 'null' && $end !== 'undefined'
+            ? trim($end)
+            : now()->toDateString();
+
+        try {
+            $startDate = Carbon::parse($startStr)->toDateString();
+        } catch (\Throwable $e) {
+            $startDate = now()->startOfMonth()->toDateString();
+        }
+
+        try {
+            $endDate = Carbon::parse($endStr)->toDateString();
+        } catch (\Throwable $e) {
+            $endDate = now()->toDateString();
+        }
+
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        return [$startDate, $endDate];
+    }
+
     /**
      * Rapport de ventes détaillé
      */
-    public function salesJournal(string $start, string $end, ?int $clientId = null): array
+    public function salesJournal(?string $start = null, ?string $end = null, ?int $clientId = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         return DB::connection('tenant')->table('factures as f')
             ->join('clients as c', 'c.id', '=', 'f.client_id')
             ->where('f.tenant_id', $this->tid())
@@ -31,8 +61,9 @@ class ReportingService
     /**
      * Rapport d'achats et dépenses détaillé
      */
-    public function purchaseJournal(string $start, string $end, ?int $supplierId = null): array
+    public function purchaseJournal(?string $start = null, ?string $end = null, ?int $supplierId = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         $achats = DB::connection('tenant')->table('factures_achats as fa')
             ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
             ->where('fa.tenant_id', $this->tid())
@@ -65,8 +96,9 @@ class ReportingService
         return $achats->concat($depenses)->sortByDesc('date_facture')->values()->toArray();
     }
 
-    public function cashAndProfitReport(string $start, string $end): array
+    public function cashAndProfitReport(?string $start = null, ?string $end = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         $tid = $this->tid();
 
         // 1. Encaissements (Paiements reçus des clients)
@@ -195,8 +227,9 @@ class ReportingService
     /**
      * Analyse du CA par Client
      */
-    public function salesByClient(string $start, string $end): array
+    public function salesByClient(?string $start = null, ?string $end = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         return DB::connection('tenant')->table('factures as f')
             ->join('clients as c', 'c.id', '=', 'f.client_id')
             ->where('f.tenant_id', $this->tid())
@@ -212,8 +245,9 @@ class ReportingService
     /**
      * Rentabilité par Projet
      */
-    public function profitabilityByProject(string $start, string $end): array
+    public function profitabilityByProject(?string $start = null, ?string $end = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         return DB::connection('tenant')->table('factures as f')
             ->join('projets as p', 'p.id', '=', 'f.projet_id')
             ->where('f.tenant_id', $this->tid())
@@ -229,8 +263,9 @@ class ReportingService
     /**
      * Rapport de TVA (Collectée vs Déductible)
      */
-    public function vatReport(string $start, string $end): array
+    public function vatReport(?string $start = null, ?string $end = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         $collected = DB::connection('tenant')->table('factures')
             ->where('tenant_id', $this->tid())
             ->whereNull('deleted_at')
@@ -270,8 +305,9 @@ class ReportingService
     /**
      * État des règlements (Journal de caisse/banque)
      */
-    public function paymentsJournal(string $start, string $end): array
+    public function paymentsJournal(?string $start = null, ?string $end = null): array
     {
+        [$start, $end] = $this->normalizeDates($start, $end);
         $reglements = DB::connection('tenant')->table('reglements as r')
             ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
             ->where('r.tenant_id', $this->tid())

@@ -25,6 +25,15 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
           <span>Initialisation complète du stock</span>
         </button>
+        <button 
+          v-if="auth.hasPermission('stock.mouvement')" 
+          class="btn-purple-custom" 
+          @click="openDecondition(null)" 
+          title="Déconditionner / Fractionner pour la vente au détail ou vrac"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/></svg>
+          <span>Déconditionner / Vrac</span>
+        </button>
         <button class="btn-primary-custom" @click="exportCSV" title="Exporter en CSV">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>Exporter CSV</span>
@@ -103,14 +112,14 @@
                 <div class="warehouse-tag">{{ s.entrepot?.nom || 'Dépôt Inconnu' }}</div>
               </td>
               <td class="text-right">
-                <span class="amount-cell">{{ s.quantite_physique }}</span>
+                <span class="amount-cell">{{ formatStockNumber(s.quantite_physique) }} <small class="text-muted">{{ s.produit?.unite || '' }}</small></span>
               </td>
               <td class="text-right">
-                <span class="amount-cell text-muted">{{ s.quantite_reservee }}</span>
+                <span class="amount-cell text-muted">{{ formatStockNumber(s.quantite_reservee) }}</span>
               </td>
               <td class="text-right">
                 <div class="amount-cell" :class="{'text-danger font-black': s.quantite_disponible <= 0, 'text-accent': s.quantite_disponible > 0}">
-                  {{ s.quantite_disponible }}
+                  {{ formatStockNumber(s.quantite_disponible) }} <small class="text-muted">{{ s.produit?.unite || '' }}</small>
                 </div>
               </td>
               <td class="text-center">
@@ -125,6 +134,9 @@
                     </button>
                     <button class="action-btn" title="Historique des mouvements" @click="openHistory(s)">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </button>
+                    <button class="action-btn" title="Déconditionner / Fractionner en vrac" @click="openDecondition(s)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/></svg>
                     </button>
                     <button class="action-btn" title="Transférer" @click="openAction(s, 'transfer')">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
@@ -182,6 +194,14 @@
       @close="isFullInitModalOpen = false"
       @success="fetchData"
     />
+
+    <StockDeconditionModal
+      :is-open="isDeconditionModalOpen"
+      :preselected-product="preselectedDeconditionProduct"
+      :entrepots="entrepots"
+      @close="isDeconditionModalOpen = false"
+      @success="fetchData"
+    />
   </div>
 </template>
 
@@ -194,6 +214,7 @@ import StockActionModal from './StockActionModal.vue'
 import StockHistoryModal from './StockHistoryModal.vue'
 import StockInitModal from './StockInitModal.vue'
 import StockFullInitModal from './StockFullInitModal.vue'
+import StockDeconditionModal from './StockDeconditionModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -210,6 +231,8 @@ const isModalOpen = ref(false)
 const isHistoryOpen = ref(false)
 const isInitModalOpen = ref(false)
 const isFullInitModalOpen = ref(false)
+const isDeconditionModalOpen = ref(false)
+const preselectedDeconditionProduct = ref(null)
 const modalMode = ref('adjust')
 const selectedStock = ref(null)
 const selectedStockId = ref(null)
@@ -299,10 +322,21 @@ const exportCSV = () => {
   document.body.removeChild(link);
 }
 
+const formatStockNumber = (val) => {
+  const num = parseFloat(val)
+  if (isNaN(num)) return '0'
+  return num % 1 === 0 ? num.toString() : num.toFixed(3).replace(/\.?0+$/, '')
+}
+
 const openAction = (item, mode) => {
   selectedStock.value = item
   modalMode.value = mode
   isModalOpen.value = true
+}
+
+const openDecondition = (item = null) => {
+  preselectedDeconditionProduct.value = item?.produit || item || null
+  isDeconditionModalOpen.value = true
 }
 
 const openHistory = (item) => {
@@ -354,6 +388,13 @@ onMounted(fetchData)
 .btn-danger-custom:hover { background: #B91C1C; transform: translateY(-1px); }
 .btn-primary-custom { background: var(--c-accent); color: #fff; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2); }
 .btn-primary-custom:hover { background: #0F766E; transform: translateY(-1px); }
+.btn-purple-custom {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px;
+  border-radius: 8px; font-size: .85rem; font-weight: 600; text-decoration: none; cursor: pointer;
+  transition: all .2s; outline: none; border: 1.5px solid transparent;
+  background: #8B5CF6; color: #fff; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+.btn-purple-custom:hover { background: #7C3AED; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35); }
 .btn-secondary-custom { background: #fff; color: var(--c-text); border-color: var(--c-border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 .btn-secondary-custom:hover { background: #F9FAFB; border-color: #D1D5DB; }
 

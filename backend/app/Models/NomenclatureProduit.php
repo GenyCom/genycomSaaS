@@ -15,7 +15,7 @@ class NomenclatureProduit extends BaseModel
     ];
 
     protected $casts = [
-        'quantite' => 'decimal:2',
+        'quantite' => 'decimal:3',
         'montant_ht' => 'decimal:2',
         'montant_tva' => 'decimal:2',
         'montant_ttc' => 'decimal:2',

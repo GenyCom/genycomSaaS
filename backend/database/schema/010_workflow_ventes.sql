@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `ligne_bon_commande_client` (
     `produit_id`            BIGINT UNSIGNED NULL,
     `designation` TEXT NOT NULL,
     `description`           TEXT NULL,
-    `quantite`              DECIMAL(24,2) DEFAULT 1.00,
+    `quantite`              DECIMAL(24,3) DEFAULT 1.000,
     `unite`                 VARCHAR(50) NULL,
     `prix_unitaire`         DECIMAL(24,4) DEFAULT 0.0000,
     `prix_achat`            DECIMAL(24,4) DEFAULT 0.0000,

@@ -231,7 +231,7 @@
                   </td>
                   <td v-if="!isNew" class="text-center text-muted font-medium">{{ l.quantite_prevue }}</td>
                   <td class="text-center">
-                    <input v-if="isNew" v-model="l.quantite_livree" type="number" step="0.01" class="input-inline-table text-center" />
+                    <input v-if="isNew" v-model="l.quantite_livree" type="number" step="0.001" class="input-inline-table text-center" />
                     <span v-else class="status-pill status-success-light font-black" style="display: inline-block;">{{ l.quantite_livree }}</span>
                   </td>
                   <td class="text-center">

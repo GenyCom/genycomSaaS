@@ -25,6 +25,11 @@ class MouvementStock extends BaseModel
         'created_by'
     ];
 
+    protected $casts = [
+        'quantite' => 'decimal:3',
+        'prix_unitaire' => 'decimal:4',
+    ];
+
     public function stock()   { return $this->belongsTo(Stock::class); }
     public function produit() { return $this->belongsTo(Produit::class); }
     public function auteur()  { return $this->belongsTo(User::class, 'created_by'); }

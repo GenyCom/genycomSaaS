@@ -56,8 +56,8 @@
             <div class="form-group-custom">
               <label>Quantité du mouvement *</label>
               <div class="input-with-unit">
-                <input v-model.number="form.quantite" type="number" step="0.01" min="0.01" class="form-input-custom font-bold" />
-                <span class="unit-tag">Unités</span>
+                <input v-model.number="form.quantite" type="number" step="0.001" min="0.001" class="form-input-custom font-bold" />
+                <span class="unit-tag">{{ produit?.unite || 'Unités' }}</span>
               </div>
             </div>
           </div>

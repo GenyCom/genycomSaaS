@@ -52,7 +52,8 @@ class BonLivraisonController extends Controller
             'lignes.*.produit_fini_id' => 'nullable|integer',
             'lignes.*.is_produit_fini' => 'nullable|boolean',
             'lignes.*.designation'   => 'required|string|max:255',
-            'lignes.*.quantite_livree' => 'required|numeric|min:0.01',
+            'lignes.*.quantite_livree' => 'required|numeric|min:0.001',
+            'lignes.*.unite'         => 'nullable|string|max:50',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
         ]);
 
@@ -113,6 +114,7 @@ class BonLivraisonController extends Controller
                     'designation'      => $ligne['designation'],
                     'quantite_prevue'  => $qty,
                     'quantite_livree'  => $qty,
+                    'unite'            => $ligne['unite'] ?? null,
                     'prix_unitaire'    => $pu,
                     'taux_tva'         => 20,
                     'montant_ht'       => $ht,

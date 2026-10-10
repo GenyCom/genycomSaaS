@@ -46,7 +46,8 @@ class AvoirClientController extends Controller
             'lignes'       => 'required|array|min:1',
             'lignes.*.produit_id' => 'nullable|integer',
             'lignes.*.designation' => 'required|string',
-            'lignes.*.quantite'    => 'required|numeric|min:0.01',
+            'lignes.*.quantite'    => 'required|numeric|min:0.001',
+            'lignes.*.unite'       => 'nullable|string|max:50',
             'lignes.*.prix_unitaire' => 'required|numeric|min:0',
             'lignes.*.taux_tva'      => 'required|numeric|min:0',
         ]);

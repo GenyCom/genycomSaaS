@@ -32,7 +32,12 @@ class Produit extends BaseModel
         'prix_ht_vente' => 'decimal:4',
         'marge_pourcentage' => 'decimal:2',
         'prix_ttc_vente' => 'decimal:2',
-        'stock_actuel' => 'decimal:2',
+        'stock_actuel' => 'decimal:3',
+        'stock_initial' => 'decimal:3',
+        'stock_min' => 'decimal:3',
+        'stock_max' => 'decimal:3',
+        'seuil_alerte' => 'decimal:3',
+        'poids' => 'decimal:3',
         'garantie_mois' => 'integer',
     ];
 

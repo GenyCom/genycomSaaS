@@ -18,6 +18,7 @@ class LigneBonLivraison extends BaseModel
         'designation',
         'quantite_prevue',
         'quantite_livree',
+        'unite',
         'ordre',
         'prix_unitaire',
         'taux_tva',
@@ -28,8 +29,8 @@ class LigneBonLivraison extends BaseModel
 
     protected $casts = [
         'is_produit_fini' => 'boolean',
-        'quantite_prevue' => 'decimal:2',
-        'quantite_livree' => 'decimal:2',
+        'quantite_prevue' => 'decimal:3',
+        'quantite_livree' => 'decimal:3',
         'prix_unitaire' => 'decimal:4',
         'taux_tva' => 'decimal:2',
         'montant_ht' => 'decimal:2',

@@ -70,21 +70,30 @@
             <div class="pos-cart-row-info">
               <div class="pos-cart-row-name">{{ item.designation }}</div>
               <div class="pos-cart-row-meta">
-                {{ formatPrice(item.prix_unitaire) }} × {{ item.quantite }}
+                {{ formatPrice(item.prix_unitaire) }}<span v-if="item.unite" class="pos-unit-tag">/{{ item.unite }}</span> × {{ formatQty(item.quantite) }} <span v-if="item.unite" class="pos-unit-tag">{{ item.unite }}</span>
               </div>
             </div>
             <div class="pos-cart-row-actions">
+              <button
+                type="button"
+                @click="openWeighModal(index)"
+                class="pos-weigh-btn"
+                title="Pesée & Vente au détail (100g, 250g, 500g...)"
+              >
+                ⚖️
+              </button>
               <div class="pos-qty-controls">
-                <button @click="decrementQty(index)" class="pos-qty-btn" :disabled="item.quantite <= 1">−</button>
+                <button @click="decrementQty(index)" class="pos-qty-btn" title="Diminuer">−</button>
                 <input
                   type="number"
                   :value="item.quantite"
-                  @change="setQty(index, $event.target.value)"
+                  @input="setQty(index, $event.target.value)"
                   class="pos-qty-input"
-                  min="1"
-                  step="1"
+                  min="0.001"
+                  step="any"
+                  placeholder="Qté"
                 />
-                <button @click="incrementQty(index)" class="pos-qty-btn">+</button>
+                <button @click="incrementQty(index)" class="pos-qty-btn" title="Augmenter">+</button>
               </div>
               <div class="pos-cart-row-total">{{ formatPrice(item.prix_unitaire * item.quantite) }}</div>
               <button @click="removeFromCart(index)" class="pos-remove-btn" title="Supprimer">
@@ -197,7 +206,7 @@
             <div class="pos-product-card-top">
               <div class="pos-product-ref">{{ p.reference }}</div>
               <div v-if="!p.is_service && p.stock_actuel !== null" class="pos-product-stock" :class="{ low: p.stock_actuel <= 5 }">
-                {{ Math.floor(p.stock_actuel) }}
+                {{ formatStock(p.stock_actuel) }} {{ p.unite || '' }}
               </div>
             </div>
 
@@ -921,6 +930,114 @@
       </div>
     </section>
 
+    <!-- ═ ═ ═  WEIGH / BULK DOSAGE MODAL (DROGUERIE / VRAC) ═ ═ ═  -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showWeighModal && weighingIndex !== null && cart[weighingIndex]" class="pos-modal-overlay" @click.self="showWeighModal = false">
+          <div class="pos-weigh-modal">
+            <div class="pos-weigh-modal-header">
+              <div class="pos-weigh-modal-title">
+                <span class="pos-weigh-icon">⚖️</span>
+                <div>
+                  <h3>Pesée & Vente au Détail</h3>
+                  <p class="pos-weigh-sub">{{ cart[weighingIndex]?.designation }} &bull; {{ formatPrice(cart[weighingIndex]?.prix_unitaire) }}/{{ cart[weighingIndex]?.unite || 'U' }}</p>
+                </div>
+              </div>
+              <button class="pos-modal-close" @click="showWeighModal = false">✕</button>
+            </div>
+
+            <div class="pos-weigh-modal-body">
+              <!-- Quick Presets -->
+              <div class="pos-weigh-presets-label">Dosages rapides fréquents :</div>
+              <div class="pos-weigh-presets-grid">
+                <button type="button" @click="applyWeighGrams(100)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 100 }">
+                  <strong>100 g</strong>
+                  <span>0.100 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(200)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 200 }">
+                  <strong>200 g</strong>
+                  <span>0.200 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(250)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 250 }">
+                  <strong>250 g</strong>
+                  <span>0.250 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(500)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 500 }">
+                  <strong>500 g</strong>
+                  <span>0.500 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(750)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 750 }">
+                  <strong>750 g</strong>
+                  <span>0.750 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(1000)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 1000 }">
+                  <strong>1 kg</strong>
+                  <span>1.000 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(2000)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 2000 }">
+                  <strong>2 kg</strong>
+                  <span>2.000 kg</span>
+                </button>
+                <button type="button" @click="applyWeighGrams(5000)" class="pos-preset-chip" :class="{ active: Number(weighGrams) === 5000 }">
+                  <strong>5 kg</strong>
+                  <span>5.000 kg</span>
+                </button>
+              </div>
+
+              <!-- Inputs -->
+              <div class="pos-weigh-inputs-row">
+                <div class="pos-weigh-input-box">
+                  <label>Poids en Grammes (g)</label>
+                  <div class="pos-weigh-input-wrap">
+                    <input
+                      type="number"
+                      v-model="weighGrams"
+                      @input="onWeighGramsInput($event.target.value)"
+                      step="1"
+                      min="1"
+                      class="pos-weigh-field"
+                      placeholder="Ex: 150"
+                    />
+                    <span class="pos-weigh-field-unit">g</span>
+                  </div>
+                </div>
+
+                <div class="pos-weigh-input-box">
+                  <label>Quantité finale en {{ cart[weighingIndex]?.unite || 'Kg' }}</label>
+                  <div class="pos-weigh-input-wrap">
+                    <input
+                      type="number"
+                      v-model="weighUnits"
+                      @input="onWeighUnitsInput($event.target.value)"
+                      step="any"
+                      min="0.001"
+                      class="pos-weigh-field"
+                      placeholder="Ex: 0.150"
+                    />
+                    <span class="pos-weigh-field-unit">{{ cart[weighingIndex]?.unite || 'Kg' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Total preview -->
+              <div class="pos-weigh-calc-preview">
+                <span>Prix calculé pour cette pesée :</span>
+                <strong>{{ formatPrice((cart[weighingIndex]?.prix_unitaire || 0) * (parseFloat(weighUnits) || 0)) }}</strong>
+              </div>
+            </div>
+
+            <div class="pos-weigh-modal-footer">
+              <button type="button" class="pos-btn-weigh-cancel" @click="showWeighModal = false">Annuler</button>
+              <button type="button" class="pos-btn-weigh-confirm" @click="confirmWeigh">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Appliquer à la ligne
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- ═══ SUCCESS MODAL ═══ -->
     <Teleport to="body">
       <Transition name="modal">
@@ -1091,7 +1208,7 @@
                             <div class="pos-detail-prod-name">{{ l.designation }}</div>
                             <div v-if="l.reference" class="pos-detail-prod-ref">Réf: {{ l.reference }}</div>
                           </td>
-                          <td class="col-price">{{ formatPrice(l.prix_unitaire) }}</td>
+                          <td class="col-price">{{ formatPrice(l.prix_unitaire_ttc || l.prix_unitaire) }}</td>
                           <td class="col-qty">
                             <span class="pos-detail-qty-badge">{{ l.quantite }}</span>
                           </td>
@@ -1291,6 +1408,60 @@ const saleToCancel = ref(null)
 const motifCancel = ref('')
 const isCancelling = ref(false)
 
+// Modal pesée / dosage vrac & détail
+const showWeighModal = ref(false)
+const weighingIndex = ref(null)
+const weighGrams = ref('')
+const weighUnits = ref('')
+
+function openWeighModal(index) {
+  weighingIndex.value = index
+  const item = cart.value[index]
+  const currentQty = parseFloat(item.quantite) || 1
+  weighUnits.value = currentQty
+  weighGrams.value = Math.round(currentQty * 1000)
+  showWeighModal.value = true
+}
+
+function applyWeighGrams(grams) {
+  weighGrams.value = grams
+  const kg = Math.round((grams / 1000) * 1000) / 1000
+  weighUnits.value = kg
+}
+
+function onWeighGramsInput(val) {
+  const g = parseFloat(val) || 0
+  weighUnits.value = Math.round((g / 1000) * 1000) / 1000
+}
+
+function onWeighUnitsInput(val) {
+  const u = parseFloat(String(val).replace(',', '.')) || 0
+  weighGrams.value = Math.round(u * 1000)
+}
+
+function confirmWeigh() {
+  if (weighingIndex.value !== null && cart.value[weighingIndex.value]) {
+    const qty = parseFloat(weighUnits.value)
+    if (!isNaN(qty) && qty > 0) {
+      cart.value[weighingIndex.value].quantite = Math.round(qty * 1000) / 1000
+    }
+  }
+  showWeighModal.value = false
+  weighingIndex.value = null
+}
+
+function formatQty(val) {
+  const num = parseFloat(val)
+  if (isNaN(num)) return '0'
+  return num % 1 === 0 ? num.toString() : num.toFixed(3).replace(/\.?0+$/, '')
+}
+
+function formatStock(val) {
+  const num = parseFloat(val)
+  if (isNaN(num)) return '0'
+  return num % 1 === 0 ? num.toString() : num.toFixed(3).replace(/\.?0+$/, '')
+}
+
 // Sale Rectification Mode
 const isRectifyingSale = ref(false)
 const rectifyingSaleId = ref(null)
@@ -1367,19 +1538,26 @@ const clotureEcartStatus = computed(() => {
 })
 
 // ─── Computed ───
-const totalItems = computed(() => cart.value.reduce((s, i) => s + i.quantite, 0))
+const totalItems = computed(() => {
+  const sum = cart.value.reduce((s, i) => s + (parseFloat(i.quantite) || 0), 0)
+  return sum % 1 === 0 ? sum.toString() : sum.toFixed(3).replace(/\.?0+$/, '')
+})
 
 const totalHT = computed(() => {
   return cart.value.reduce((s, i) => {
+    const qty = parseFloat(i.quantite) || 0
     const prixHT = i.prix_unitaire / (1 + (i.taux_tva / 100))
-    return s + prixHT * i.quantite
+    return s + prixHT * qty
   }, 0)
 })
 
 const totalTVA = computed(() => totalTTC.value - totalHT.value)
 
 const totalTTC = computed(() => {
-  return cart.value.reduce((s, i) => s + i.prix_unitaire * i.quantite, 0)
+  return cart.value.reduce((s, i) => {
+    const qty = parseFloat(i.quantite) || 0
+    return s + i.prix_unitaire * qty
+  }, 0)
 })
 
 const monnaie = computed(() => {
@@ -1624,19 +1802,29 @@ async function handleBarcodeOrSearch(e) {
   }
 }
 
-function addToCart(product) {
+function addToCart(product, initialQty = null) {
   const existing = cart.value.find(i => i.produit_id === product.id)
+  const qtyToAdd = initialQty !== null ? initialQty : (product.weighed_quantity || 1)
   if (existing) {
-    existing.quantite++
+    existing.quantite = Math.round((Number(existing.quantite) + Number(qtyToAdd)) * 1000) / 1000
     existing._flash = true
     setTimeout(() => { existing._flash = false }, 400)
   } else {
+    const tva = parseFloat(product.taux_tva) || 0
+    const ttc = parseFloat(product.prix_ttc_vente) || 0
+    const ht = (product.prix_ht_vente !== null && product.prix_ht_vente !== undefined && !isNaN(parseFloat(product.prix_ht_vente)))
+      ? parseFloat(product.prix_ht_vente)
+      : (tva > 0 ? Math.round((ttc / (1 + (tva / 100))) * 10000) / 10000 : ttc)
+
     cart.value.push({
       produit_id: product.id,
       designation: product.designation,
-      prix_unitaire: parseFloat(product.prix_ttc_vente) || 0,
-      taux_tva: parseFloat(product.taux_tva) || 0,
-      quantite: 1,
+      prix_unitaire: ttc,
+      prix_ttc: ttc,
+      prix_ht: ht,
+      taux_tva: tva,
+      quantite: Math.round(Number(qtyToAdd) * 1000) / 1000,
+      unite: product.unite || 'U',
       reference: product.reference,
       _flash: true,
     })
@@ -1653,19 +1841,30 @@ function addToCart(product) {
 }
 
 function incrementQty(index) {
-  cart.value[index].quantite++
+  const cur = Number(cart.value[index].quantite) || 0
+  if (cur < 1) {
+    cart.value[index].quantite = Math.round((cur + 0.1) * 1000) / 1000
+  } else {
+    cart.value[index].quantite = Math.round((cur + 1) * 1000) / 1000
+  }
 }
 
 function decrementQty(index) {
-  if (cart.value[index].quantite > 1) {
-    cart.value[index].quantite--
+  const cur = Number(cart.value[index].quantite) || 0
+  if (cur <= 0.1) {
+    removeFromCart(index)
+  } else if (cur <= 1) {
+    cart.value[index].quantite = Math.max(0.001, Math.round((cur - 0.1) * 1000) / 1000)
+  } else {
+    cart.value[index].quantite = Math.round((cur - 1) * 1000) / 1000
   }
 }
 
 function setQty(index, value) {
-  const qty = parseInt(value)
-  if (qty > 0) {
-    cart.value[index].quantite = qty
+  const normalized = String(value).replace(',', '.')
+  const qty = parseFloat(normalized)
+  if (!isNaN(qty) && qty > 0) {
+    cart.value[index].quantite = Math.round(qty * 1000) / 1000
   }
 }
 
@@ -1729,17 +1928,35 @@ async function handleCheckout() {
       ? (parseFloat(montantRecu.value) || totalTTC.value)
       : totalTTC.value
 
+    const prepareLignePayload = (item) => {
+      const tva = parseFloat(item.taux_tva) || 0
+      const qty = Math.round((parseFloat(item.quantite) || 1) * 1000) / 1000
+      const unitTTC = parseFloat(item.prix_unitaire) || 0
+      let unitHT
+      if (item.prix_ht !== undefined && !isNaN(item.prix_ht) && Math.abs((item.prix_ttc || 0) - unitTTC) < 0.009) {
+        unitHT = parseFloat(item.prix_ht)
+      } else {
+        unitHT = tva > 0 ? (unitTTC / (1 + (tva / 100))) : unitTTC
+      }
+      unitHT = Math.round(unitHT * 10000) / 10000
+
+      return {
+        produit_id: item.produit_id,
+        produit_fini_id: item.produit_fini_id || null,
+        is_produit_fini: item.is_produit_fini || false,
+        designation: item.designation,
+        quantite: qty,
+        unite: item.unite || null,
+        prix_unitaire: unitHT,
+        prix_ttc: Math.round(unitTTC * 100) / 100,
+        taux_tva: tva,
+      }
+    }
+
     if (isRectifyingSale.value && rectifyingSaleId.value) {
       const payload = {
-        lignes: cart.value.map(item => ({
-          produit_id: item.produit_id,
-          produit_fini_id: item.produit_fini_id || null,
-          is_produit_fini: item.is_produit_fini || false,
-          designation: item.designation,
-          quantite: item.quantite,
-          prix_unitaire: item.prix_unitaire,
-          taux_tva: item.taux_tva,
-        })),
+        lignes: cart.value.map(prepareLignePayload),
+        prix_is_ttc: false,
         mode_paiement: paymentMode.value,
         montant_recu: effectiveRecu,
         motif_rectification: motifRectification.value || 'Rectification effectuée en caisse',
@@ -1763,15 +1980,8 @@ async function handleCheckout() {
 
     const payload = {
       client_id: null,
-      lignes: cart.value.map(item => ({
-        produit_id: item.produit_id,
-        produit_fini_id: item.produit_fini_id || null,
-        is_produit_fini: item.is_produit_fini || false,
-        designation: item.designation,
-        quantite: item.quantite,
-        prix_unitaire: item.prix_unitaire,
-        taux_tva: item.taux_tva,
-      })),
+      lignes: cart.value.map(prepareLignePayload),
+      prix_is_ttc: false,
       mode_paiement: paymentMode.value,
       montant_recu: effectiveRecu,
       observations: observationPaiement.value ? observationPaiement.value.trim() : null,
@@ -1855,17 +2065,24 @@ async function startRectifySale(sale) {
     isRectifyingSale.value = true
     motifRectification.value = 'Modification / Rectification des articles en caisse'
 
-    cart.value = data.lignes.map(l => ({
-      produit_id: l.produit_id,
-      produit_fini_id: l.produit_fini_id || null,
-      is_produit_fini: l.is_produit_fini || false,
-      designation: l.designation,
-      prix_unitaire: l.prix_unitaire,
-      taux_tva: l.taux_tva,
-      quantite: l.quantite,
-      reference: l.reference || '',
-      _flash: false
-    }))
+    cart.value = data.lignes.map(l => {
+      const puTtc = l.prix_unitaire_ttc || (l.quantite > 0 ? Math.round((l.total_ttc / l.quantite) * 100) / 100 : (l.prix_unitaire * (1 + (l.taux_tva / 100))))
+      const puHt = l.prix_unitaire_ht || l.prix_unitaire
+      return {
+        produit_id: l.produit_id,
+        produit_fini_id: l.produit_fini_id || null,
+        is_produit_fini: l.is_produit_fini || false,
+        designation: l.designation,
+        prix_unitaire: Math.round(puTtc * 100) / 100,
+        prix_ttc: Math.round(puTtc * 100) / 100,
+        prix_ht: puHt,
+        taux_tva: l.taux_tva,
+        quantite: l.quantite,
+        unite: l.unite || 'U',
+        reference: l.reference || '',
+        _flash: false
+      }
+    })
 
     paymentMode.value = data.mode_paiement_code || 'especes'
     montantRecu.value = String(data.total_ttc)
@@ -2415,8 +2632,39 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.pos-unit-tag {
+  display: inline-block;
+  padding: 1px 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent, #3b82f6);
+  margin-left: 2px;
+}
+
+.pos-weigh-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pos-weigh-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent, #3b82f6);
+  transform: scale(1.05);
+}
+
 .pos-qty-input {
-  width: 36px;
+  width: 52px;
+  padding: 0 2px;
   text-align: center;
   border: none;
   border-left: 1px solid var(--border-color);
@@ -2428,6 +2676,213 @@ onUnmounted(() => {
   font-family: inherit;
   outline: none;
   -moz-appearance: textfield;
+}
+
+/* Modal Pesée & Vente au détail (Droguerie / Vrac) */
+.pos-weigh-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  width: 480px;
+  max-width: 95vw;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pos-weigh-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--subtle);
+}
+
+.pos-weigh-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pos-weigh-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.pos-weigh-modal-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pos-weigh-sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pos-weigh-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pos-weigh-presets-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pos-weigh-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pos-preset-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pos-preset-chip strong {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.pos-preset-chip span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.pos-preset-chip:hover {
+  border-color: var(--accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+}
+.pos-preset-chip.active {
+  background: var(--accent, #3b82f6);
+  border-color: var(--accent, #3b82f6);
+}
+.pos-preset-chip.active strong,
+.pos-preset-chip.active span {
+  color: white;
+}
+
+.pos-weigh-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-top: 6px;
+}
+
+.pos-weigh-input-box label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.pos-weigh-input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 10px;
+}
+.pos-weigh-input-wrap:focus-within {
+  border-color: var(--accent, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.pos-weigh-field {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+
+.pos-weigh-field-unit {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.pos-weigh-calc-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--text-primary);
+}
+.pos-weigh-calc-preview strong {
+  font-size: 1.15rem;
+  color: var(--accent, #3b82f6);
+}
+
+.pos-weigh-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  background: var(--subtle);
+}
+
+.pos-btn-weigh-cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pos-btn-weigh-cancel:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.pos-btn-weigh-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent, #3b82f6);
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pos-btn-weigh-confirm:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 .pos-qty-input::-webkit-outer-spin-button,
 .pos-qty-input::-webkit-inner-spin-button {

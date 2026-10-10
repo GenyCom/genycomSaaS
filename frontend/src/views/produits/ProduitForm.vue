@@ -258,6 +258,9 @@
               <div class="form-group-custom">
                 <label>Unité de mesure</label>
                 <input v-model="form.unite" placeholder="Ex: Unité, kg, m..." />
+                <div class="unit-quick-chips">
+                  <span v-for="u in ['Kg', 'g', 'L', 'm', 'Sac', 'Carton', 'Boîte', 'Unité']" :key="u" @click="form.unite = u" class="unit-chip" :class="{ active: form.unite === u }">{{ u }}</span>
+                </div>
               </div>
               <div class="form-group-custom">
                 <label>Emplacement Stock</label>
@@ -268,12 +271,12 @@
             <div class="form-row-custom">
               <div class="form-group-custom">
                 <label>Stock Initial (Ouverture)</label>
-                <input v-model="form.stock_initial" type="number" step="0.01" :disabled="!isNew" :class="{ 'input-readonly': !isNew }" />
+                <input v-model="form.stock_initial" type="number" step="0.001" :disabled="!isNew" :class="{ 'input-readonly': !isNew }" />
                 <small v-if="isNew" class="help-text">Définit le stock de départ et crée un mouvement initial.</small>
               </div>
               <div class="form-group-custom">
                 <label>Stock Actuel (Lecture seule)</label>
-                <input :value="form.stock_actuel" type="number" step="0.01" disabled class="input-readonly font-bold" />
+                <input :value="form.stock_actuel" type="number" step="0.001" disabled class="input-readonly font-bold" />
                 <small class="help-text">Mis à jour via les BL, BR et ajustements.</small>
               </div>
             </div>
@@ -281,11 +284,11 @@
             <div class="form-row-custom">
               <div class="form-group-custom">
                 <label>Stock de Sécurité (Min)</label>
-                <input v-model="form.stock_min" type="number" />
+                <input v-model="form.stock_min" type="number" step="0.001" />
               </div>
               <div class="form-group-custom">
                 <label>Seuil d'Alerte (Notif.)</label>
-                <input v-model="form.seuil_alerte" type="number" class="border-warn" />
+                <input v-model="form.seuil_alerte" type="number" step="0.001" class="border-warn" />
               </div>
             </div>
 
@@ -984,6 +987,33 @@ input.money-input { font-weight: 800; font-size: 1.1rem; border-color: var(--c-a
   font-style: italic;
   text-align: center;
   padding: 12px 0;
+}
+
+.unit-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.unit-chip {
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--bg-card, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.unit-chip:hover {
+  border-color: var(--primary, #3b82f6);
+  color: var(--primary, #3b82f6);
+}
+.unit-chip.active {
+  background: var(--primary, #3b82f6);
+  border-color: var(--primary, #3b82f6);
+  color: white;
 }
 
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

@@ -21,7 +21,7 @@ class LigneFacture extends BaseModel
     ];
 
     protected $casts = [
-        'quantite' => 'decimal:2',
+        'quantite' => 'decimal:3',
         'prix_unitaire' => 'decimal:4',
         'taux_tva' => 'decimal:3',
         'montant_ht' => 'decimal:2',
