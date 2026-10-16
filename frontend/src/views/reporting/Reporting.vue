@@ -276,15 +276,15 @@
         <div class="summary-cards mb-24">
           <div class="mini-card accent">
             <span class="label">Créances Clients (À encaisser)</span>
-            <span class="value">{{ formatMoney(unpaidStatementData.total_creances ?? unpaidData.total_clients) }}</span>
+            <span class="value">{{ formatMoney(totalCreances) }}</span>
           </div>
           <div class="mini-card neg">
             <span class="label">Dettes Fournisseurs (À décaisser)</span>
-            <span class="value">{{ formatMoney(unpaidStatementData.total_dettes ?? unpaidData.total_fournisseurs) }}</span>
+            <span class="value">{{ formatMoney(totalDettes) }}</span>
           </div>
-          <div class="mini-card" :class="(unpaidStatementData.total_creances - unpaidStatementData.total_dettes) >= 0 ? 'success' : 'neg'">
+          <div class="mini-card" :class="soldeNet >= 0 ? 'success' : 'neg'">
             <span class="label">Solde Net</span>
-            <span class="value">{{ formatMoney((unpaidStatementData.total_creances ?? 0) - (unpaidStatementData.total_dettes ?? 0)) }}</span>
+            <span class="value">{{ formatMoney(soldeNet) }}</span>
           </div>
         </div>
 
@@ -815,7 +815,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw } from 'vue'
+import { ref, reactive, onMounted, computed, watch, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../../services/api'
 import { toast } from '../../services/toastService'
@@ -889,8 +889,8 @@ const unpaidStatementData = ref({ clients: [], fournisseurs: [], total_creances:
 const expandedTiers = reactive({})
 const unpaidStatementLoaded = ref(false)
 
-async function fetchUnpaidStatement() {
-  if (unpaidStatementLoaded.value) return
+async function fetchUnpaidStatement(force = false) {
+  if (unpaidStatementLoaded.value && !force) return
   try {
     const res = await api.get('/reporting/unpaid-statement')
     unpaidStatementData.value = res.data
@@ -899,6 +899,28 @@ async function fetchUnpaidStatement() {
     console.error('Erreur chargement état des impayés:', e)
   }
 }
+
+const totalCreances = computed(() => {
+  if (unpaidSubTab.value === 'tiers' && unpaidStatementLoaded.value && unpaidStatementData.value.total_creances !== undefined) {
+    return Number(unpaidStatementData.value.total_creances) || 0
+  }
+  return Number(unpaidData.value.total_clients) || 0
+})
+
+const totalDettes = computed(() => {
+  if (unpaidSubTab.value === 'tiers' && unpaidStatementLoaded.value && unpaidStatementData.value.total_dettes !== undefined) {
+    return Number(unpaidStatementData.value.total_dettes) || 0
+  }
+  return Number(unpaidData.value.total_fournisseurs) || 0
+})
+
+const soldeNet = computed(() => totalCreances.value - totalDettes.value)
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'unpaid' && !unpaidStatementLoaded.value) {
+    fetchUnpaidStatement()
+  }
+})
 
 function switchToTiersView() {
   unpaidSubTab.value = 'tiers'
@@ -981,7 +1003,11 @@ async function fetchData() {
     unpaidData.value = data.unpaid
     cashData.value = data.cash_flow
     chequeData.value = data.cheques
-    unpaidStatementLoaded.value = false // invalidate cache so État par Tiers reloads
+    if (activeTab.value === 'unpaid') {
+      fetchUnpaidStatement(true)
+    } else {
+      unpaidStatementLoaded.value = false
+    }
   } catch (error) {
     toast.error("Erreur lors du chargement des rapports")
   } finally {
