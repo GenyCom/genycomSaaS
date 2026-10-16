@@ -60,18 +60,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
         </div>
         <div class="kpi-content">
-          <p class="kpi-label" style="color: #9F1239;">Dépenses du mois</p>
+          <p class="kpi-label" style="color: #9F1239;">Dépenses</p>
           <p class="kpi-value" style="color: #BE123C;">{{ formatMoney(kpis.depenses_mois) }}</p>
           <p class="kpi-sub-text" style="color: #9F1239;">Charges de fonctionnement</p>
-        </div>
-      </div>
-
-      <div class="kpi-card warning">
-        <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-        <div class="kpi-content">
-          <p class="kpi-label">Impayés Clients</p>
-          <p class="kpi-value text-danger">{{ formatMoney(kpis.factures_impayees?.montant) }}</p>
-          <p class="kpi-sub-text">{{ kpis.factures_impayees?.count || 0 }} factures</p>
         </div>
       </div>
 
@@ -85,6 +76,75 @@
           <p class="kpi-sub-text" style="color: #047857;">Trésorerie générée</p>
         </div>
       </div>
+
+      <!-- Bénéfice Net (après CA Encaissé) -->
+      <div class="kpi-card profit-card" :class="(kpis.benefice_net !== undefined ? kpis.benefice_net : ((kpis.ca_mois || 0) - (kpis.depenses_mois || 0))) >= 0 ? 'profit-pos' : 'profit-neg'">
+        <div class="kpi-icon profit-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="kpi-content">
+          <p class="kpi-label profit-label">Bénéfice Net</p>
+          <div class="value-row">
+            <p class="kpi-value profit-value">{{ formatMoney(kpis.benefice_net !== undefined ? kpis.benefice_net : ((kpis.ca_mois || 0) - (kpis.depenses_mois || 0))) }}</p>
+            <span v-if="kpis.benefice_marge_pct !== undefined" :class="['trend-badge', (kpis.benefice_net || 0) >= 0 ? 'pos' : 'neg']">
+              {{ kpis.benefice_marge_pct }}%
+            </span>
+          </div>
+          <p class="kpi-sub-text profit-sub">Rentabilité de la période</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Niveau 2 : Impayés Clients & Impayés Fournisseurs (Ligne 2) -->
+    <div class="kpi-secondary-row">
+      <router-link to="/factures" class="kpi-strip-card card-impayes-client" title="Voir les factures clients">
+        <div class="strip-icon-wrapper warning">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12"/>
+            <path d="m8 11 4 4 4-4"/>
+            <path d="M4 21h16"/>
+          </svg>
+        </div>
+        <div class="strip-main">
+          <div class="strip-header">
+            <span class="strip-tag tag-warning">Créances Clients</span>
+            <span class="strip-count">{{ kpis.factures_impayees?.count || 0 }} facture(s) en attente</span>
+          </div>
+          <div class="strip-body">
+            <span class="strip-title">Impayés Clients</span>
+            <span class="strip-amount val-danger">{{ formatMoney(kpis.factures_impayees?.montant ?? kpis.encours_clients) }}</span>
+          </div>
+        </div>
+        <div class="strip-arrow">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </router-link>
+
+      <router-link to="/factures-achats" class="kpi-strip-card card-impayes-fournisseur" title="Voir les factures d'achats">
+        <div class="strip-icon-wrapper info">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21V9"/>
+            <path d="m16 13-4-4-4 4"/>
+            <path d="M4 3h16"/>
+          </svg>
+        </div>
+        <div class="strip-main">
+          <div class="strip-header">
+            <span class="strip-tag tag-purple">Dettes Fournisseurs</span>
+            <span class="strip-count">{{ kpis.impayes_fournisseurs?.count || 0 }} facture(s) d'achat à payer</span>
+          </div>
+          <div class="strip-body">
+            <span class="strip-title">Impayés Fournisseurs</span>
+            <span class="strip-amount val-purple">{{ formatMoney(kpis.impayes_fournisseurs?.montant ?? kpis.encours_fournisseurs) }}</span>
+          </div>
+        </div>
+        <div class="strip-arrow">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </router-link>
     </div>
 
     <div class="dashboard-grid-main">
@@ -104,7 +164,9 @@
             <div class="bar-chart-container">
               <div v-for="(item, idx) in caMensuel" :key="idx" class="chart-column">
                 <div class="bar-wrapper">
-                  <div class="bar-tooltip">{{ formatMoney(item.ca) }}</div>
+                  <span class="bar-value" :class="{ 'zero-value': item.ca === 0 }">
+                    {{ formatBarValue(item.ca) }}
+                  </span>
                   <div class="bar" :class="{ 'empty-bar': item.ca === 0 }" :style="{ height: getBarHeight(item.ca) }"></div>
                 </div>
                 <span class="bar-label">{{ item.label }}</span>
@@ -207,12 +269,20 @@ function formatCompact(val) {
   return num.toFixed(0)
 }
 
+function formatBarValue(val) {
+  const num = parseFloat(val) || 0
+  if (num === 0) return '0 DH'
+  return num.toLocaleString('fr-FR', {
+    minimumFractionDigits: num % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2
+  }) + ' DH'
+}
+
 const maxCA = computed(() => Math.max(...caMensuel.value.map(i => parseFloat(i.ca) || 0), 1))
 function getBarHeight(val) {
   if (!val || val === 0) return '4px'; // Petite barre grise si aucun CA
   const max = Math.max(...caMensuel.value.map(i => parseFloat(i.ca) || 0), 1);
-  const pct = (parseFloat(val) / max) * 100;
-  // Utilisation de Math.max pour garantir une hauteur minimale visible
+  const pct = (parseFloat(val) / max) * 75; // Limité à 75% pour laisser l'espace au libellé de montant au-dessus
   return `${Math.max(pct, 2)}%`; 
 }
 
@@ -364,6 +434,196 @@ onMounted(refreshData)
 .trend-badge.neg { background: #FEE2E2; color: #991B1B; }
 .kpi-sub-text { font-size: .68rem; color: var(--c-muted); margin: 2px 0 0; }
 
+/* --- Bénéfice Net Card --- */
+.kpi-card.profit-pos {
+  background: #F0FDF4;
+  border-color: #A7F3D0;
+}
+.kpi-card.profit-pos .profit-icon {
+  background: #D1FAE5;
+  color: #059669;
+}
+.kpi-card.profit-pos .profit-label {
+  color: #065F46;
+}
+.kpi-card.profit-pos .profit-value {
+  color: #064E3B;
+}
+.kpi-card.profit-pos .profit-sub {
+  color: #047857;
+}
+
+.kpi-card.profit-neg {
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+.kpi-card.profit-neg .profit-icon {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+.kpi-card.profit-neg .profit-label {
+  color: #991B1B;
+}
+.kpi-card.profit-neg .profit-value {
+  color: #7F1D1D;
+}
+.kpi-card.profit-neg .profit-sub {
+  color: #991B1B;
+}
+
+/* --- Niveau 2 : Ligne des Impayés (Clients & Fournisseurs) --- */
+.kpi-secondary-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .kpi-secondary-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-strip-card {
+  background: #ffffff;
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-strip-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.kpi-strip-card.card-impayes-client {
+  border-left: 4px solid #F59E0B;
+}
+
+.kpi-strip-card.card-impayes-client:hover {
+  border-color: #F59E0B;
+  background: #FFFDF8;
+}
+
+.kpi-strip-card.card-impayes-fournisseur {
+  border-left: 4px solid #8B5CF6;
+}
+
+.kpi-strip-card.card-impayes-fournisseur:hover {
+  border-color: #8B5CF6;
+  background: #FAF9FF;
+}
+
+.strip-icon-wrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.strip-icon-wrapper.warning {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.strip-icon-wrapper.info {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.strip-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.strip-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.tag-warning {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.tag-purple {
+  background: #F5F3FF;
+  color: #6D28D9;
+  border: 1px solid #DDD6FE;
+}
+
+.strip-count {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.strip-body {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.strip-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.strip-amount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.val-danger {
+  color: #DC2626;
+}
+
+.val-purple {
+  color: #7C3AED;
+}
+
+.strip-arrow {
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kpi-strip-card:hover .strip-arrow {
+  transform: translateX(3px);
+  color: var(--c-text);
+}
+
 /* --- Main Layout Grids --- */
 .dashboard-grid-main { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; margin-bottom: 16px; }
 .dashboard-grid-secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -390,7 +650,7 @@ onMounted(refreshData)
 
 /* Premium Bar Chart */
 .chart-body { padding: 24px 24px 16px; }
-.premium-chart { position: relative; height: 180px; }
+.premium-chart { position: relative; height: 195px; }
 
 .chart-grid { position: absolute; inset: 0 0 25px 0; display: flex; flex-direction: column; justify-content: space-between; z-index: 1; pointer-events: none; }
 .grid-line { width: 100%; border-top: 1px dashed #E2E8F0; }
@@ -398,15 +658,31 @@ onMounted(refreshData)
 .bar-chart-container { position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; height: 100%; padding-bottom: 25px; }
 .chart-column { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; height: 100%; justify-content: flex-end; }
 
-.bar-wrapper { width: 100%; max-width: 38px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; cursor: pointer; }
+.bar-wrapper { width: 100%; max-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; cursor: pointer; }
+
+.bar-value {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #1E293B;
+  white-space: nowrap;
+  margin-bottom: 5px;
+  letter-spacing: -0.01em;
+  transition: transform 0.2s ease, color 0.2s ease;
+  pointer-events: none;
+}
+.bar-value.zero-value {
+  color: #94A3B8;
+  font-weight: 500;
+  font-size: 0.62rem;
+}
+.bar-wrapper:hover .bar-value {
+  color: #2563EB;
+  transform: translateY(-2px);
+}
 
 .bar { width: 100%; background: #3b82f6; border-radius: 6px 6px 0 0; transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 .empty-bar { background: #F1F5F9; box-shadow: none; border-radius: 4px; }
-.bar-wrapper:hover .bar { opacity: 0.8; transform: scaleY(1.02); transform-origin: bottom; }
-
-.bar-tooltip { position: absolute; top: -32px; background: #1E293B; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; opacity: 0; transform: translateY(5px); transition: all 0.2s ease; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-.bar-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 4px; border-style: solid; border-color: #1E293B transparent transparent transparent; }
-.bar-wrapper:hover .bar-tooltip { opacity: 1; transform: translateY(0); }
+.bar-wrapper:hover .bar { opacity: 0.85; transform: scaleY(1.02); transform-origin: bottom; }
 
 .bar-label { font-size: 0.65rem; font-weight: 600; color: #64748B; position: absolute; bottom: 0; text-transform: capitalize; }
 

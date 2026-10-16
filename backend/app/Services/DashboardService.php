@@ -24,12 +24,18 @@ class DashboardService
         $currentCA = $this->caPeriode($startDate);
         $previousCA = $this->caPeriodeEntre($previousDates['start'], $previousDates['end']);
 
+        $beneficeNet = $this->beneficeNetPeriode($startDate);
+        $beneficeMargePct = $this->beneficeMargePct($beneficeNet, $startDate);
+
         return [
             'ca_mois'               => $currentCA, 
             'ca_trend'              => $this->calculateTrend($currentCA, $previousCA),
             'ca_encaisse'           => $this->caEncaissePeriode($startDate),
             'ca_annee'              => $this->caAnnee(),
+            'benefice_net'          => $beneficeNet,
+            'benefice_marge_pct'    => $beneficeMargePct,
             'factures_impayees'     => $this->facturesImpayees(),
+            'impayes_fournisseurs'  => $this->facturesAchatsImpayees(),
             'encours_clients'       => $this->encoursClients(),
             'encours_fournisseurs'  => $this->encoursFournisseurs(),
             'devis_en_cours'        => $this->devisEnCours(),
@@ -81,11 +87,33 @@ class DashboardService
     {
         try {
             $tid = $this->tid();
+
+            // Récupérer les IDs des états "Annulée" pour les exclure
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->where('type_document', 'facture')
+                ->where('code', 'ANN')
+                ->pluck('id');
+
             $q = DB::connection('tenant')->table('factures')
                 ->where('tenant_id', $tid)
                 ->whereNull('deleted_at')
-                ->where('est_reglee', 0)
+                ->where(function ($sub) {
+                    $sub->where('est_reglee', 0)
+                        ->orWhereNull('est_reglee');
+                })
+                ->whereRaw('(total_ttc - montant_regle) > 0')
                 ->whereNotNull('numero');
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $q->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('etat_id')
+                        ->orWhereNotIn('etat_id', $etatsAnnules);
+                });
+            }
+
+            $count = (clone $q)->count();
+            $montantFactures = (float) (clone $q)->sum(DB::raw('total_ttc - montant_regle'));
 
             $soldeInitial = (float) DB::connection('tenant')->table('clients')
                 ->where('tenant_id', $tid)
@@ -93,21 +121,44 @@ class DashboardService
                 ->sum('solde_initial');
 
             return [
-                'count'   => $q->count(),
-                'montant' => ((float) $q->sum(DB::raw('total_ttc - montant_regle'))) + $soldeInitial,
+                'count'   => $count,
+                'montant' => $montantFactures + $soldeInitial,
             ];
-        } catch (\Exception $e) { return ['count' => 0, 'montant' => 0]; }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard facturesImpayees error: ' . $e->getMessage());
+            return ['count' => 0, 'montant' => 0];
+        }
     }
 
     public function encoursClients(): float
     {
         try {
             $tid = $this->tid();
-            $facturesEncours = (float) DB::connection('tenant')->table('factures')
+
+            // Récupérer les IDs des états "Annulée" pour les exclure
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->where('type_document', 'facture')
+                ->where('code', 'ANN')
+                ->pluck('id');
+
+            $q = DB::connection('tenant')->table('factures')
                 ->where('tenant_id', $tid)
                 ->whereNull('deleted_at')
-                ->where('est_reglee', 0)
-                ->sum(DB::raw('total_ttc - montant_regle'));
+                ->where(function ($sub) {
+                    $sub->where('est_reglee', 0)
+                        ->orWhereNull('est_reglee');
+                })
+                ->whereRaw('(total_ttc - montant_regle) > 0');
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $q->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('etat_id')
+                        ->orWhereNotIn('etat_id', $etatsAnnules);
+                });
+            }
+
+            $facturesEncours = (float) $q->sum(DB::raw('total_ttc - montant_regle'));
 
             $soldeInitial = (float) DB::connection('tenant')->table('clients')
                 ->where('tenant_id', $tid)
@@ -115,17 +166,90 @@ class DashboardService
                 ->sum('solde_initial');
 
             return $facturesEncours + $soldeInitial;
-        } catch (\Exception $e) { return 0; }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard encoursClients error: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     public function encoursFournisseurs(): float
     {
         try {
-            return (float) DB::connection('tenant')->table('factures_achats')
-                ->where('tenant_id', $this->tid())
+            $tid = $this->tid();
+
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->whereIn('type_document', ['facture_achat', 'facture'])
+                ->whereIn('code', ['ANN', 'ANL'])
+                ->pluck('id');
+
+            $q = DB::connection('tenant')->table('factures_achats')
+                ->where('tenant_id', $tid)
                 ->whereNull('deleted_at')
-                ->sum('reste_a_payer');
-        } catch (\Exception $e) { return 0; }
+                ->where(function ($sub) {
+                    $sub->whereNull('statut')
+                        ->orWhere('statut', '!=', 'annule');
+                })
+                ->where(function ($sub) {
+                    $sub->where('reste_a_payer', '>', 0)
+                        ->orWhereRaw('(montant_ttc - COALESCE(montant_paye, 0)) > 0');
+                });
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $q->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('etat_id')
+                        ->orWhereNotIn('etat_id', $etatsAnnules);
+                });
+            }
+
+            return (float) $q->sum(DB::raw('CASE WHEN reste_a_payer IS NOT NULL AND reste_a_payer > 0 THEN reste_a_payer ELSE (montant_ttc - COALESCE(montant_paye, 0)) END'));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard encoursFournisseurs error: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function facturesAchatsImpayees(): array
+    {
+        try {
+            $tid = $this->tid();
+
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->whereIn('type_document', ['facture_achat', 'facture'])
+                ->whereIn('code', ['ANN', 'ANL'])
+                ->pluck('id');
+
+            $q = DB::connection('tenant')->table('factures_achats')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->where(function ($sub) {
+                    $sub->whereNull('statut')
+                        ->orWhere('statut', '!=', 'annule');
+                })
+                ->where(function ($sub) {
+                    $sub->where('reste_a_payer', '>', 0)
+                        ->orWhereRaw('(montant_ttc - COALESCE(montant_paye, 0)) > 0');
+                });
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $q->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('etat_id')
+                        ->orWhereNotIn('etat_id', $etatsAnnules);
+                });
+            }
+
+            $count = (clone $q)->count();
+            $montant = (float) (clone $q)->sum(DB::raw('CASE WHEN reste_a_payer IS NOT NULL AND reste_a_payer > 0 THEN reste_a_payer ELSE (montant_ttc - COALESCE(montant_paye, 0)) END'));
+
+            return [
+                'count'   => $count,
+                'montant' => $montant,
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard facturesAchatsImpayees error: ' . $e->getMessage());
+            return ['count' => 0, 'montant' => 0.0];
+        }
     }
 
     public function devisEnCours(): int
@@ -242,6 +366,93 @@ class DashboardService
         } catch (\Exception $e) { return 0; }
     }
 
+    public function beneficeNetPeriode($startDate): float
+    {
+        try {
+            $tid = $this->tid();
+            $depenses = (float) DB::connection('tenant')->table('depenses')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->where('date_depense', '>=', $startDate)
+                ->sum('montant');
+
+            $lignes = DB::connection('tenant')->table('ligne_facture as lf')
+                ->join('factures as f', 'f.id', '=', 'lf.facture_id')
+                ->leftJoin('produits as p', 'p.id', '=', 'lf.produit_id')
+                ->where('f.tenant_id', $tid)
+                ->whereNull('f.deleted_at')
+                ->whereNotNull('f.numero')
+                ->where('f.date_facture', '>=', $startDate)
+                ->select('lf.montant_ht', 'lf.quantite', 'p.prix_revient', 'p.is_service')
+                ->get();
+
+            $caHt = 0;
+            $cogs = 0;
+
+            foreach ($lignes as $l) {
+                $caHt += (float) $l->montant_ht;
+                if ($l->prix_revient && !$l->is_service) {
+                    $cogs += (float) $l->quantite * (float) $l->prix_revient;
+                }
+            }
+
+            // Fallback si pas de lignes détaillées avec total HT direct sur la facture
+            if ($caHt == 0) {
+                $caHt = (float) DB::connection('tenant')->table('factures')
+                    ->where('tenant_id', $tid)
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('numero')
+                    ->where('date_facture', '>=', $startDate)
+                    ->sum('total_ht');
+            }
+
+            // Fallback pour le coût d'achat si non renseigné sur les fiches produits
+            if ($cogs == 0) {
+                try {
+                    $cogs = (float) DB::connection('tenant')->table('factures_achats')
+                        ->where('tenant_id', $tid)
+                        ->whereNull('deleted_at')
+                        ->where('date_facture', '>=', $startDate)
+                        ->sum('total_ht');
+                } catch (\Exception $e) {}
+            }
+
+            $margeBrute = $caHt - $cogs;
+            return round($margeBrute - $depenses, 2);
+        } catch (\Exception $e) {
+            return 0.0;
+        }
+    }
+
+    public function beneficeMargePct(float $beneficeNet, $startDate): float
+    {
+        try {
+            $tid = $this->tid();
+            $caHt = (float) DB::connection('tenant')->table('factures')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->whereNotNull('numero')
+                ->where('date_facture', '>=', $startDate)
+                ->sum('total_ht');
+
+            if ($caHt <= 0) {
+                $caHt = (float) DB::connection('tenant')->table('factures')
+                    ->where('tenant_id', $tid)
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('numero')
+                    ->where('date_facture', '>=', $startDate)
+                    ->sum('total_ttc');
+            }
+
+            if ($caHt > 0) {
+                return round(($beneficeNet / $caHt) * 100, 1);
+            }
+            return 0.0;
+        } catch (\Exception $e) {
+            return 0.0;
+        }
+    }
+
     public function caMensuel(): array
     {
         try {
@@ -308,13 +519,33 @@ class DashboardService
     public function echeancesProchaines(): array
     {
         try {
-            $clients = DB::connection('tenant')->table('factures as f')
+            $tid = $this->tid();
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->where('type_document', 'facture')
+                ->where('code', 'ANN')
+                ->pluck('id');
+
+            $clientsQuery = DB::connection('tenant')->table('factures as f')
                 ->join('clients as c', 'c.id', '=', 'f.client_id')
-                ->where('f.tenant_id', $this->tid())
-                ->where('f.est_reglee', 0)
+                ->where('f.tenant_id', $tid)
+                ->where(function ($sub) {
+                    $sub->where('f.est_reglee', 0)
+                        ->orWhereNull('f.est_reglee');
+                })
+                ->whereRaw('(f.total_ttc - f.montant_regle) > 0')
                 ->whereNull('f.deleted_at')
                 ->whereNotNull('f.date_echeance')
-                ->whereRaw('f.date_echeance <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)')
+                ->whereRaw('f.date_echeance <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)');
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $clientsQuery->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('f.etat_id')
+                        ->orWhereNotIn('f.etat_id', $etatsAnnules);
+                });
+            }
+
+            $clients = $clientsQuery
                 ->select('f.numero', 'c.societe', 'f.total_ttc', 'f.montant_regle', 'f.date_echeance',
                          DB::raw('(f.total_ttc - f.montant_regle) as reste_du'))
                 ->orderBy('f.date_echeance')
@@ -322,13 +553,32 @@ class DashboardService
 
             $fournisseurs = [];
             try {
-                $fournisseurs = DB::connection('tenant')->table('factures_achats as d')
+                $etatsAnnulesFourn = DB::connection('tenant')->table('etat_document')
+                    ->where('tenant_id', $tid)
+                    ->whereIn('type_document', ['facture_achat', 'facture'])
+                    ->whereIn('code', ['ANN', 'ANL'])
+                    ->pluck('id');
+
+                $fournQuery = DB::connection('tenant')->table('factures_achats as d')
                     ->join('fournisseurs as fr', 'fr.id', '=', 'd.fournisseur_id')
-                    ->where('d.tenant_id', $this->tid())
+                    ->where('d.tenant_id', $tid)
                     ->whereNull('d.deleted_at')
+                    ->where(function ($sub) {
+                        $sub->whereNull('d.statut')
+                            ->orWhere('d.statut', '!=', 'annule');
+                    })
                     ->where('d.reste_a_payer', '>', 0)
                     ->whereNotNull('d.date_echeance')
-                    ->whereRaw('d.date_echeance <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)')
+                    ->whereRaw('d.date_echeance <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)');
+
+                if ($etatsAnnulesFourn->isNotEmpty()) {
+                    $fournQuery->where(function ($sub) use ($etatsAnnulesFourn) {
+                        $sub->whereNull('d.etat_id')
+                            ->orWhereNotIn('d.etat_id', $etatsAnnulesFourn);
+                    });
+                }
+
+                $fournisseurs = $fournQuery
                     ->select('d.numero', 'fr.societe', 'd.reste_a_payer as montant_restant', 'd.date_echeance')
                     ->orderBy('d.date_echeance')
                     ->get();
@@ -377,15 +627,31 @@ class DashboardService
 
         // 2. Récupération des factures en retard
         try {
-            $overdueFactures = DB::connection('tenant')->table('factures')
+            $etatsAnnules = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->where('type_document', 'facture')
+                ->where('code', 'ANN')
+                ->pluck('id');
+
+            $overdueQuery = DB::connection('tenant')->table('factures')
                 ->where('tenant_id', $tid)
                 ->where(function ($query) {
                     $query->where('est_reglee', 0)
                           ->orWhereNull('est_reglee');
                 })
+                ->whereRaw('(total_ttc - montant_regle) > 0')
                 ->whereNotNull('date_echeance')
                 ->whereDate('date_echeance', '<=', now()->format('Y-m-d'))
-                ->whereNull('deleted_at')
+                ->whereNull('deleted_at');
+
+            if ($etatsAnnules->isNotEmpty()) {
+                $overdueQuery->where(function ($sub) use ($etatsAnnules) {
+                    $sub->whereNull('etat_id')
+                        ->orWhereNotIn('etat_id', $etatsAnnules);
+                });
+            }
+
+            $overdueFactures = $overdueQuery
                 ->get()
                 ->map(function($f) {
                     return [

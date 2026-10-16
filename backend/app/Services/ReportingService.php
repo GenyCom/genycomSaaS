@@ -401,14 +401,39 @@ class ReportingService
     {
         $tid = $this->tid();
 
+        // Récupérer les IDs des états "Annulée" pour les exclure
+        $etatsAnnulesClients = DB::connection('tenant')->table('etat_document')
+            ->where('tenant_id', $tid)
+            ->where('type_document', 'facture')
+            ->where('code', 'ANN')
+            ->pluck('id');
+
+        $etatsAnnulesFournisseurs = DB::connection('tenant')->table('etat_document')
+            ->where('tenant_id', $tid)
+            ->whereIn('type_document', ['facture_achat', 'facture'])
+            ->whereIn('code', ['ANN', 'ANL'])
+            ->pluck('id');
+
         // 1. Factures clients impayées
-        $facturesClients = DB::connection('tenant')->table('factures as f')
+        $facturesClientsQuery = DB::connection('tenant')->table('factures as f')
             ->join('clients as c', 'c.id', '=', 'f.client_id')
             ->where('f.tenant_id', $tid)
             ->whereNull('f.deleted_at')
-            ->where('f.est_reglee', 0)
+            ->where(function ($sub) {
+                $sub->where('f.est_reglee', 0)
+                    ->orWhereNull('f.est_reglee');
+            })
             ->whereNotNull('f.numero')
-            ->whereRaw('(f.total_ttc - f.montant_regle) > 0.01')
+            ->whereRaw('(f.total_ttc - f.montant_regle) > 0.01');
+
+        if ($etatsAnnulesClients->isNotEmpty()) {
+            $facturesClientsQuery->where(function ($sub) use ($etatsAnnulesClients) {
+                $sub->whereNull('f.etat_id')
+                    ->orWhereNotIn('f.etat_id', $etatsAnnulesClients);
+            });
+        }
+
+        $facturesClients = $facturesClientsQuery
             ->select('f.numero', 'f.date_facture', 'f.date_echeance', 'c.societe', 'f.total_ttc', 'f.montant_regle', DB::raw("(f.total_ttc - f.montant_regle) as reste_a_payer"), DB::raw("'client' as tiers_type"))
             ->get();
 
@@ -432,12 +457,28 @@ class ReportingService
         $clients = $facturesClients->concat($soldesInitiaux);
 
         // 3. Factures fournisseurs impayées
-        $fournisseurs = DB::connection('tenant')->table('factures_achats as fa')
+        $fournisseursQuery = DB::connection('tenant')->table('factures_achats as fa')
             ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
             ->where('fa.tenant_id', $tid)
             ->whereNull('fa.deleted_at')
+            ->where(function ($sub) {
+                $sub->whereNull('fa.statut')
+                    ->orWhere('fa.statut', '!=', 'annule');
+            })
             ->where('fa.statut', '!=', 'paye')
-            ->where('fa.reste_a_payer', '>', 0.01)
+            ->where(function ($sub) {
+                $sub->where('fa.reste_a_payer', '>', 0.01)
+                    ->orWhereRaw('(fa.montant_ttc - COALESCE(fa.montant_paye, 0)) > 0.01');
+            });
+
+        if ($etatsAnnulesFournisseurs->isNotEmpty()) {
+            $fournisseursQuery->where(function ($sub) use ($etatsAnnulesFournisseurs) {
+                $sub->whereNull('fa.etat_id')
+                    ->orWhereNotIn('fa.etat_id', $etatsAnnulesFournisseurs);
+            });
+        }
+
+        $fournisseurs = $fournisseursQuery
             ->select('fa.numero', 'fa.date_facture', 'fa.date_echeance', 'fr.societe', 'fa.montant_ttc as total_ttc', 'fa.montant_paye as montant_regle', 'fa.reste_a_payer', DB::raw("'fournisseur' as tiers_type"))
             ->get();
 
@@ -460,13 +501,29 @@ class ReportingService
 
         // ── 1. Créances Clients ──
         if (!$tiersType || $tiersType === 'client') {
+            $etatsAnnulesClients = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->where('type_document', 'facture')
+                ->where('code', 'ANN')
+                ->pluck('id');
+
             $query = DB::connection('tenant')->table('factures as f')
                 ->join('clients as c', 'c.id', '=', 'f.client_id')
                 ->where('f.tenant_id', $tid)
                 ->whereNull('f.deleted_at')
-                ->where('f.est_reglee', 0)
+                ->where(function ($sub) {
+                    $sub->where('f.est_reglee', 0)
+                        ->orWhereNull('f.est_reglee');
+                })
                 ->whereNotNull('f.numero')
                 ->whereRaw('(f.total_ttc - f.montant_regle) > 0.01');
+
+            if ($etatsAnnulesClients->isNotEmpty()) {
+                $query->where(function ($sub) use ($etatsAnnulesClients) {
+                    $sub->whereNull('f.etat_id')
+                        ->orWhereNotIn('f.etat_id', $etatsAnnulesClients);
+                });
+            }
 
             if ($tiersId && $tiersType === 'client') {
                 $query->where('f.client_id', $tiersId);
@@ -561,12 +618,32 @@ class ReportingService
 
         // ── 2. Dettes Fournisseurs ──
         if (!$tiersType || $tiersType === 'fournisseur') {
+            $etatsAnnulesFournisseurs = DB::connection('tenant')->table('etat_document')
+                ->where('tenant_id', $tid)
+                ->whereIn('type_document', ['facture_achat', 'facture'])
+                ->whereIn('code', ['ANN', 'ANL'])
+                ->pluck('id');
+
             $query = DB::connection('tenant')->table('factures_achats as fa')
                 ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
                 ->where('fa.tenant_id', $tid)
                 ->whereNull('fa.deleted_at')
+                ->where(function ($sub) {
+                    $sub->whereNull('fa.statut')
+                        ->orWhere('fa.statut', '!=', 'annule');
+                })
                 ->where('fa.statut', '!=', 'paye')
-                ->where('fa.reste_a_payer', '>', 0.01);
+                ->where(function ($sub) {
+                    $sub->where('fa.reste_a_payer', '>', 0.01)
+                        ->orWhereRaw('(fa.montant_ttc - COALESCE(fa.montant_paye, 0)) > 0.01');
+                });
+
+            if ($etatsAnnulesFournisseurs->isNotEmpty()) {
+                $query->where(function ($sub) use ($etatsAnnulesFournisseurs) {
+                    $sub->whereNull('fa.etat_id')
+                        ->orWhereNotIn('fa.etat_id', $etatsAnnulesFournisseurs);
+                });
+            }
 
             if ($tiersId && $tiersType === 'fournisseur') {
                 $query->where('fa.fournisseur_id', $tiersId);
