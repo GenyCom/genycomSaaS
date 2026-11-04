@@ -789,4 +789,449 @@ class ReportingService
 
         return $data->toArray();
     }
+
+    /**
+     * Volet Fournisseur : Liste des transactions d'achat et leurs règlements sur une période
+     */
+    public function supplierTransactions(?string $start = null, ?string $end = null, ?int $supplierId = null): array
+    {
+        [$start, $end] = $this->normalizeDates($start, $end);
+        $tid = $this->tid();
+
+        // 1. Factures d'achat
+        $factures = DB::connection('tenant')->table('factures_achats as fa')
+            ->join('fournisseurs as fr', 'fr.id', '=', 'fa.fournisseur_id')
+            ->where('fa.tenant_id', $tid)
+            ->whereNull('fa.deleted_at')
+            ->whereBetween('fa.date_facture', [$start, $end])
+            ->when($supplierId, fn($q) => $q->where('fa.fournisseur_id', $supplierId))
+            ->select(
+                'fa.id',
+                'fa.numero',
+                'fa.date_facture',
+                'fa.date_echeance',
+                'fa.fournisseur_id',
+                'fr.societe',
+                'fr.ice',
+                'fr.telephone',
+                'fr.email',
+                'fa.montant_ht as total_ht',
+                'fa.montant_tva as total_tva',
+                'fa.montant_ttc as total_ttc',
+                'fa.montant_paye as montant_regle',
+                'fa.reste_a_payer',
+                'fa.statut',
+                'fa.observations',
+                DB::raw("'facture' as source_type")
+            )
+            ->get();
+
+        // 2. Dettes associées à ces factures
+        $factureIds = $factures->pluck('id')->filter()->values()->toArray();
+        $dettesParFacture = [];
+        if (!empty($factureIds)) {
+            $dettesAssociees = DB::connection('tenant')->table('dettes_fournisseur')
+                ->where('tenant_id', $tid)
+                ->whereNull('deleted_at')
+                ->whereIn('facture_id', $factureIds)
+                ->get();
+            foreach ($dettesAssociees as $d) {
+                $dettesParFacture[$d->facture_id] = $d->id;
+            }
+        }
+
+        // 3. Dettes directes (sans facture_id) de la période
+        $dettesDirectes = DB::connection('tenant')->table('dettes_fournisseur as d')
+            ->join('fournisseurs as fr', 'fr.id', '=', 'd.fournisseur_id')
+            ->where('d.tenant_id', $tid)
+            ->whereNull('d.deleted_at')
+            ->whereNull('d.facture_id')
+            ->whereBetween('d.date_dette', [$start, $end])
+            ->when($supplierId, fn($q) => $q->where('d.fournisseur_id', $supplierId))
+            ->select(
+                'd.id',
+                'd.numero',
+                'd.date_dette as date_facture',
+                'd.date_echeance',
+                'd.fournisseur_id',
+                'fr.societe',
+                'fr.ice',
+                'fr.telephone',
+                'fr.email',
+                'd.montant_ht as total_ht',
+                'd.montant_tva as total_tva',
+                'd.montant_total as total_ttc',
+                'd.montant_regle',
+                'd.montant_restant as reste_a_payer',
+                DB::raw("'valide' as statut"),
+                DB::raw("NULL as observations"),
+                DB::raw("'dette' as source_type")
+            )
+            ->get();
+
+        // 4. Charger les règlements
+        $allDetteIds = array_values($dettesParFacture);
+        foreach ($dettesDirectes as $dd) {
+            $allDetteIds[] = $dd->id;
+        }
+        $allDetteIds = array_unique(array_filter($allDetteIds));
+
+        $reglementsDettes = collect();
+        if (!empty($allDetteIds)) {
+            $reglementsDettes = DB::connection('tenant')->table('reglements as r')
+                ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
+                ->where('r.tenant_id', $tid)
+                ->where(function($q) {
+                    $q->where('r.payable_type', 'App\\Models\\DetteFournisseur')
+                      ->orWhere('r.payable_type', 'like', '%DetteFournisseur%');
+                })
+                ->whereIn('r.payable_id', $allDetteIds)
+                ->select(
+                    'r.id',
+                    'r.payable_id',
+                    'r.date_reglement',
+                    'r.montant',
+                    'mr.libelle as mode',
+                    'r.numero_cheque',
+                    'r.banque',
+                    'r.date_echeance_cheque',
+                    'r.statut_cheque',
+                    'r.reference_virement',
+                    'r.observations'
+                )
+                ->orderBy('r.date_reglement', 'asc')
+                ->get();
+        }
+
+        $reglementsFactures = collect();
+        if (!empty($factureIds)) {
+            $reglementsFactures = DB::connection('tenant')->table('reglements as r')
+                ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
+                ->where('r.tenant_id', $tid)
+                ->where(function($q) {
+                    $q->where('r.payable_type', 'App\\Models\\FactureAchat')
+                      ->orWhere('r.payable_type', 'like', '%FactureAchat%');
+                })
+                ->whereIn('r.payable_id', $factureIds)
+                ->select(
+                    'r.id',
+                    'r.payable_id',
+                    'r.date_reglement',
+                    'r.montant',
+                    'mr.libelle as mode',
+                    'r.numero_cheque',
+                    'r.banque',
+                    'r.date_echeance_cheque',
+                    'r.statut_cheque',
+                    'r.reference_virement',
+                    'r.observations'
+                )
+                ->orderBy('r.date_reglement', 'asc')
+                ->get();
+
+            $paiementsDirects = DB::connection('tenant')->table('paiements_fournisseurs as pf')
+                ->where('pf.tenant_id', $tid)
+                ->whereIn('pf.facture_achat_id', $factureIds)
+                ->select(
+                    'pf.id',
+                    'pf.facture_achat_id as payable_id',
+                    'pf.date_paiement as date_reglement',
+                    'pf.montant',
+                    'pf.mode_paiement as mode',
+                    DB::raw("NULL as numero_cheque"),
+                    DB::raw("NULL as banque"),
+                    DB::raw("NULL as date_echeance_cheque"),
+                    DB::raw("NULL as statut_cheque"),
+                    'pf.reference as reference_virement',
+                    'pf.observations'
+                )
+                ->orderBy('pf.date_paiement', 'asc')
+                ->get();
+
+            $reglementsFactures = $reglementsFactures->concat($paiementsDirects);
+        }
+
+        $reglementsByDetteId = $reglementsDettes->groupBy('payable_id');
+        $reglementsByFactureId = $reglementsFactures->groupBy('payable_id');
+
+        $allTransactions = collect();
+
+        foreach ($factures as $f) {
+            $detteId = $dettesParFacture[$f->id] ?? null;
+            $regs = collect();
+            if ($detteId && isset($reglementsByDetteId[$detteId])) {
+                $regs = $regs->concat($reglementsByDetteId[$detteId]);
+            }
+            if (isset($reglementsByFactureId[$f->id])) {
+                $regs = $regs->concat($reglementsByFactureId[$f->id]);
+            }
+            $regs = $regs->unique('id')->values();
+
+            $sumRegle = (float) $regs->sum('montant');
+            $montantRegle = $sumRegle > 0 ? $sumRegle : (float) ($f->montant_regle ?? 0);
+            $totalTtc = (float) $f->total_ttc;
+            $resteAPayer = max(0, round($totalTtc - $montantRegle, 2));
+
+            $statutReglement = 'impaye';
+            if ($resteAPayer <= 0.01 || $f->statut === 'paye') {
+                $statutReglement = 'paye';
+            } elseif ($montantRegle > 0.01) {
+                $statutReglement = 'partiel';
+            }
+
+            $allTransactions->push([
+                'id' => $f->id,
+                'source_type' => 'facture_achat',
+                'numero' => $f->numero,
+                'date_facture' => $f->date_facture,
+                'date_echeance' => $f->date_echeance,
+                'fournisseur_id' => $f->fournisseur_id,
+                'societe' => $f->societe,
+                'ice' => $f->ice,
+                'telephone' => $f->telephone,
+                'email' => $f->email,
+                'total_ht' => (float) $f->total_ht,
+                'total_tva' => (float) $f->total_tva,
+                'total_ttc' => $totalTtc,
+                'montant_regle' => $montantRegle,
+                'reste_a_payer' => $resteAPayer,
+                'statut_document' => $f->statut,
+                'statut_reglement' => $statutReglement,
+                'observations' => $f->observations,
+                'nb_reglements' => $regs->count(),
+                'reglements' => $regs->map(fn($r) => [
+                    'id' => $r->id,
+                    'date_reglement' => $r->date_reglement,
+                    'montant' => (float) $r->montant,
+                    'mode' => $r->mode ?? 'Espèces',
+                    'numero_cheque' => $r->numero_cheque,
+                    'banque' => $r->banque,
+                    'date_echeance_cheque' => $r->date_echeance_cheque,
+                    'statut_cheque' => $r->statut_cheque,
+                    'reference' => $r->reference_virement ?: ($r->numero_cheque ?: '—'),
+                    'observations' => $r->observations
+                ])->toArray()
+            ]);
+        }
+
+        foreach ($dettesDirectes as $dd) {
+            $regs = isset($reglementsByDetteId[$dd->id]) ? $reglementsByDetteId[$dd->id] : collect();
+            $sumRegle = (float) $regs->sum('montant');
+            $montantRegle = $sumRegle > 0 ? $sumRegle : (float) ($dd->montant_regle ?? 0);
+            $totalTtc = (float) $dd->total_ttc;
+            $resteAPayer = max(0, round($totalTtc - $montantRegle, 2));
+
+            $statutReglement = 'impaye';
+            if ($resteAPayer <= 0.01) {
+                $statutReglement = 'paye';
+            } elseif ($montantRegle > 0.01) {
+                $statutReglement = 'partiel';
+            }
+
+            $allTransactions->push([
+                'id' => $dd->id,
+                'source_type' => 'dette_directe',
+                'numero' => $dd->numero,
+                'date_facture' => $dd->date_facture,
+                'date_echeance' => $dd->date_echeance,
+                'fournisseur_id' => $dd->fournisseur_id,
+                'societe' => $dd->societe,
+                'ice' => $dd->ice,
+                'telephone' => $dd->telephone,
+                'email' => $dd->email,
+                'total_ht' => (float) $dd->total_ht,
+                'total_tva' => (float) $dd->total_tva,
+                'total_ttc' => $totalTtc,
+                'montant_regle' => $montantRegle,
+                'reste_a_payer' => $resteAPayer,
+                'statut_document' => 'valide',
+                'statut_reglement' => $statutReglement,
+                'observations' => $dd->observations,
+                'nb_reglements' => $regs->count(),
+                'reglements' => $regs->map(fn($r) => [
+                    'id' => $r->id,
+                    'date_reglement' => $r->date_reglement,
+                    'montant' => (float) $r->montant,
+                    'mode' => $r->mode ?? 'Espèces',
+                    'numero_cheque' => $r->numero_cheque,
+                    'banque' => $r->banque,
+                    'date_echeance_cheque' => $r->date_echeance_cheque,
+                    'statut_cheque' => $r->statut_cheque,
+                    'reference' => $r->reference_virement ?: ($r->numero_cheque ?: '—'),
+                    'observations' => $r->observations
+                ])->toArray()
+            ]);
+        }
+
+        $sorted = $allTransactions->sortByDesc('date_facture')->values();
+
+        $totalHt = (float) $sorted->sum('total_ht');
+        $totalTva = (float) $sorted->sum('total_tva');
+        $totalTtc = (float) $sorted->sum('total_ttc');
+        $totalRegle = (float) $sorted->sum('montant_regle');
+        $totalReste = (float) $sorted->sum('reste_a_payer');
+        $tauxReglement = $totalTtc > 0 ? round(($totalRegle / $totalTtc) * 100, 2) : 0;
+
+        return [
+            'period' => ['start' => $start, 'end' => $end],
+            'totals' => [
+                'count' => $sorted->count(),
+                'total_ht' => $totalHt,
+                'total_tva' => $totalTva,
+                'total_ttc' => $totalTtc,
+                'total_regle' => $totalRegle,
+                'total_reste_a_payer' => $totalReste,
+                'taux_reglement' => $tauxReglement
+            ],
+            'transactions' => $sorted->toArray()
+        ];
+    }
+
+    /**
+     * Volet Client : Liste des transactions de vente et leurs règlements sur une période
+     */
+    public function clientTransactions(?string $start = null, ?string $end = null, ?int $clientId = null): array
+    {
+        [$start, $end] = $this->normalizeDates($start, $end);
+        $tid = $this->tid();
+
+        // 1. Factures clients de la période
+        $factures = DB::connection('tenant')->table('factures as f')
+            ->join('clients as c', 'c.id', '=', 'f.client_id')
+            ->leftJoin('etat_document as ed', 'ed.id', '=', 'f.etat_id')
+            ->where('f.tenant_id', $tid)
+            ->whereNull('f.deleted_at')
+            ->whereNotNull('f.numero')
+            ->whereBetween('f.date_facture', [$start, $end])
+            ->when($clientId, fn($q) => $q->where('f.client_id', $clientId))
+            ->select(
+                'f.id',
+                'f.numero',
+                'f.date_facture',
+                'f.date_echeance',
+                'f.client_id',
+                'c.societe',
+                'c.ice',
+                'c.telephone',
+                'c.email',
+                'f.total_ht',
+                'f.total_tva',
+                'f.total_ttc',
+                'f.montant_regle',
+                'f.montant_restant',
+                'f.est_reglee',
+                'ed.libelle as etat_libelle',
+                'ed.code as etat_code',
+                'f.observations'
+            )
+            ->orderBy('f.date_facture', 'desc')
+            ->get();
+
+        $factureIds = $factures->pluck('id')->filter()->values()->toArray();
+
+        // 2. Règlements associés aux factures
+        $reglements = collect();
+        if (!empty($factureIds)) {
+            $reglements = DB::connection('tenant')->table('reglements as r')
+                ->leftJoin('mode_reglement as mr', 'mr.id', '=', 'r.mode_reglement_id')
+                ->where('r.tenant_id', $tid)
+                ->where(function($q) {
+                    $q->where('r.payable_type', 'App\\Models\\Facture')
+                      ->orWhere('r.payable_type', 'like', '%Facture%');
+                })
+                ->whereIn('r.payable_id', $factureIds)
+                ->select(
+                    'r.id',
+                    'r.payable_id',
+                    'r.date_reglement',
+                    'r.montant',
+                    'mr.libelle as mode',
+                    'r.numero_cheque',
+                    'r.banque',
+                    'r.date_echeance_cheque',
+                    'r.statut_cheque',
+                    'r.reference_virement',
+                    'r.observations'
+                )
+                ->orderBy('r.date_reglement', 'asc')
+                ->get();
+        }
+
+        $reglementsByFactureId = $reglements->groupBy('payable_id');
+
+        $allTransactions = collect();
+
+        foreach ($factures as $f) {
+            $regs = isset($reglementsByFactureId[$f->id]) ? $reglementsByFactureId[$f->id] : collect();
+            $sumRegle = (float) $regs->sum('montant');
+            $montantRegle = $sumRegle > 0 ? $sumRegle : (float) ($f->montant_regle ?? 0);
+            $totalTtc = (float) $f->total_ttc;
+            $resteAPayer = max(0, round($totalTtc - $montantRegle, 2));
+
+            $statutReglement = 'impaye';
+            if ($resteAPayer <= 0.01 || $f->est_reglee) {
+                $statutReglement = 'paye';
+            } elseif ($montantRegle > 0.01) {
+                $statutReglement = 'partiel';
+            }
+
+            $allTransactions->push([
+                'id' => $f->id,
+                'source_type' => 'facture_client',
+                'numero' => $f->numero,
+                'date_facture' => $f->date_facture,
+                'date_echeance' => $f->date_echeance,
+                'client_id' => $f->client_id,
+                'societe' => $f->societe,
+                'ice' => $f->ice,
+                'telephone' => $f->telephone,
+                'email' => $f->email,
+                'total_ht' => (float) $f->total_ht,
+                'total_tva' => (float) $f->total_tva,
+                'total_ttc' => $totalTtc,
+                'montant_regle' => $montantRegle,
+                'reste_a_payer' => $resteAPayer,
+                'statut_document' => $f->etat_libelle ?: 'Validée',
+                'etat_code' => $f->etat_code,
+                'statut_reglement' => $statutReglement,
+                'observations' => $f->observations,
+                'nb_reglements' => $regs->count(),
+                'reglements' => $regs->map(fn($r) => [
+                    'id' => $r->id,
+                    'date_reglement' => $r->date_reglement,
+                    'montant' => (float) $r->montant,
+                    'mode' => $r->mode ?? 'Espèces',
+                    'numero_cheque' => $r->numero_cheque,
+                    'banque' => $r->banque,
+                    'date_echeance_cheque' => $r->date_echeance_cheque,
+                    'statut_cheque' => $r->statut_cheque,
+                    'reference' => $r->reference_virement ?: ($r->numero_cheque ?: '—'),
+                    'observations' => $r->observations
+                ])->toArray()
+            ]);
+        }
+
+        $sorted = $allTransactions->sortByDesc('date_facture')->values();
+
+        $totalHt = (float) $sorted->sum('total_ht');
+        $totalTva = (float) $sorted->sum('total_tva');
+        $totalTtc = (float) $sorted->sum('total_ttc');
+        $totalRegle = (float) $sorted->sum('montant_regle');
+        $totalReste = (float) $sorted->sum('reste_a_payer');
+        $tauxReglement = $totalTtc > 0 ? round(($totalRegle / $totalTtc) * 100, 2) : 0;
+
+        return [
+            'period' => ['start' => $start, 'end' => $end],
+            'totals' => [
+                'count' => $sorted->count(),
+                'total_ht' => $totalHt,
+                'total_tva' => $totalTva,
+                'total_ttc' => $totalTtc,
+                'total_regle' => $totalRegle,
+                'total_reste_a_payer' => $totalReste,
+                'taux_reglement' => $tauxReglement
+            ],
+            'transactions' => $sorted->toArray()
+        ];
+    }
 }

@@ -64,6 +64,8 @@ class ReportingController extends Controller
             'unpaid' => $this->reporting->unpaidInvoices(),
             'cash_flow' => $this->reporting->cashAndProfitReport($start, $end),
             'cheques' => $this->reporting->chequeReport($status),
+            'supplier_transactions' => $this->reporting->supplierTransactions($start, $end, $supplierId),
+            'client_transactions' => $this->reporting->clientTransactions($start, $end, $clientId),
         ]);
     }
 
@@ -166,5 +168,19 @@ class ReportingController extends Controller
         }
 
         return response()->json(['message' => 'Chèque introuvable.'], 404);
+    }
+
+    public function supplierTransactions(Request $request): JsonResponse
+    {
+        [$start, $end] = $this->resolveDateRange($request);
+        $supplierId = $request->get('fournisseur_id') ? (int) $request->get('fournisseur_id') : null;
+        return response()->json($this->reporting->supplierTransactions($start, $end, $supplierId));
+    }
+
+    public function clientTransactions(Request $request): JsonResponse
+    {
+        [$start, $end] = $this->resolveDateRange($request);
+        $clientId = $request->get('client_id') ? (int) $request->get('client_id') : null;
+        return response()->json($this->reporting->clientTransactions($start, $end, $clientId));
     }
 }

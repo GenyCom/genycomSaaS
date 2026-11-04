@@ -135,6 +135,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/print-report/transactions',
+    name: 'TransactionsPrint',
+    component: () => import('../views/reporting/TransactionsPrint.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue'),

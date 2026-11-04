@@ -49,6 +49,384 @@
     </div>
 
     <div class="reporting-content">
+      <!-- Fournisseur -->
+      <div v-if="activeTab === 'supplier_transactions'" class="tab-pane">
+        <div class="summary-cards">
+          <div class="mini-card">
+            <span class="label">Total Achats HT</span>
+            <span class="value">{{ formatMoney(supplierTransactionsData.totals.total_ht) }}</span>
+          </div>
+          <div class="mini-card accent">
+            <span class="label">Total TTC</span>
+            <span class="value">{{ formatMoney(supplierTransactionsData.totals.total_ttc) }}</span>
+          </div>
+          <div class="mini-card" style="border-top-color: #10b981;">
+            <span class="label">Total Réglé</span>
+            <span class="value text-success">{{ formatMoney(supplierTransactionsData.totals.total_regle) }}</span>
+          </div>
+          <div class="mini-card" style="border-top-color: #ef4444;">
+            <span class="label">Reste à Payer</span>
+            <span class="value text-danger">{{ formatMoney(supplierTransactionsData.totals.total_reste_a_payer) }}</span>
+          </div>
+          <div class="mini-card">
+            <span class="label">Taux Règlement</span>
+            <span class="value" :style="{ color: supplierTransactionsData.totals.taux_reglement >= 80 ? '#10b981' : (supplierTransactionsData.totals.taux_reglement >= 50 ? '#f59e0b' : '#ef4444') }">
+              {{ supplierTransactionsData.totals.taux_reglement }}%
+            </span>
+          </div>
+        </div>
+
+        <div class="table-card mt-4">
+          <div class="card-header">
+            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px;">
+              <h3 style="margin:0; border:none; padding:0;">Transactions d'Achat Fournisseurs</h3>
+              <span class="header-badge accent">{{ filteredSupplierTransactions.length }} transaction{{ filteredSupplierTransactions.length > 1 ? 's' : '' }}</span>
+
+              <select v-model="filters.supplierId" @change="fetchData" class="filter-select">
+                <option :value="null">Tous les fournisseurs</option>
+                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
+              </select>
+
+              <select v-model="supplierStatusFilter" class="filter-select">
+                <option value="tous">Tous les statuts</option>
+                <option value="paye">Réglées (Soldées)</option>
+                <option value="partiel">Partiellement réglées</option>
+                <option value="impaye">En attente / Impayées</option>
+              </select>
+
+              <input 
+                type="text" 
+                v-model="supplierSearchQuery" 
+                placeholder="Rechercher n° pièce, tiers..." 
+                class="filter-select"
+                style="min-width: 170px;"
+              />
+            </div>
+            
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <button @click="toggleAllSupplierRows(true)" class="btn-export secondary" title="Tout déplier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+                Déplier tout
+              </button>
+              <button @click="toggleAllSupplierRows(false)" class="btn-export secondary" title="Tout replier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                Replier tout
+              </button>
+              <button @click="exportTransactionsExcel('fournisseur')" class="btn-export">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Exporter Excel
+              </button>
+              <button @click="printTransactionsPDF('fournisseur')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimer / PDF
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table statement-table">
+              <colgroup>
+                <col style="width: 36px;" />
+                <col style="width: 105px;" />
+                <col style="width: 130px;" />
+                <col />
+                <col style="width: 110px;" />
+                <col style="width: 120px;" />
+                <col style="width: 120px;" />
+                <col style="width: 120px;" />
+                <col style="width: 110px;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Date</th>
+                  <th>N° Pièce</th>
+                  <th>Fournisseur</th>
+                  <th class="text-right">Total HT</th>
+                  <th class="text-right">Total TTC</th>
+                  <th class="text-right">Réglé</th>
+                  <th class="text-right">Reste</th>
+                  <th class="text-center">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="t in filteredSupplierTransactions" :key="'sup-' + t.id">
+                  <tr class="tiers-row" @click="toggleSupplierExpand(t.id)">
+                    <td class="expand-cell">
+                      <svg :class="['expand-icon', { rotated: expandedSupplierRows[t.id] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </td>
+                    <td>{{ formatDate(t.date_facture) }}</td>
+                    <td>
+                      <span class="badge-code">{{ t.numero }}</span>
+                    </td>
+                    <td>
+                      <div class="font-bold">{{ t.societe }}</div>
+                      <div class="text-muted" style="font-size: 0.7rem;" v-if="t.ice">ICE: {{ t.ice }}</div>
+                    </td>
+                    <td class="text-right">{{ formatMoney(t.total_ht) }}</td>
+                    <td class="text-right font-bold">{{ formatMoney(t.total_ttc) }}</td>
+                    <td class="text-right text-success font-bold">{{ formatMoney(t.montant_regle) }}</td>
+                    <td class="text-right font-bold" :class="t.reste_a_payer > 0.01 ? 'text-danger' : 'text-success'">
+                      {{ formatMoney(t.reste_a_payer) }}
+                    </td>
+                    <td class="text-center" @click.stop>
+                      <span :class="['status-pill', t.statut_reglement === 'paye' ? 'paid' : (t.statut_reglement === 'partiel' ? 'pending' : 'pending')]">
+                        {{ t.statut_reglement === 'paye' ? 'Réglée' : (t.statut_reglement === 'partiel' ? 'Partielle' : 'En attente') }}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Detail des règlements expanded -->
+                  <tr v-if="expandedSupplierRows[t.id]" class="detail-header-row">
+                    <td></td>
+                    <td colspan="8">
+                      <div class="detail-table-wrapper">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                          <span style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+                            Détail des règlements associés ({{ t.reglements ? t.reglements.length : 0 }})
+                          </span>
+                          <span style="font-size: 0.72rem; color: #64748b;">
+                            Reste dû sur cette transaction : <strong :class="t.reste_a_payer > 0 ? 'text-danger' : 'text-success'">{{ formatMoney(t.reste_a_payer) }}</strong>
+                          </span>
+                        </div>
+
+                        <table class="detail-table" v-if="t.reglements && t.reglements.length > 0">
+                          <thead>
+                            <tr>
+                              <th>Date Règlement</th>
+                              <th>Mode</th>
+                              <th>Réf / N° Chèque</th>
+                              <th>Banque</th>
+                              <th>Échéance</th>
+                              <th>Statut Chèque</th>
+                              <th>Observations</th>
+                              <th class="text-right">Montant Réglé</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="r in t.reglements" :key="r.id">
+                              <td>{{ formatDate(r.date_reglement) }}</td>
+                              <td><span class="font-bold">{{ r.mode || 'Espèces' }}</span></td>
+                              <td>{{ r.numero_cheque || r.reference || '—' }}</td>
+                              <td>{{ r.banque || '—' }}</td>
+                              <td>{{ r.date_echeance_cheque ? formatDate(r.date_echeance_cheque) : '—' }}</td>
+                              <td>
+                                <span v-if="r.statut_cheque" :class="['status-pill', r.statut_cheque === 'encaisse' ? 'paid' : 'pending']" style="font-size: 0.65rem; padding: 2px 6px;">
+                                  {{ r.statut_cheque }}
+                                </span>
+                                <span v-else class="text-muted">—</span>
+                              </td>
+                              <td class="text-muted">{{ r.observations || '—' }}</td>
+                              <td class="text-right font-bold text-success">+ {{ formatMoney(r.montant) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div v-else style="padding: 12px; background: white; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; text-align: center;">
+                          Aucun règlement enregistré sur cette transaction pour le moment. Reste à payer : <strong class="text-danger">{{ formatMoney(t.reste_a_payer) }}</strong>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+
+                <tr v-if="filteredSupplierTransactions.length === 0">
+                  <td colspan="9" class="empty-state">Aucune transaction trouvée sur cette période ou selon vos filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Client -->
+      <div v-if="activeTab === 'client_transactions'" class="tab-pane">
+        <div class="summary-cards">
+          <div class="mini-card">
+            <span class="label">Total Ventes HT</span>
+            <span class="value">{{ formatMoney(clientTransactionsData.totals.total_ht) }}</span>
+          </div>
+          <div class="mini-card accent">
+            <span class="label">Total TTC</span>
+            <span class="value">{{ formatMoney(clientTransactionsData.totals.total_ttc) }}</span>
+          </div>
+          <div class="mini-card" style="border-top-color: #10b981;">
+            <span class="label">Total Réglé</span>
+            <span class="value text-success">{{ formatMoney(clientTransactionsData.totals.total_regle) }}</span>
+          </div>
+          <div class="mini-card" style="border-top-color: #ef4444;">
+            <span class="label">Reste à Payer</span>
+            <span class="value text-danger">{{ formatMoney(clientTransactionsData.totals.total_reste_a_payer) }}</span>
+          </div>
+          <div class="mini-card">
+            <span class="label">Taux Recouvrement</span>
+            <span class="value" :style="{ color: clientTransactionsData.totals.taux_reglement >= 80 ? '#10b981' : (clientTransactionsData.totals.taux_reglement >= 50 ? '#f59e0b' : '#ef4444') }">
+              {{ clientTransactionsData.totals.taux_reglement }}%
+            </span>
+          </div>
+        </div>
+
+        <div class="table-card mt-4">
+          <div class="card-header">
+            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px;">
+              <h3 style="margin:0; border:none; padding:0;">Transactions de Vente Clients</h3>
+              <span class="header-badge accent">{{ filteredClientTransactions.length }} transaction{{ filteredClientTransactions.length > 1 ? 's' : '' }}</span>
+
+              <select v-model="filters.clientId" @change="fetchData" class="filter-select">
+                <option :value="null">Tous les clients</option>
+                <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe }}</option>
+              </select>
+
+              <select v-model="clientStatusFilter" class="filter-select">
+                <option value="tous">Tous les statuts</option>
+                <option value="paye">Réglées (Soldées)</option>
+                <option value="partiel">Partiellement réglées</option>
+                <option value="impaye">En attente / Impayées</option>
+              </select>
+
+              <input 
+                type="text" 
+                v-model="clientSearchQuery" 
+                placeholder="Rechercher n° facture, client..." 
+                class="filter-select"
+                style="min-width: 170px;"
+              />
+            </div>
+            
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <button @click="toggleAllClientRows(true)" class="btn-export secondary" title="Tout déplier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+                Déplier tout
+              </button>
+              <button @click="toggleAllClientRows(false)" class="btn-export secondary" title="Tout replier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                Replier tout
+              </button>
+              <button @click="exportTransactionsExcel('client')" class="btn-export">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Exporter Excel
+              </button>
+              <button @click="printTransactionsPDF('client')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimer / PDF
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table statement-table">
+              <colgroup>
+                <col style="width: 36px;" />
+                <col style="width: 105px;" />
+                <col style="width: 130px;" />
+                <col />
+                <col style="width: 110px;" />
+                <col style="width: 120px;" />
+                <col style="width: 120px;" />
+                <col style="width: 120px;" />
+                <col style="width: 110px;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Date</th>
+                  <th>N° Facture</th>
+                  <th>Client</th>
+                  <th class="text-right">Total HT</th>
+                  <th class="text-right">Total TTC</th>
+                  <th class="text-right">Réglé</th>
+                  <th class="text-right">Reste</th>
+                  <th class="text-center">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="t in filteredClientTransactions" :key="'cli-' + t.id">
+                  <tr class="tiers-row" @click="toggleClientExpand(t.id)">
+                    <td class="expand-cell">
+                      <svg :class="['expand-icon', { rotated: expandedClientRows[t.id] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </td>
+                    <td>{{ formatDate(t.date_facture) }}</td>
+                    <td>
+                      <span class="badge-code">{{ t.numero }}</span>
+                    </td>
+                    <td>
+                      <div class="font-bold">{{ t.societe }}</div>
+                      <div class="text-muted" style="font-size: 0.7rem;" v-if="t.ice">ICE: {{ t.ice }}</div>
+                    </td>
+                    <td class="text-right">{{ formatMoney(t.total_ht) }}</td>
+                    <td class="text-right font-bold">{{ formatMoney(t.total_ttc) }}</td>
+                    <td class="text-right text-success font-bold">{{ formatMoney(t.montant_regle) }}</td>
+                    <td class="text-right font-bold" :class="t.reste_a_payer > 0.01 ? 'text-danger' : 'text-success'">
+                      {{ formatMoney(t.reste_a_payer) }}
+                    </td>
+                    <td class="text-center" @click.stop>
+                      <span :class="['status-pill', t.statut_reglement === 'paye' ? 'paid' : (t.statut_reglement === 'partiel' ? 'pending' : 'pending')]">
+                        {{ t.statut_reglement === 'paye' ? 'Réglée' : (t.statut_reglement === 'partiel' ? 'Partielle' : 'En attente') }}
+                      </span>
+                    </td>
+                  </tr>
+
+                  <!-- Detail des règlements expanded -->
+                  <tr v-if="expandedClientRows[t.id]" class="detail-header-row">
+                    <td></td>
+                    <td colspan="8">
+                      <div class="detail-table-wrapper">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                          <span style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+                            Détail des règlements associés ({{ t.reglements ? t.reglements.length : 0 }})
+                          </span>
+                          <span style="font-size: 0.72rem; color: #64748b;">
+                            Reste dû sur cette facture : <strong :class="t.reste_a_payer > 0 ? 'text-danger' : 'text-success'">{{ formatMoney(t.reste_a_payer) }}</strong>
+                          </span>
+                        </div>
+
+                        <table class="detail-table" v-if="t.reglements && t.reglements.length > 0">
+                          <thead>
+                            <tr>
+                              <th>Date Règlement</th>
+                              <th>Mode</th>
+                              <th>Réf / N° Chèque</th>
+                              <th>Banque</th>
+                              <th>Échéance</th>
+                              <th>Statut Chèque</th>
+                              <th>Observations</th>
+                              <th class="text-right">Montant Réglé</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="r in t.reglements" :key="r.id">
+                              <td>{{ formatDate(r.date_reglement) }}</td>
+                              <td><span class="font-bold">{{ r.mode || 'Espèces' }}</span></td>
+                              <td>{{ r.numero_cheque || r.reference || '—' }}</td>
+                              <td>{{ r.banque || '—' }}</td>
+                              <td>{{ r.date_echeance_cheque ? formatDate(r.date_echeance_cheque) : '—' }}</td>
+                              <td>
+                                <span v-if="r.statut_cheque" :class="['status-pill', r.statut_cheque === 'encaisse' ? 'paid' : 'pending']" style="font-size: 0.65rem; padding: 2px 6px;">
+                                  {{ r.statut_cheque }}
+                                </span>
+                                <span v-else class="text-muted">—</span>
+                              </td>
+                              <td class="text-muted">{{ r.observations || '—' }}</td>
+                              <td class="text-right font-bold text-success">+ {{ formatMoney(r.montant) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div v-else style="padding: 12px; background: white; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; text-align: center;">
+                          Aucun règlement enregistré sur cette facture pour le moment. Reste à payer : <strong class="text-danger">{{ formatMoney(t.reste_a_payer) }}</strong>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+
+                <tr v-if="filteredClientTransactions.length === 0">
+                  <td colspan="9" class="empty-state">Aucune transaction trouvée sur cette période ou selon vos filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Ventes Journal -->
       <div v-if="activeTab === 'sales'" class="tab-pane">
         <div class="summary-cards">
@@ -847,15 +1225,25 @@ const IconCheques = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 14h.01M11 14h.01M15 14h.01M7 18h.01M11 18h.01M15 18h.01M3 6h18M3 8h18"/></svg>`
 })
 
+const IconSupplierReport = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
+})
+
+const IconClientReport = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+})
+
 const tabs = [
-  { id: 'sales', label: 'Ventes', icon: IconSales },
+  { id: 'sales', label: 'Journal Ventes', icon: IconSales },
   { id: 'purchases', label: 'Achats & Dépenses', icon: IconPurchase },
   { id: 'cashflow', label: 'Caisse & Bénéfice', icon: IconCash },
   { id: 'payments', label: 'Règlements', icon: IconPayments },
   { id: 'cheques', label: 'Suivi Chèques', icon: IconCheques },
   { id: 'unpaid', label: 'Impayés', icon: IconUnpaid },
   { id: 'finance', label: 'Finance & Projets', icon: IconFinance },
-  { id: 'stock', label: 'Stock', icon: IconStock }
+  { id: 'stock', label: 'Stock', icon: IconStock },
+  { id: 'supplier_transactions', label: 'Fournisseur', icon: IconSupplierReport },
+  { id: 'client_transactions', label: 'Client', icon: IconClientReport }
 ]
 
 const route = useRoute()
@@ -866,6 +1254,75 @@ const dateRange = reactive({
   start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
   end: new Date().toISOString().split('T')[0]
 })
+
+// ─── Fournisseur & Client ───
+const supplierTransactionsData = ref({
+  totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },
+  transactions: []
+})
+const supplierStatusFilter = ref('tous')
+const supplierSearchQuery = ref('')
+const expandedSupplierRows = reactive({})
+
+const clientTransactionsData = ref({
+  totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },
+  transactions: []
+})
+const clientStatusFilter = ref('tous')
+const clientSearchQuery = ref('')
+const expandedClientRows = reactive({})
+
+const filteredSupplierTransactions = computed(() => {
+  let list = supplierTransactionsData.value.transactions || []
+  if (supplierStatusFilter.value !== 'tous') {
+    list = list.filter(t => t.statut_reglement === supplierStatusFilter.value)
+  }
+  if (supplierSearchQuery.value && supplierSearchQuery.value.trim() !== '') {
+    const q = supplierSearchQuery.value.toLowerCase().trim()
+    list = list.filter(t => 
+      (t.numero && t.numero.toLowerCase().includes(q)) ||
+      (t.societe && t.societe.toLowerCase().includes(q)) ||
+      (t.ice && t.ice.toLowerCase().includes(q))
+    )
+  }
+  return list
+})
+
+const filteredClientTransactions = computed(() => {
+  let list = clientTransactionsData.value.transactions || []
+  if (clientStatusFilter.value !== 'tous') {
+    list = list.filter(t => t.statut_reglement === clientStatusFilter.value)
+  }
+  if (clientSearchQuery.value && clientSearchQuery.value.trim() !== '') {
+    const q = clientSearchQuery.value.toLowerCase().trim()
+    list = list.filter(t => 
+      (t.numero && t.numero.toLowerCase().includes(q)) ||
+      (t.societe && t.societe.toLowerCase().includes(q)) ||
+      (t.ice && t.ice.toLowerCase().includes(q))
+    )
+  }
+  return list
+})
+
+function toggleSupplierExpand(id) {
+  expandedSupplierRows[id] = !expandedSupplierRows[id]
+}
+
+function toggleAllSupplierRows(expand = true) {
+  filteredSupplierTransactions.value.forEach(t => {
+    expandedSupplierRows[t.id] = expand
+  })
+}
+
+function toggleClientExpand(id) {
+  expandedClientRows[id] = !expandedClientRows[id]
+}
+
+function toggleAllClientRows(expand = true) {
+  filteredClientTransactions.value.forEach(t => {
+    expandedClientRows[t.id] = expand
+  })
+}
 
 const salesData = ref({ journal: [], by_client: [], totals: { ht: 0, tva: 0, ttc: 0 } })
 const purchaseData = ref([])
@@ -1003,6 +1460,15 @@ async function fetchData() {
     unpaidData.value = data.unpaid
     cashData.value = data.cash_flow
     chequeData.value = data.cheques
+
+    supplierTransactionsData.value = data.supplier_transactions || {
+      totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },
+      transactions: []
+    }
+    clientTransactionsData.value = data.client_transactions || {
+      totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },
+      transactions: []
+    }
     if (activeTab.value === 'unpaid') {
       fetchUnpaidStatement(true)
     } else {
@@ -1126,6 +1592,74 @@ function exportCSV(data, filename) {
 
 function printPDF() {
   const url = `/print-report/cash-flow?start=${dateRange.start}&end=${dateRange.end}`
+  window.open(url, '_blank')
+}
+
+function exportTransactionsExcel(type) {
+  const isSup = type === 'fournisseur'
+  const transactions = isSup ? filteredSupplierTransactions.value : filteredClientTransactions.value
+  const totals = isSup ? supplierTransactionsData.value.totals : clientTransactionsData.value.totals
+  const title = isSup ? "Rapport des Achats Fournisseurs" : "Rapport des Ventes Clients"
+  const partyLabel = isSup ? "Fournisseur" : "Client"
+  
+  if (!transactions || !transactions.length) {
+    toast.error("Aucune transaction à exporter.")
+    return
+  }
+
+  // En-tête UTF-8 BOM pour ouverture directe et propre dans Excel
+  let csv = "\uFEFF"
+  csv += `"${title}";;;;;;;;;;;\n`
+  csv += `"Période : Du ${dateRange.start} au ${dateRange.end}";;;;;;;;;;;\n`
+  csv += `"Total HT : ${(totals.total_ht || 0).toFixed(2)} DH";"Total TTC : ${(totals.total_ttc || 0).toFixed(2)} DH";"Total Réglé : ${(totals.total_regle || 0).toFixed(2)} DH";"Reste à Payer : ${(totals.total_reste_a_payer || 0).toFixed(2)} DH";"Taux de Règlement : ${totals.taux_reglement || 0}%";;;;;;;\n\n`
+  
+  // Colonnes
+  csv += `"Date";"N° Pièce";"${partyLabel}";"ICE";"Téléphone";"Total HT (DH)";"Total TTC (DH)";"Montant Réglé (DH)";"Reste à Payer (DH)";"Statut Règlement";"Nb Règlements";"Détail des Règlements"\n`
+  
+  // Lignes de données
+  transactions.forEach(t => {
+    const regsSummary = (t.reglements && t.reglements.length > 0)
+      ? t.reglements.map(r => 
+          `[${r.date_reglement}: ${r.montant} DH | ${r.mode || 'Espèces'}${r.numero_cheque ? ' Chq N° ' + r.numero_cheque : ''}${r.reference && r.reference !== '—' ? ' Réf ' + r.reference : ''}${r.banque && r.banque !== '—' ? ' ' + r.banque : ''}]`
+        ).join(' ; ')
+      : "Aucun règlement"
+
+    const row = [
+      `"${t.date_facture || ''}"`,
+      `"${(t.numero || '').replace(/"/g, '""')}"`,
+      `"${(t.societe || '').replace(/"/g, '""')}"`,
+      `"${(t.ice || '').replace(/"/g, '""')}"`,
+      `"${(t.telephone || '').replace(/"/g, '""')}"`,
+      (t.total_ht || 0).toFixed(2),
+      (t.total_ttc || 0).toFixed(2),
+      (t.montant_regle || 0).toFixed(2),
+      (t.reste_a_payer || 0).toFixed(2),
+      `"${t.statut_reglement === 'paye' ? 'Réglée' : (t.statut_reglement === 'partiel' ? 'Partielle' : 'En attente')}"`,
+      t.nb_reglements || (t.reglements ? t.reglements.length : 0),
+      `"${regsSummary.replace(/"/g, '""')}"`
+    ]
+    csv += row.join(';') + '\n'
+  })
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  link.setAttribute("download", `rapport_${isSup ? 'fournisseurs' : 'clients'}_${dateRange.start}_au_${dateRange.end}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  toast.success("Fichier Excel (CSV) exporté avec succès.")
+}
+
+function printTransactionsPDF(type) {
+  const isSup = type === 'fournisseur'
+  const filterId = isSup ? filters.supplierId : filters.clientId
+  let url = `/print-report/transactions?type=${type}&start=${dateRange.start}&end=${dateRange.end}`
+  if (filterId) {
+    url += isSup ? `&fournisseur_id=${filterId}` : `&client_id=${filterId}`
+  }
   window.open(url, '_blank')
 }
 
