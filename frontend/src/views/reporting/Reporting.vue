@@ -77,14 +77,14 @@
         </div>
 
         <div class="table-card mt-4">
-          <div class="card-header">
-            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px; flex: 1; min-width: 280px;">
               <h3 style="margin:0; border:none; padding:0;">Transactions d'Achat Fournisseurs</h3>
               <span class="header-badge accent">{{ filteredSupplierTransactions.length }} transaction{{ filteredSupplierTransactions.length > 1 ? 's' : '' }}</span>
 
               <select v-model="filters.supplierId" @change="fetchData" class="filter-select">
                 <option :value="null">Tous les fournisseurs</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
+                <option v-for="s in availableSuppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
               </select>
 
               <select v-model="supplierStatusFilter" class="filter-select">
@@ -103,7 +103,7 @@
               />
             </div>
             
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; flex-shrink: 0;">
               <button @click="toggleAllSupplierRows(true)" class="btn-export secondary" title="Tout déplier">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
                 Déplier tout
@@ -116,7 +116,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 Exporter Excel
               </button>
-              <button @click="printTransactionsPDF('fournisseur')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe;">
+              <button @click="printTransactionsPDF('fournisseur')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe; white-space: nowrap;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                 Imprimer / PDF
               </button>
@@ -128,7 +128,7 @@
               <colgroup>
                 <col style="width: 36px;" />
                 <col style="width: 105px;" />
-                <col style="width: 130px;" />
+                <col style="width: 170px;" />
                 <col />
                 <col style="width: 110px;" />
                 <col style="width: 120px;" />
@@ -156,7 +156,7 @@
                       <svg :class="['expand-icon', { rotated: expandedSupplierRows[t.id] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                     </td>
                     <td>{{ formatDate(t.date_facture) }}</td>
-                    <td>
+                    <td style="white-space: nowrap;">
                       <span class="badge-code">{{ t.numero }}</span>
                     </td>
                     <td>
@@ -266,14 +266,14 @@
         </div>
 
         <div class="table-card mt-4">
-          <div class="card-header">
-            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+            <div class="header-with-filter" style="flex-wrap: wrap; gap: 10px; flex: 1; min-width: 280px;">
               <h3 style="margin:0; border:none; padding:0;">Transactions de Vente Clients</h3>
               <span class="header-badge accent">{{ filteredClientTransactions.length }} transaction{{ filteredClientTransactions.length > 1 ? 's' : '' }}</span>
 
               <select v-model="filters.clientId" @change="fetchData" class="filter-select">
                 <option :value="null">Tous les clients</option>
-                <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe }}</option>
+                <option v-for="c in availableClients" :key="c.id" :value="c.id">{{ c.societe }}</option>
               </select>
 
               <select v-model="clientStatusFilter" class="filter-select">
@@ -292,7 +292,7 @@
               />
             </div>
             
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; flex-shrink: 0;">
               <button @click="toggleAllClientRows(true)" class="btn-export secondary" title="Tout déplier">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
                 Déplier tout
@@ -305,7 +305,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 Exporter Excel
               </button>
-              <button @click="printTransactionsPDF('client')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe;">
+              <button @click="printTransactionsPDF('client')" class="btn-export" style="color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe; white-space: nowrap;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                 Imprimer / PDF
               </button>
@@ -317,7 +317,7 @@
               <colgroup>
                 <col style="width: 36px;" />
                 <col style="width: 105px;" />
-                <col style="width: 130px;" />
+                <col style="width: 170px;" />
                 <col />
                 <col style="width: 110px;" />
                 <col style="width: 120px;" />
@@ -345,7 +345,7 @@
                       <svg :class="['expand-icon', { rotated: expandedClientRows[t.id] }]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                     </td>
                     <td>{{ formatDate(t.date_facture) }}</td>
-                    <td>
+                    <td style="white-space: nowrap;">
                       <span class="badge-code">{{ t.numero }}</span>
                     </td>
                     <td>
@@ -450,7 +450,7 @@
               <h3>Journal des Ventes</h3>
               <select v-model="filters.clientId" @change="fetchData" class="filter-select">
                 <option :value="null">Tous les clients</option>
-                <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.societe }}</option>
+                <option v-for="c in availableClients" :key="c.id" :value="c.id">{{ c.societe }}</option>
               </select>
             </div>
             <button @click="exportCSV(salesData.journal, 'journal_ventes')" class="btn-export">Exporter CSV</button>
@@ -499,7 +499,7 @@
               <h3>Journal des Achats & Dépenses</h3>
               <select v-model="filters.supplierId" @change="fetchData" class="filter-select">
                 <option :value="null">Tous les fournisseurs</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
+                <option v-for="s in availableSuppliers" :key="s.id" :value="s.id">{{ s.societe }}</option>
               </select>
             </div>
             <button @click="exportCSV(purchaseData, 'journal_achats')" class="btn-export">Exporter CSV</button>
@@ -1416,14 +1416,56 @@ const filters = reactive({
   supplierId: null
 })
 
+// Mémorisation dynamique de tous les tiers (API + transactions du tableau récap)
+const knownSuppliers = ref(new Map())
+const knownClients = ref(new Map())
+
+watch([suppliers, () => supplierTransactionsData.value?.transactions], ([newSuppliers, newTxs]) => {
+  (newSuppliers || []).forEach(s => {
+    const name = s.societe || [s.nom, s.prenom].filter(Boolean).join(' ') || `Fournisseur #${s.id}`
+    knownSuppliers.value.set(Number(s.id), { id: Number(s.id), societe: name })
+  })
+  ;(newTxs || []).forEach(t => {
+    if (t.fournisseur_id) {
+      const id = Number(t.fournisseur_id)
+      const existing = knownSuppliers.value.get(id)
+      const name = t.societe || existing?.societe || `Fournisseur #${id}`
+      knownSuppliers.value.set(id, { id, societe: name })
+    }
+  })
+}, { immediate: true, deep: true })
+
+const availableSuppliers = computed(() => {
+  return Array.from(knownSuppliers.value.values()).sort((a, b) => a.societe.localeCompare(b.societe, 'fr'))
+})
+
+watch([clients, () => clientTransactionsData.value?.transactions], ([newClients, newTxs]) => {
+  (newClients || []).forEach(c => {
+    const name = c.societe || [c.nom, c.prenom].filter(Boolean).join(' ') || `Client #${c.id}`
+    knownClients.value.set(Number(c.id), { id: Number(c.id), societe: name })
+  })
+  ;(newTxs || []).forEach(t => {
+    if (t.client_id) {
+      const id = Number(t.client_id)
+      const existing = knownClients.value.get(id)
+      const name = t.societe || t.nom || existing?.societe || `Client #${id}`
+      knownClients.value.set(id, { id, societe: name })
+    }
+  })
+}, { immediate: true, deep: true })
+
+const availableClients = computed(() => {
+  return Array.from(knownClients.value.values()).sort((a, b) => a.societe.localeCompare(b.societe, 'fr'))
+})
+
 async function fetchFilterData() {
   try {
     const [cRes, sRes] = await Promise.all([
-      api.get('/clients'),
-      api.get('/fournisseurs')
+      api.get('/clients', { params: { with_trashed: 1 } }),
+      api.get('/fournisseurs', { params: { with_trashed: 1 } })
     ])
-    clients.value = cRes.data.data || cRes.data
-    suppliers.value = sRes.data.data || sRes.data
+    clients.value = cRes.data.data || cRes.data || []
+    suppliers.value = sRes.data.data || sRes.data || []
   } catch (e) { console.error(e) }
 }
 
@@ -1731,7 +1773,7 @@ onMounted(() => {
 .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 .filter-select.period { min-width: 140px; background-color: white; border-color: #e2e8f0; }
 
-.btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn-export { font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
 .btn-export.secondary { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
 .mr-2 { margin-right: 0.5rem; }
 
@@ -1744,7 +1786,7 @@ onMounted(() => {
 .text-center { text-align: center !important; }
 .statement-table { table-layout: fixed; width: 100%; }
 .font-bold { font-weight: 700; }
-.badge-code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; color: #3b82f6; }
+.badge-code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; color: #3b82f6; white-space: nowrap; display: inline-block; }
 .status-pill { padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; }
 .status-pill.paid { background: #dcfce7; color: #166534; }
 .status-pill.pending { background: #fef3c7; color: #92400e; }

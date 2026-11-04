@@ -20,6 +20,7 @@ class FournisseurController extends Controller
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
         $query = Fournisseur::with(['typeFournisseur'])
+            ->when($request->boolean('with_trashed'), fn($q) => $q->withTrashed())
             ->withSum('facturesAchats as total_achats', 'montant_ttc')
             ->withSum('facturesAchats as total_paye', 'montant_paye')
             ->withSum('commandes as total_commandes', 'total_ttc')

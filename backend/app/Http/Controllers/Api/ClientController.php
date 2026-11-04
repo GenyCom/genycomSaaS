@@ -20,6 +20,7 @@ class ClientController extends Controller
         $sortDir = $request->sort_dir === 'desc' ? 'desc' : 'asc';
 
         $query = Client::with(['typeClient', 'commercial:id,nom,prenom'])
+            ->when($request->boolean('with_trashed'), fn($q) => $q->withTrashed())
             ->withSum(['factures' => function($q) {
                 $q->whereNotNull('numero'); // Uniquement les factures validées
             }], 'total_ttc')
