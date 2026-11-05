@@ -1247,10 +1247,9 @@ class ReportingService
         [$start, $end] = $this->normalizeDates($start, $end);
         $tid = $this->tid();
 
-        // 1. Récupérer tous les projets du tenant
+        // 1. Récupérer tous les projets du tenant (sans join direct sur users car users est sur la DB central)
         $query = DB::connection('tenant')->table('projets as p')
             ->leftJoin('clients as c', 'c.id', '=', 'p.client_id')
-            ->leftJoin('users as u', 'u.id', '=', 'p.responsable_id')
             ->where('p.tenant_id', $tid)
             ->whereNull('p.deleted_at');
 
@@ -1271,12 +1270,30 @@ class ReportingService
             'p.date_fin_reelle',
             'p.budget_prevu',
             'p.budget_consomme',
+            'p.responsable_id',
             'c.id as client_id',
-            'c.societe as client_nom',
-            'u.name as responsable_nom'
+            'c.societe as client_nom'
         )
         ->orderBy('p.nom_projet', 'asc')
         ->get();
+
+        // Récupérer les noms des responsables depuis la base centrale
+        $responsableIds = $projets->pluck('responsable_id')->filter()->unique()->toArray();
+        $usersMap = collect();
+        if (!empty($responsableIds)) {
+            $usersMap = DB::connection('central')->table('users')
+                ->whereIn('id', $responsableIds)
+                ->select('id', 'nom', 'prenom')
+                ->get()
+                ->keyBy('id')
+                ->map(fn($u) => trim(($u->prenom ?? '') . ' ' . ($u->nom ?? '')));
+        }
+
+        foreach ($projets as $p) {
+            $p->responsable_nom = $p->responsable_id && $usersMap->has($p->responsable_id) 
+                ? $usersMap->get($p->responsable_id) 
+                : '—';
+        }
 
         if ($projets->isEmpty()) {
             return [
