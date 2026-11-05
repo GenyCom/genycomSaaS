@@ -66,6 +66,7 @@ class ReportingController extends Controller
             'cheques' => $this->reporting->chequeReport($status),
             'supplier_transactions' => $this->reporting->supplierTransactions($start, $end, $supplierId),
             'client_transactions' => $this->reporting->clientTransactions($start, $end, $clientId),
+            'project_report' => $this->reporting->projectStatusReport($start, $end, $request->get('projet_id') ? (int) $request->get('projet_id') : null),
         ]);
     }
 
@@ -182,5 +183,12 @@ class ReportingController extends Controller
         [$start, $end] = $this->resolveDateRange($request);
         $clientId = $request->get('client_id') ? (int) $request->get('client_id') : null;
         return response()->json($this->reporting->clientTransactions($start, $end, $clientId));
+    }
+
+    public function projectReport(Request $request): JsonResponse
+    {
+        [$start, $end] = $this->resolveDateRange($request);
+        $projectId = $request->get('projet_id') ? (int) $request->get('projet_id') : null;
+        return response()->json($this->reporting->projectStatusReport($start, $end, $projectId));
     }
 }

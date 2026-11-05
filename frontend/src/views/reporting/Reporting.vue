@@ -427,6 +427,304 @@
         </div>
       </div>
 
+      <!-- État Projets -->
+      <div v-if="activeTab === 'project_status'" class="tab-pane">
+        <div class="summary-cards">
+          <div class="mini-card">
+            <span class="label">Projets Suivis</span>
+            <span class="value">{{ projectReportData.totals.nb_projets || 0 }}</span>
+          </div>
+          <div class="mini-card">
+            <span class="label">Budget Prévu Total</span>
+            <span class="value">{{ formatMoney(projectReportData.totals.total_budget_prevu) }}</span>
+          </div>
+          <div class="mini-card accent">
+            <span class="label">Total Achats Engagés (HT)</span>
+            <span class="value">{{ formatMoney(projectReportData.totals.total_achats_ht) }}</span>
+          </div>
+          <div class="mini-card" style="border-top-color: #10b981;">
+            <span class="label">Total Facturé Ventes (HT)</span>
+            <span class="value text-success">{{ formatMoney(projectReportData.totals.total_ventes_ht) }}</span>
+          </div>
+          <div class="mini-card" :style="{ borderTopColor: projectReportData.totals.marge_brute >= 0 ? '#10b981' : '#ef4444' }">
+            <span class="label">Marge Réalisée (HT)</span>
+            <span class="value" :class="projectReportData.totals.marge_brute >= 0 ? 'text-success' : 'text-danger'">
+              {{ formatMoney(projectReportData.totals.marge_brute) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="table-card mt-4">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+            <div class="header-with-filter" style="flex: 1; min-width: 280px; flex-wrap: wrap;">
+              <h3 style="white-space: nowrap;">Suivi & Consommation par Projet</h3>
+              <span class="badge-code" style="color: #64748b; background: #e2e8f0; font-size: 0.75rem;">
+                {{ filteredProjects.length }} projet(s)
+              </span>
+
+              <!-- Filtre Statut -->
+              <select v-model="projectStatusFilter" class="filter-select">
+                <option value="tous">Tous les statuts</option>
+                <option value="en_cours">En cours</option>
+                <option value="termine">Terminé</option>
+                <option value="en_pause">En pause</option>
+                <option value="brouillon">Brouillon</option>
+                <option value="annule">Annulé</option>
+              </select>
+
+              <!-- Recherche textuelle -->
+              <div style="position: relative; display: inline-flex; align-items: center;">
+                <input 
+                  type="text" 
+                  v-model="projectSearchQuery" 
+                  placeholder="Rechercher code, projet, client..." 
+                  class="filter-select"
+                  style="background-image: none; padding-right: 12px; min-width: 200px;"
+                />
+                <button 
+                  v-if="projectSearchQuery" 
+                  @click="projectSearchQuery = ''" 
+                  style="position: absolute; right: 8px; border: none; background: transparent; cursor: pointer; color: #94a3b8; font-size: 14px;"
+                >&times;</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; flex-shrink: 0;">
+              <button @click="toggleAllProjectRows(true)" class="btn-export secondary" title="Tout déplier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                Déplier tout
+              </button>
+              <button @click="toggleAllProjectRows(false)" class="btn-export secondary" title="Tout replier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                Replier tout
+              </button>
+              <button @click="exportProjectReportExcel" class="btn-export">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Exporter Excel
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table">
+              <colgroup>
+                <col style="width: 40px;" />
+                <col style="width: 140px;" />
+                <col style="width: 220px;" />
+                <col style="width: 160px;" />
+                <col style="width: 130px;" />
+                <col style="width: 130px;" />
+                <col style="width: 140px;" />
+                <col style="width: 130px;" />
+                <col style="width: 100px;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style="width: 40px;"></th>
+                  <th>Code Projet</th>
+                  <th>Nom du Projet / Client</th>
+                  <th>Période</th>
+                  <th class="text-right">Budget Prévu</th>
+                  <th class="text-right">Achats Engagés</th>
+                  <th class="text-right">Reste Budget</th>
+                  <th class="text-center">Consommation</th>
+                  <th class="text-center">Avancement</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="p in filteredProjects" :key="p.id">
+                  <tr 
+                    class="tiers-row" 
+                    @click="toggleProjectExpand(p.id)"
+                    :style="expandedProjectRows[p.id] ? 'background: #f8fafc;' : ''"
+                  >
+                    <td class="expand-cell" style="text-align: center;">
+                      <svg 
+                        :class="['expand-icon', { rotated: expandedProjectRows[p.id] }]"
+                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </td>
+                    <td style="white-space: nowrap;">
+                      <span class="badge-code">{{ p.code_projet }}</span>
+                    </td>
+                    <td>
+                      <div class="font-bold text-slate-800" style="color: #1e293b;">{{ p.nom_projet }}</div>
+                      <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                        <span>Client : <strong>{{ p.client_nom }}</strong></span>
+                        <span v-if="p.responsable_nom && p.responsable_nom !== '—'" style="margin-left: 8px;">• Resp : {{ p.responsable_nom }}</span>
+                      </div>
+                    </td>
+                    <td style="font-size: 0.8rem; color: #475569;">
+                      <div>Du : {{ p.date_debut ? formatDate(p.date_debut) : '—' }}</div>
+                      <div>Au : {{ p.date_fin_prevue ? formatDate(p.date_fin_prevue) : '—' }}</div>
+                    </td>
+                    <td class="text-right font-bold">{{ formatMoney(p.budget_prevu) }}</td>
+                    <td class="text-right font-bold text-slate-700">{{ formatMoney(p.total_achats_ht) }}</td>
+                    <td class="text-right font-bold" :class="p.reste_budget >= 0 ? 'text-success' : 'text-danger'">
+                      {{ formatMoney(p.reste_budget) }}
+                    </td>
+                    <td class="text-center">
+                      <div style="min-width: 90px; display: inline-block;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; margin-bottom: 2px;" :style="{ color: p.taux_consommation > 100 ? '#dc2626' : (p.taux_consommation > 80 ? '#d97706' : '#166534') }">
+                          <span>{{ p.taux_consommation }}%</span>
+                        </div>
+                        <div class="progress-bg" style="height: 6px;">
+                          <div 
+                            class="progress-fill" 
+                            :style="{ 
+                              width: Math.min(p.taux_consommation, 100) + '%', 
+                              backgroundColor: p.taux_consommation > 100 ? '#ef4444' : (p.taux_consommation > 80 ? '#f59e0b' : '#10b981') 
+                            }"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <span :class="['status-pill', p.statut === 'termine' ? 'paid' : (p.statut === 'en_cours' ? 'pending' : '')]" style="display: inline-block; margin-bottom: 4px;">
+                        {{ p.statut }}
+                      </span>
+                      <div style="font-size: 0.72rem; color: #64748b; font-weight: 600;">
+                        {{ p.avancement_pcent }}% réalisé
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Ligne Dépliée : Détails des Achats et Consommation du Projet -->
+                  <tr v-if="expandedProjectRows[p.id]" class="detail-header-row">
+                    <td colspan="9" style="padding: 0; background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                      <div style="padding: 16px 20px 20px 48px;">
+                        
+                        <!-- Mini synthèse financière du projet -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; background: white; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                          <div>
+                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Ventes Facturées (HT)</div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #059669;">{{ formatMoney(p.total_ventes_ht) }}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Encaissé : {{ formatMoney(p.total_ventes_encaisse) }}</div>
+                          </div>
+                          <div>
+                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Achats Engagés (HT)</div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #1e293b;">{{ formatMoney(p.total_achats_ht) }}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">TTC : {{ formatMoney(p.total_achats_ttc) }}</div>
+                          </div>
+                          <div>
+                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Marge Commerciale (HT)</div>
+                            <div style="font-size: 1rem; font-weight: 800;" :class="p.marge_brute >= 0 ? 'text-success' : 'text-danger'">
+                              {{ formatMoney(p.marge_brute) }}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Taux de marge : {{ p.taux_marge }}%</div>
+                          </div>
+                          <div>
+                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Dépassement / Solde Budget</div>
+                            <div style="font-size: 1rem; font-weight: 800;" :class="p.reste_budget >= 0 ? 'text-success' : 'text-danger'">
+                              {{ p.reste_budget >= 0 ? 'Disponible : ' : 'Dépassement : ' }}{{ formatMoney(Math.abs(p.reste_budget)) }}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #64748b;">Consommé : {{ p.taux_consommation }}% du budget</div>
+                          </div>
+                        </div>
+
+                        <!-- Tableau des transactions commerciales d'achat -->
+                        <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                          <div style="font-size: 0.8rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Transactions d'Achat (Commandes Fournisseurs BCF) — {{ p.nb_achats }} commande(s)
+                          </div>
+                        </div>
+
+                        <table v-if="p.achats && p.achats.length > 0" class="detail-table" style="background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 12px;">
+                          <thead>
+                            <tr style="background: #f1f5f9;">
+                              <th>Date</th>
+                              <th>N° Commande (BCF)</th>
+                              <th>Fournisseur</th>
+                              <th class="text-right">Montant HT</th>
+                              <th class="text-right">TVA</th>
+                              <th class="text-right">Montant TTC</th>
+                              <th class="text-center">Statut BCF</th>
+                              <th>Articles / Prestations commandées</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="bcf in p.achats" :key="bcf.id">
+                              <td style="white-space: nowrap;">{{ bcf.date_commande ? formatDate(bcf.date_commande) : '—' }}</td>
+                              <td><span class="badge-code">{{ bcf.numero }}</span></td>
+                              <td class="font-bold">{{ bcf.fournisseur_nom || '—' }}</td>
+                              <td class="text-right font-bold">{{ formatMoney(bcf.total_ht) }}</td>
+                              <td class="text-right text-muted">{{ formatMoney(bcf.total_tva) }}</td>
+                              <td class="text-right font-bold text-slate-800">{{ formatMoney(bcf.total_ttc) }}</td>
+                              <td class="text-center">
+                                <span class="status-pill" :class="bcf.statut === 'valide' || bcf.statut === 'recu' ? 'paid' : 'pending'">
+                                  {{ bcf.statut || 'En attente' }}
+                                </span>
+                              </td>
+                              <td>
+                                <div v-if="bcf.lignes && bcf.lignes.length > 0" style="font-size: 0.75rem; color: #475569;">
+                                  <div v-for="(lig, lidx) in bcf.lignes" :key="lidx" style="margin-bottom: 2px;">
+                                    • {{ lig.designation }} ({{ lig.quantite }} &times; {{ formatMoney(lig.prix_unitaire) }}) = <strong>{{ formatMoney(lig.montant_ht) }}</strong>
+                                  </div>
+                                </div>
+                                <span v-else class="text-muted" style="font-size: 0.75rem;">—</span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div v-else style="padding: 12px; background: white; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; text-align: center; margin-bottom: 12px;">
+                          Aucune commande fournisseur associée directement à ce projet pour le moment.
+                        </div>
+
+                        <!-- Tableau des factures de vente du projet -->
+                        <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                          <div style="font-size: 0.8rem; font-weight: 800; color: #334155; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Factures Ventes Associées — {{ p.nb_ventes }} facture(s)
+                          </div>
+                        </div>
+
+                        <table v-if="p.ventes && p.ventes.length > 0" class="detail-table" style="background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+                          <thead>
+                            <tr style="background: #f1f5f9;">
+                              <th>Date Facture</th>
+                              <th>N° Facture</th>
+                              <th class="text-right">Montant HT</th>
+                              <th class="text-right">TVA</th>
+                              <th class="text-right">Montant TTC</th>
+                              <th class="text-right">Encaissé</th>
+                              <th class="text-center">État Règlement</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="fac in p.ventes" :key="fac.id">
+                              <td style="white-space: nowrap;">{{ fac.date_facture ? formatDate(fac.date_facture) : '—' }}</td>
+                              <td><span class="badge-code">{{ fac.numero }}</span></td>
+                              <td class="text-right font-bold">{{ formatMoney(fac.total_ht) }}</td>
+                              <td class="text-right text-muted">{{ formatMoney(fac.total_tva) }}</td>
+                              <td class="text-right font-bold text-slate-800">{{ formatMoney(fac.total_ttc) }}</td>
+                              <td class="text-right font-bold text-success">{{ formatMoney(fac.montant_regle) }}</td>
+                              <td class="text-center">
+                                <span class="status-pill" :class="fac.est_reglee ? 'paid' : 'pending'">
+                                  {{ fac.est_reglee ? 'Réglée' : 'En attente' }}
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div v-else style="padding: 12px; background: white; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 0.75rem; color: #64748b; text-align: center;">
+                          Aucune facture client liée à ce projet pour le moment.
+                        </div>
+
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+
+                <tr v-if="filteredProjects.length === 0">
+                  <td colspan="9" class="empty-state">Aucun projet trouvé sur cette période ou selon vos filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Ventes Journal -->
       <div v-if="activeTab === 'sales'" class="tab-pane">
         <div class="summary-cards">
@@ -1229,6 +1527,10 @@ const IconSupplierReport = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
 })
 
+
+const IconProjectStatus = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`
+})
 const IconClientReport = markRaw({
   template: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
 })
@@ -1243,7 +1545,8 @@ const tabs = [
   { id: 'finance', label: 'Finance & Projets', icon: IconFinance },
   { id: 'stock', label: 'Stock', icon: IconStock },
   { id: 'supplier_transactions', label: 'Fournisseur', icon: IconSupplierReport },
-  { id: 'client_transactions', label: 'Client', icon: IconClientReport }
+  { id: 'client_transactions', label: 'Client', icon: IconClientReport },
+  { id: 'project_status', label: 'État Projets', icon: IconProjectStatus }
 ]
 
 const route = useRoute()
@@ -1322,6 +1625,91 @@ function toggleAllClientRows(expand = true) {
   filteredClientTransactions.value.forEach(t => {
     expandedClientRows[t.id] = expand
   })
+}
+
+// ─── État Projets (Achats & Consommation) ───
+const projectReportData = ref({
+  totals: { nb_projets: 0, total_budget_prevu: 0, total_achats_ht: 0, total_achats_ttc: 0, total_ventes_ht: 0, total_ventes_ttc: 0, total_ventes_encaisse: 0, marge_brute: 0 },
+  projets: []
+})
+const projectStatusFilter = ref('tous')
+const projectSearchQuery = ref('')
+const expandedProjectRows = reactive({})
+
+const filteredProjects = computed(() => {
+  let list = projectReportData.value.projets || []
+  if (projectStatusFilter.value !== 'tous') {
+    list = list.filter(p => p.statut === projectStatusFilter.value)
+  }
+  if (projectSearchQuery.value && projectSearchQuery.value.trim() !== '') {
+    const q = projectSearchQuery.value.toLowerCase().trim()
+    list = list.filter(p =>
+      (p.code_projet && p.code_projet.toLowerCase().includes(q)) ||
+      (p.nom_projet && p.nom_projet.toLowerCase().includes(q)) ||
+      (p.client_nom && p.client_nom.toLowerCase().includes(q)) ||
+      (p.responsable_nom && p.responsable_nom.toLowerCase().includes(q))
+    )
+  }
+  return list
+})
+
+function toggleProjectExpand(id) {
+  expandedProjectRows[id] = !expandedProjectRows[id]
+}
+
+function toggleAllProjectRows(expand = true) {
+  filteredProjects.value.forEach(p => {
+    expandedProjectRows[p.id] = expand
+  })
+}
+
+function exportProjectReportExcel() {
+  const projects = filteredProjects.value
+  const totals = projectReportData.value.totals
+  if (!projects || !projects.length) {
+    toast.error("Aucun projet à exporter.")
+    return
+  }
+
+  let csv = "\uFEFF"
+  csv += `"État de Suivi et Consommation des Projets";;;;;;;;\n`
+  csv += `"Période : Du ${dateRange.start} au ${dateRange.end}";;;;;;;;\n`
+  csv += `"Budget Prévu Total : ${(totals.total_budget_prevu || 0).toFixed(2)} DH";"Achats Engagés HT : ${(totals.total_achats_ht || 0).toFixed(2)} DH";"Ventes Facturées HT : ${(totals.total_ventes_ht || 0).toFixed(2)} DH";"Marge Réalisée HT : ${(totals.marge_brute || 0).toFixed(2)} DH";;;;;\n\n`
+  
+  csv += `"Code Projet";"Nom du Projet";"Client";"Statut";"Avancement (%)";"Budget Prévu (DH)";"Achats Engagés HT (DH)";"Reste Budget (DH)";"Consommation (%)";"Total Ventes HT (DH)";"Marge Brute HT (DH)";"Détail Achats (BCF)"\n`
+
+  projects.forEach(p => {
+    const achatsSummary = (p.achats && p.achats.length > 0)
+      ? p.achats.map(b => `[${b.numero}: ${b.total_ht} DH HT - ${b.fournisseur_nom || 'Fournisseur'}]`).join(' ; ')
+      : "Aucun achat"
+
+    const row = [
+      `"${(p.code_projet || '').replace(/"/g, '""')}"`,
+      `"${(p.nom_projet || '').replace(/"/g, '""')}"`,
+      `"${(p.client_nom || '').replace(/"/g, '""')}"`,
+      `"${p.statut || ''}"`,
+      p.avancement_pcent || 0,
+      (p.budget_prevu || 0).toFixed(2),
+      (p.total_achats_ht || 0).toFixed(2),
+      (p.reste_budget || 0).toFixed(2),
+      p.taux_consommation || 0,
+      (p.total_ventes_ht || 0).toFixed(2),
+      (p.marge_brute || 0).toFixed(2),
+      `"${achatsSummary.replace(/"/g, '""')}"`
+    ]
+    csv += row.join(';') + '\n'
+  })
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  link.setAttribute("download", `etat_projets_${dateRange.start}_au_${dateRange.end}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  toast.success("Rapport des projets exporté avec succès.")
 }
 
 const salesData = ref({ journal: [], by_client: [], totals: { ht: 0, tva: 0, ttc: 0 } })
@@ -1506,6 +1894,10 @@ async function fetchData() {
     supplierTransactionsData.value = data.supplier_transactions || {
       totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },
       transactions: []
+    }
+    projectReportData.value = data.project_report || {
+      totals: { nb_projets: 0, total_budget_prevu: 0, total_achats_ht: 0, total_achats_ttc: 0, total_ventes_ht: 0, total_ventes_ttc: 0, total_ventes_encaisse: 0, marge_brute: 0 },
+      projets: []
     }
     clientTransactionsData.value = data.client_transactions || {
       totals: { count: 0, total_ht: 0, total_tva: 0, total_ttc: 0, total_regle: 0, total_reste_a_payer: 0, taux_reglement: 0 },

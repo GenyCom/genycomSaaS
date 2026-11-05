@@ -49,4 +49,5 @@ class Projet extends BaseModel
     public function bonsCommande() { return $this->hasMany(BonCommandeClient::class, 'projet_id'); }
     public function bonsLivraison() { return $this->hasMany(BonLivraison::class, 'projet_id'); }
     public function factures()     { return $this->hasMany(Facture::class); }
+    public function commandesFournisseur() { return $this->hasMany(BonCommandeFournisseur::class, 'projet_id'); }
 }

@@ -258,6 +258,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\TenantMiddleware::class]
         Route::put('/cheques/{id}/statut', [ReportingController::class, 'updateChequeStatus']);
         Route::get('/supplier-transactions', [ReportingController::class, 'supplierTransactions']);
         Route::get('/client-transactions', [ReportingController::class, 'clientTransactions']);
+        Route::get('/projects', [ReportingController::class, 'projectReport']);
     });
 
     // POS — Point de Vente (Voie Rapide)

@@ -1234,4 +1234,231 @@ class ReportingService
             'transactions' => $sorted->toArray()
         ];
     }
+
+    /**
+     * Rapport détaillé d'état des projets :
+     * - Informations du projet (client, responsable, budget, avancement, dates, statut)
+     * - Achats liés (BCF / Commandes Fournisseurs avec leurs lignes et réceptions)
+     * - Factures clients liées (Chiffre d'affaires facturé & encaissé)
+     * - Indicateurs financiers (Budget prévu vs consommé / engagé, écart, marge, taux d'avancement)
+     */
+    public function projectStatusReport(?string $start = null, ?string $end = null, ?int $projectId = null): array
+    {
+        [$start, $end] = $this->normalizeDates($start, $end);
+        $tid = $this->tid();
+
+        // 1. Récupérer tous les projets du tenant
+        $query = DB::connection('tenant')->table('projets as p')
+            ->leftJoin('clients as c', 'c.id', '=', 'p.client_id')
+            ->leftJoin('users as u', 'u.id', '=', 'p.responsable_id')
+            ->where('p.tenant_id', $tid)
+            ->whereNull('p.deleted_at');
+
+        if ($projectId) {
+            $query->where('p.id', $projectId);
+        }
+
+        $projets = $query->select(
+            'p.id',
+            'p.code_projet',
+            'p.nom_projet',
+            'p.description',
+            'p.statut',
+            'p.priorite',
+            'p.avancement_pcent',
+            'p.date_debut',
+            'p.date_fin_prevue',
+            'p.date_fin_reelle',
+            'p.budget_prevu',
+            'p.budget_consomme',
+            'c.id as client_id',
+            'c.societe as client_nom',
+            'u.name as responsable_nom'
+        )
+        ->orderBy('p.nom_projet', 'asc')
+        ->get();
+
+        if ($projets->isEmpty()) {
+            return [
+                'period' => ['start' => $start, 'end' => $end],
+                'totals' => [
+                    'nb_projets' => 0,
+                    'total_budget_prevu' => 0,
+                    'total_achats_ht' => 0,
+                    'total_achats_ttc' => 0,
+                    'total_ventes_ht' => 0,
+                    'total_ventes_ttc' => 0,
+                    'total_ventes_encaisse' => 0,
+                    'marge_brute' => 0
+                ],
+                'projets' => []
+            ];
+        }
+
+        $projectIds = $projets->pluck('id')->toArray();
+
+        // 2. Commandes Fournisseurs (BCF) liées aux projets
+        $bcfs = DB::connection('tenant')->table('bcf as b')
+            ->leftJoin('fournisseurs as f', 'f.id', '=', 'b.fournisseur_id')
+            ->where('b.tenant_id', $tid)
+            ->whereNull('b.deleted_at')
+            ->whereIn('b.projet_id', $projectIds)
+            ->select(
+                'b.id',
+                'b.projet_id',
+                'b.numero',
+                'b.date_commande',
+                'b.date_livraison_prevue',
+                'b.statut',
+                'b.total_ht',
+                'b.total_tva',
+                'b.total_ttc',
+                'f.id as fournisseur_id',
+                'f.societe as fournisseur_nom'
+            )
+            ->orderBy('b.date_commande', 'desc')
+            ->get();
+
+        // Récupérer les lignes de ces BCF pour le détail des achats
+        $bcfIds = $bcfs->pluck('id')->toArray();
+        $bcfLignes = collect();
+        if (!empty($bcfIds)) {
+            $bcfLignes = DB::connection('tenant')->table('bcf_lignes as bl')
+                ->leftJoin('produits as pr', 'pr.id', '=', 'bl.produit_id')
+                ->where('bl.tenant_id', $tid)
+                ->whereIn('bl.bcf_id', $bcfIds)
+                ->select(
+                    'bl.bcf_id',
+                    'bl.designation',
+                    'bl.quantite',
+                    'bl.prix_unitaire',
+                    'bl.taux_tva',
+                    'bl.montant_ht',
+                    'bl.montant_ttc',
+                    'pr.reference as produit_reference'
+                )
+                ->get()
+                ->groupBy('bcf_id');
+        }
+
+        // Associer les lignes aux BCF
+        $bcfsGrouped = $bcfs->map(function ($bcf) use ($bcfLignes) {
+            $bcf->lignes = $bcfLignes->get($bcf->id, collect())->values()->all();
+            return $bcf;
+        })->groupBy('projet_id');
+
+        // 3. Factures Ventes liées aux projets
+        $factures = DB::connection('tenant')->table('factures as fac')
+            ->where('fac.tenant_id', $tid)
+            ->whereNull('fac.deleted_at')
+            ->whereIn('fac.projet_id', $projectIds)
+            ->select(
+                'fac.id',
+                'fac.projet_id',
+                'fac.numero',
+                'fac.date_facture',
+                'fac.total_ht',
+                'fac.total_tva',
+                'fac.total_ttc',
+                'fac.montant_regle',
+                'fac.est_reglee'
+            )
+            ->orderBy('fac.date_facture', 'desc')
+            ->get()
+            ->groupBy('projet_id');
+
+        // 4. Calculs et consolidation par projet
+        $totalBudgetPrevu = 0;
+        $totalAchatsHt = 0;
+        $totalAchatsTtc = 0;
+        $totalVentesHt = 0;
+        $totalVentesTtc = 0;
+        $totalVentesEncaisse = 0;
+
+        $projectList = $projets->map(function ($p) use (
+            $bcfsGrouped,
+            $factures,
+            &$totalBudgetPrevu,
+            &$totalAchatsHt,
+            &$totalAchatsTtc,
+            &$totalVentesHt,
+            &$totalVentesTtc,
+            &$totalVentesEncaisse
+        ) {
+            $achatsList = $bcfsGrouped->get($p->id, collect())->values();
+            $ventesList = $factures->get($p->id, collect())->values();
+
+            $sommeAchatsHt = (float) $achatsList->sum('total_ht');
+            $sommeAchatsTtc = (float) $achatsList->sum('total_ttc');
+
+            $sommeVentesHt = (float) $ventesList->sum('total_ht');
+            $sommeVentesTtc = (float) $ventesList->sum('total_ttc');
+            $sommeVentesRegle = (float) $ventesList->sum('montant_regle');
+
+            $budgetPrevu = (float) ($p->budget_prevu ?? 0);
+            
+            // Consommation = dépenses réelles (achats HT engagés) ou budget_consomme saisi si supérieur
+            $consommation = max($sommeAchatsHt, (float) ($p->budget_consomme ?? 0));
+            $resteBudget = $budgetPrevu - $consommation;
+            $tauxConsommation = $budgetPrevu > 0 ? round(($consommation / $budgetPrevu) * 100, 1) : 0;
+            $margeBrute = $sommeVentesHt - $sommeAchatsHt;
+            $tauxMarge = $sommeVentesHt > 0 ? round(($margeBrute / $sommeVentesHt) * 100, 1) : 0;
+
+            $totalBudgetPrevu += $budgetPrevu;
+            $totalAchatsHt += $sommeAchatsHt;
+            $totalAchatsTtc += $sommeAchatsTtc;
+            $totalVentesHt += $sommeVentesHt;
+            $totalVentesTtc += $sommeVentesTtc;
+            $totalVentesEncaisse += $sommeVentesRegle;
+
+            return [
+                'id' => $p->id,
+                'code_projet' => $p->code_projet,
+                'nom_projet' => $p->nom_projet,
+                'description' => $p->description,
+                'statut' => $p->statut ?? 'brouillon',
+                'priorite' => $p->priorite ?? 'normale',
+                'avancement_pcent' => (int) ($p->avancement_pcent ?? 0),
+                'date_debut' => $p->date_debut,
+                'date_fin_prevue' => $p->date_fin_prevue,
+                'date_fin_reelle' => $p->date_fin_reelle,
+                'client_nom' => $p->client_nom ?: '—',
+                'responsable_nom' => $p->responsable_nom ?: '—',
+                
+                // Métriques financières
+                'budget_prevu' => $budgetPrevu,
+                'budget_consomme' => $consommation,
+                'reste_budget' => $resteBudget,
+                'taux_consommation' => $tauxConsommation,
+                'total_achats_ht' => $sommeAchatsHt,
+                'total_achats_ttc' => $sommeAchatsTtc,
+                'total_ventes_ht' => $sommeVentesHt,
+                'total_ventes_ttc' => $sommeVentesTtc,
+                'total_ventes_encaisse' => $sommeVentesRegle,
+                'marge_brute' => $margeBrute,
+                'taux_marge' => $tauxMarge,
+                
+                // Détails des transactions
+                'nb_achats' => $achatsList->count(),
+                'achats' => $achatsList->all(),
+                'nb_ventes' => $ventesList->count(),
+                'ventes' => $ventesList->all()
+            ];
+        });
+
+        return [
+            'period' => ['start' => $start, 'end' => $end],
+            'totals' => [
+                'nb_projets' => $projectList->count(),
+                'total_budget_prevu' => $totalBudgetPrevu,
+                'total_achats_ht' => $totalAchatsHt,
+                'total_achats_ttc' => $totalAchatsTtc,
+                'total_ventes_ht' => $totalVentesHt,
+                'total_ventes_ttc' => $totalVentesTtc,
+                'total_ventes_encaisse' => $totalVentesEncaisse,
+                'marge_brute' => $totalVentesHt - $totalAchatsHt
+            ],
+            'projets' => $projectList->values()->all()
+        ];
+    }
 }
